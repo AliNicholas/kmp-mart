@@ -697,16 +697,18 @@ Allows user/RT to create and pay orders.
 
 ### Requirements
 
-| ID      | Requirement                | Priority |
-| ------- | -------------------------- | -------- |
-| CHK-001 | Add product to cart        | P0       |
-| CHK-002 | Update cart quantity       | P0       |
-| CHK-003 | Remove item from cart      | P0       |
-| CHK-004 | Validate stock at checkout | P0       |
-| CHK-005 | Choose fulfillment method  | P0       |
-| CHK-006 | Apply voucher/points       | P0       |
-| CHK-007 | Create order invoice       | P0       |
-| CHK-008 | Order is idempotent        | P1       |
+| ID      | Requirement                                  | Priority | Description |
+| ------- | -------------------------------------------- | -------- | ----------- |
+| CHK-001 | Add product to cart                          | P0       | Add items to the shopping cart |
+| CHK-002 | Update cart quantity                         | P0       | Adjust quantity of items in cart |
+| CHK-003 | Remove item from cart                        | P0       | Delete an item from the cart |
+| CHK-004 | Validate stock at checkout                   | P0       | Stop checkout if stock is insufficient |
+| CHK-005 | Choose fulfillment method                    | P0       | Select Pos RT, Ambil Mandiri, or Kurir Desa |
+| CHK-006 | Apply voucher/points                         | P0       | Redeem loyalty points for discounts |
+| CHK-007 | Create order invoice                         | P0       | Persist orders in SQLite database |
+| CHK-008 | Order is idempotent                          | P1       | Prevent double checkouts |
+| CHK-009 | Live Delivery Simulation (GoFood-style)      | P0       | For `DELIVERY_TO_HOME`, show real-time 4-stage tracking modal (Driver: Mang Ujang). Reaching 'Arrived' auto-completes order (`COMPLETED`/`PAID`) in DB. |
+| CHK-010 | Cross-Coop Shopping & Surcharge             | P0       | Warga can switch active Kopdes (e.g. Sukamaju to Sukasari). Surcharge of Rp5.000 & +1 day delivery applies for neighbor coop orders. |
 
 ---
 

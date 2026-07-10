@@ -24,6 +24,7 @@ export interface User {
 
 export interface Product {
   id: string;
+  cooperative_id: string;
   name: string;
   price: number;
   cost_price: number;
@@ -132,22 +133,60 @@ class WebDatabase {
     });
 
     if (updated) {
-      this.setStorage(db);
       this.seedData(db);
+    }
+
+    // Ensure cooperative_id is on products in web db
+    let changed = false;
+    if (db['products']) {
+      db['products'].forEach((p: any) => {
+        if (!p.cooperative_id) {
+          p.cooperative_id = 'tenant-1';
+          changed = true;
+        }
+      });
+      // Ensure Beras Premium 5kg is low stock in Sukamaju for demo
+      const beras = db['products'].find((p: any) => p.id === 'prod-beras');
+      if (beras && beras.stock > 2) {
+        beras.stock = 2;
+        changed = true;
+      }
+    }
+
+    // Ensure Sukasari (tenant-2) exists
+    if (db['tenants'] && !db['tenants'].some((t: any) => t.id === 'tenant-2')) {
+      db['tenants'].push({
+        id: 'tenant-2',
+        name: 'Koperasi Sukasari (Tetangga)',
+        code: 'KOP-SUKASARI',
+        village: 'Sukasari',
+        status: 'ACTIVE'
+      });
+      
+      // Seed products for Sukasari
+      db['products'].push(
+        { id: 'prod-beras-2', cooperative_id: 'tenant-2', name: 'Beras Premium 5kg (Sukasari)', price: 73000, cost_price: 66000, stock: 90, unit: 'pcs', is_local: 0, image_url: 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=400' },
+        { id: 'prod-telur-2', cooperative_id: 'tenant-2', name: 'Telur Bebek Asin 10pcs', price: 35000, cost_price: 30000, stock: 50, unit: 'pack', is_local: 1, image_url: 'https://images.unsplash.com/photo-1506976785307-8732e854ad03?w=400' },
+        { id: 'prod-minyak-2', cooperative_id: 'tenant-2', name: 'Minyak Kelapa Murni 1L', price: 32000, cost_price: 27000, stock: 25, unit: 'liter', is_local: 1, image_url: 'https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?w=400' },
+        { id: 'prod-gula-2', cooperative_id: 'tenant-2', name: 'Gula Merah Aren 1kg', price: 22000, cost_price: 18000, stock: 40, unit: 'kg', is_local: 1, image_url: 'https://images.unsplash.com/photo-1581781870027-04212e231e96?w=400' },
+        { id: 'prod-paket-2', cooperative_id: 'tenant-2', name: 'Paket Hemat Sukasari 75K', price: 75000, cost_price: 65000, stock: 15, unit: 'pack', is_local: 0, image_url: 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=400' }
+      );
+      changed = true;
+    }
+
+    if (updated || changed) {
+      this.setStorage(db);
     }
   }
 
   private seedData(db: { [table: string]: any[] }) {
     console.log("Seeding Web Database...");
 
-    // 1. Seed Tenant
-    db['tenants'].push({
-      id: 'tenant-1',
-      name: 'Koperasi Merah Putih Sukamaju',
-      code: 'KOP-SUKAMAJU',
-      village: 'Sukamaju',
-      status: 'ACTIVE'
-    });
+    // 1. Seed Tenants
+    db['tenants'].push(
+      { id: 'tenant-1', name: 'Koperasi Merah Putih Sukamaju', code: 'KOP-SUKAMAJU', village: 'Sukamaju', status: 'ACTIVE' },
+      { id: 'tenant-2', name: 'Koperasi Sukasari (Tetangga)', code: 'KOP-SUKASARI', village: 'Sukasari', status: 'ACTIVE' }
+    );
 
     // 2. Seed Users
     db['users'].push(
@@ -160,16 +199,24 @@ class WebDatabase {
 
     // 3. Seed Products
     db['products'].push(
-      { id: 'prod-beras', name: 'Beras Premium 5kg', price: 75000, cost_price: 68000, stock: 50, unit: 'pcs', is_local: 0, image_url: 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=400' },
-      { id: 'prod-telur', name: 'Telur Ayam 1kg', price: 28000, cost_price: 24000, stock: 40, unit: 'kg', is_local: 0, image_url: 'https://images.unsplash.com/photo-1506976785307-8732e854ad03?w=400' },
-      { id: 'prod-minyak', name: 'Minyak Goreng 1L', price: 18000, cost_price: 15500, stock: 60, unit: 'liter', is_local: 0, image_url: 'https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?w=400' },
-      { id: 'prod-gula', name: 'Gula Pasir 1kg', price: 15000, cost_price: 13000, stock: 100, unit: 'kg', is_local: 0, image_url: 'https://images.unsplash.com/photo-1581781870027-04212e231e96?w=400' },
-      { id: 'prod-paket', name: 'Paket Sembako Dapur 50K', price: 50000, cost_price: 42000, stock: 30, unit: 'pack', is_local: 0, image_url: 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=400' },
-      { id: 'prod-pisang', name: 'Keripik Pisang Lokal', price: 12000, cost_price: 9000, stock: 25, unit: 'pcs', is_local: 1, image_url: 'https://images.unsplash.com/photo-1613967193490-1d17b930c1a1?w=400' },
-      { id: 'prod-sambal', name: 'Sambal Rumahan Ibu Rina', price: 15000, cost_price: 11000, stock: 20, unit: 'pcs', is_local: 1, image_url: 'https://images.unsplash.com/photo-1595124201382-742455b33db6?w=400' },
-      { id: 'prod-kangkung', name: 'Kangkung Segar RT 03', price: 4000, cost_price: 3000, stock: 15, unit: 'pcs', is_local: 1, image_url: 'https://images.unsplash.com/photo-1550346048-b472e399580b?w=400' },
-      { id: 'prod-gas', name: 'Gas LPG 3kg Melon', price: 22000, cost_price: 19000, stock: 12, unit: 'pcs', is_local: 0, image_url: 'https://images.unsplash.com/photo-1585829365295-ab7cd400c167?w=400' },
-      { id: 'prod-sabun', name: 'Sabun Cuci Wangi', price: 14000, cost_price: 11500, stock: 35, unit: 'pcs', is_local: 0, image_url: 'https://images.unsplash.com/photo-1607613009820-a29f7bb81c04?w=400' }
+      // Sukamaju products (tenant-1)
+      { id: 'prod-beras', cooperative_id: 'tenant-1', name: 'Beras Premium 5kg', price: 75000, cost_price: 68000, stock: 2, unit: 'pcs', is_local: 0, image_url: 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=400' },
+      { id: 'prod-telur', cooperative_id: 'tenant-1', name: 'Telur Ayam 1kg', price: 28000, cost_price: 24000, stock: 40, unit: 'kg', is_local: 0, image_url: 'https://images.unsplash.com/photo-1506976785307-8732e854ad03?w=400' },
+      { id: 'prod-minyak', cooperative_id: 'tenant-1', name: 'Minyak Goreng 1L', price: 18000, cost_price: 15500, stock: 60, unit: 'liter', is_local: 0, image_url: 'https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?w=400' },
+      { id: 'prod-gula', cooperative_id: 'tenant-1', name: 'Gula Pasir 1kg', price: 15000, cost_price: 13000, stock: 100, unit: 'kg', is_local: 0, image_url: 'https://images.unsplash.com/photo-1581781870027-04212e231e96?w=400' },
+      { id: 'prod-paket', cooperative_id: 'tenant-1', name: 'Paket Sembako Dapur 50K', price: 50000, cost_price: 42000, stock: 30, unit: 'pack', is_local: 0, image_url: 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=400' },
+      { id: 'prod-pisang', cooperative_id: 'tenant-1', name: 'Keripik Pisang Lokal', price: 12000, cost_price: 9000, stock: 25, unit: 'pcs', is_local: 1, image_url: 'https://images.unsplash.com/photo-1613967193490-1d17b930c1a1?w=400' },
+      { id: 'prod-sambal', cooperative_id: 'tenant-1', name: 'Sambal Rumahan Ibu Rina', price: 15000, cost_price: 11000, stock: 20, unit: 'pcs', is_local: 1, image_url: 'https://images.unsplash.com/photo-1595124201382-742455b33db6?w=400' },
+      { id: 'prod-kangkung', cooperative_id: 'tenant-1', name: 'Kangkung Segar RT 03', price: 4000, cost_price: 3000, stock: 15, unit: 'pcs', is_local: 1, image_url: 'https://images.unsplash.com/photo-1550346048-b472e399580b?w=400' },
+      { id: 'prod-gas', cooperative_id: 'tenant-1', name: 'Gas LPG 3kg Melon', price: 22000, cost_price: 19000, stock: 12, unit: 'pcs', is_local: 0, image_url: 'https://images.unsplash.com/photo-1585829365295-ab7cd400c167?w=400' },
+      { id: 'prod-sabun', cooperative_id: 'tenant-1', name: 'Sabun Cuci Wangi', price: 14000, cost_price: 11500, stock: 35, unit: 'pcs', is_local: 0, image_url: 'https://images.unsplash.com/photo-1607613009820-a29f7bb81c04?w=400' },
+      
+      // Sukasari products (tenant-2)
+      { id: 'prod-beras-2', cooperative_id: 'tenant-2', name: 'Beras Premium 5kg (Sukasari)', price: 73000, cost_price: 66000, stock: 90, unit: 'pcs', is_local: 0, image_url: 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=400' },
+      { id: 'prod-telur-2', cooperative_id: 'tenant-2', name: 'Telur Bebek Asin 10pcs', price: 35000, cost_price: 30000, stock: 50, unit: 'pack', is_local: 1, image_url: 'https://images.unsplash.com/photo-1506976785307-8732e854ad03?w=400' },
+      { id: 'prod-minyak-2', cooperative_id: 'tenant-2', name: 'Minyak Kelapa Murni 1L', price: 32000, cost_price: 27000, stock: 25, unit: 'liter', is_local: 1, image_url: 'https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?w=400' },
+      { id: 'prod-gula-2', cooperative_id: 'tenant-2', name: 'Gula Merah Aren 1kg', price: 22000, cost_price: 18000, stock: 40, unit: 'kg', is_local: 1, image_url: 'https://images.unsplash.com/photo-1581781870027-04212e231e96?w=400' },
+      { id: 'prod-paket-2', cooperative_id: 'tenant-2', name: 'Paket Hemat Sukasari 75K', price: 75000, cost_price: 65000, stock: 15, unit: 'pack', is_local: 0, image_url: 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=400' }
     );
 
     // 4. Seed RT Batch
@@ -485,6 +532,7 @@ const initNativeSchema = (db: any) => {
     );
     CREATE TABLE IF NOT EXISTS products (
       id TEXT PRIMARY KEY,
+      cooperative_id TEXT DEFAULT 'tenant-1',
       name TEXT,
       price REAL,
       cost_price REAL,
@@ -558,14 +606,50 @@ const initNativeSchema = (db: any) => {
     );
   `);
 
+  // Native database schema migrations for existing local sqlite files
+  try {
+    db.execSync("ALTER TABLE products ADD COLUMN cooperative_id TEXT DEFAULT 'tenant-1';");
+    console.log("Database Migration: Added cooperative_id column to products table.");
+  } catch (e) {
+    // Ignore if column already exists
+  }
+
+  // Ensure Sukasari (tenant-2) and its products exist in the SQLite database
+  try {
+    const tenants = db.getAllSync(`SELECT * FROM tenants WHERE id = 'tenant-2'`);
+    if (tenants.length === 0) {
+      console.log("Database Migration: Seeding Sukasari (tenant-2) and items...");
+      db.runSync(`INSERT OR IGNORE INTO tenants (id, name, code, village, status) VALUES (?, ?, ?, ?, ?)`, 
+        ['tenant-2', 'Koperasi Sukasari (Tetangga)', 'KOP-SUKASARI', 'Sukasari', 'ACTIVE']);
+      
+      db.runSync(`INSERT OR IGNORE INTO products (id, cooperative_id, name, price, cost_price, stock, unit, is_local, image_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`, 
+        ['prod-beras-2', 'tenant-2', 'Beras Premium 5kg (Sukasari)', 73000, 66000, 90, 'pcs', 0, 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=400']);
+      db.runSync(`INSERT OR IGNORE INTO products (id, cooperative_id, name, price, cost_price, stock, unit, is_local, image_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`, 
+        ['prod-telur-2', 'tenant-2', 'Telur Bebek Asin 10pcs', 35000, 30000, 50, 'pack', 1, 'https://images.unsplash.com/photo-1506976785307-8732e854ad03?w=400']);
+      db.runSync(`INSERT OR IGNORE INTO products (id, cooperative_id, name, price, cost_price, stock, unit, is_local, image_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`, 
+        ['prod-minyak-2', 'tenant-2', 'Minyak Kelapa Murni 1L', 32000, 27000, 25, 'liter', 1, 'https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?w=400']);
+      db.runSync(`INSERT OR IGNORE INTO products (id, cooperative_id, name, price, cost_price, stock, unit, is_local, image_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`, 
+        ['prod-gula-2', 'tenant-2', 'Gula Merah Aren 1kg', 22000, 18000, 40, 'kg', 1, 'https://images.unsplash.com/photo-1581781870027-04212e231e96?w=400']);
+      db.runSync(`INSERT OR IGNORE INTO products (id, cooperative_id, name, price, cost_price, stock, unit, is_local, image_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`, 
+        ['prod-paket-2', 'tenant-2', 'Paket Hemat Sukasari 75K', 75000, 65000, 15, 'pack', 0, 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=400']);
+    }
+
+    // Set Sukamaju beras stock to 2 for low stock demo
+    db.runSync("UPDATE products SET stock = 2 WHERE id = 'prod-beras';");
+  } catch (e) {
+    console.error("Database Migration Error seeding Sukasari:", e);
+  }
+
   // Check if seeded
   const users = db.getAllSync(`SELECT * FROM users`);
   if (users.length === 0) {
     console.log("Seeding Native SQLite database...");
     
-    // Seed Cooperative
+    // Seed Cooperatives (Tenants)
     db.runSync(`INSERT INTO tenants (id, name, code, village, status) VALUES (?, ?, ?, ?, ?)`, 
       ['tenant-1', 'Koperasi Merah Putih Sukamaju', 'KOP-SUKAMAJU', 'Sukamaju', 'ACTIVE']);
+    db.runSync(`INSERT INTO tenants (id, name, code, village, status) VALUES (?, ?, ?, ?, ?)`, 
+      ['tenant-2', 'Koperasi Sukasari (Tetangga)', 'KOP-SUKASARI', 'Sukasari', 'ACTIVE']);
 
     // Seed Users
     db.runSync(`INSERT INTO users (id, name, phone, role, rt_id, cooperative_id, points, referral_code, referred_by, pin) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, 
@@ -579,27 +663,40 @@ const initNativeSchema = (db: any) => {
     db.runSync(`INSERT INTO users (id, name, phone, role, rt_id, cooperative_id, points, referral_code, referred_by, pin) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, 
       ['user-rina', 'Ibu Rina', '087788990011', 'USER', 'RT 03', 'tenant-1', 80, 'RINAJAK', null, '111111']);
 
-    // Seed Products
-    db.runSync(`INSERT INTO products (id, name, price, cost_price, stock, unit, is_local, image_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, 
-      ['prod-beras', 'Beras Premium 5kg', 75000, 68000, 50, 'pcs', 0, 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=400']);
-    db.runSync(`INSERT INTO products (id, name, price, cost_price, stock, unit, is_local, image_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, 
-      ['prod-telur', 'Telur Ayam 1kg', 28000, 24000, 40, 'kg', 0, 'https://images.unsplash.com/photo-1506976785307-8732e854ad03?w=400']);
-    db.runSync(`INSERT INTO products (id, name, price, cost_price, stock, unit, is_local, image_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, 
-      ['prod-minyak', 'Minyak Goreng 1L', 18000, 15500, 60, 'liter', 0, 'https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?w=400']);
-    db.runSync(`INSERT INTO products (id, name, price, cost_price, stock, unit, is_local, image_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, 
-      ['prod-gula', 'Gula Pasir 1kg', 15000, 13000, 100, 'kg', 0, 'https://images.unsplash.com/photo-1581781870027-04212e231e96?w=400']);
-    db.runSync(`INSERT INTO products (id, name, price, cost_price, stock, unit, is_local, image_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, 
-      ['prod-paket', 'Paket Sembako Dapur 50K', 50000, 42000, 30, 'pack', 0, 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=400']);
-    db.runSync(`INSERT INTO products (id, name, price, cost_price, stock, unit, is_local, image_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, 
-      ['prod-pisang', 'Keripik Pisang Lokal', 12000, 9000, 25, 'pcs', 1, 'https://images.unsplash.com/photo-1613967193490-1d17b930c1a1?w=400']);
-    db.runSync(`INSERT INTO products (id, name, price, cost_price, stock, unit, is_local, image_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, 
-      ['prod-sambal', 'Sambal Rumahan Ibu Rina', 15000, 11000, 20, 'pcs', 1, 'https://images.unsplash.com/photo-1595124201382-742455b33db6?w=400']);
-    db.runSync(`INSERT INTO products (id, name, price, cost_price, stock, unit, is_local, image_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, 
-      ['prod-kangkung', 'Kangkung Segar RT 03', 4000, 3000, 15, 'pcs', 1, 'https://images.unsplash.com/photo-1550346048-b472e399580b?w=400']);
-    db.runSync(`INSERT INTO products (id, name, price, cost_price, stock, unit, is_local, image_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, 
-      ['prod-gas', 'Gas LPG 3kg Melon', 22000, 19000, 12, 'pcs', 0, 'https://images.unsplash.com/photo-1585829365295-ab7cd400c167?w=400']);
-    db.runSync(`INSERT INTO products (id, name, price, cost_price, stock, unit, is_local, image_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, 
-      ['prod-sabun', 'Sabun Cuci Wangi', 14000, 11500, 35, 'pcs', 0, 'https://images.unsplash.com/photo-1607613009820-a29f7bb81c04?w=400']);
+
+    // Seed Products (Sukamaju - tenant-1)
+    db.runSync(`INSERT INTO products (id, cooperative_id, name, price, cost_price, stock, unit, is_local, image_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`, 
+      ['prod-beras', 'tenant-1', 'Beras Premium 5kg', 75000, 68000, 2, 'pcs', 0, 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=400']);
+    db.runSync(`INSERT INTO products (id, cooperative_id, name, price, cost_price, stock, unit, is_local, image_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`, 
+      ['prod-telur', 'tenant-1', 'Telur Ayam 1kg', 28000, 24000, 40, 'kg', 0, 'https://images.unsplash.com/photo-1506976785307-8732e854ad03?w=400']);
+    db.runSync(`INSERT INTO products (id, cooperative_id, name, price, cost_price, stock, unit, is_local, image_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`, 
+      ['prod-minyak', 'tenant-1', 'Minyak Goreng 1L', 18000, 15500, 60, 'liter', 0, 'https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?w=400']);
+    db.runSync(`INSERT INTO products (id, cooperative_id, name, price, cost_price, stock, unit, is_local, image_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`, 
+      ['prod-gula', 'tenant-1', 'Gula Pasir 1kg', 15000, 13000, 100, 'kg', 0, 'https://images.unsplash.com/photo-1581781870027-04212e231e96?w=400']);
+    db.runSync(`INSERT INTO products (id, cooperative_id, name, price, cost_price, stock, unit, is_local, image_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`, 
+      ['prod-paket', 'tenant-1', 'Paket Sembako Dapur 50K', 50000, 42000, 30, 'pack', 0, 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=400']);
+    db.runSync(`INSERT INTO products (id, cooperative_id, name, price, cost_price, stock, unit, is_local, image_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`, 
+      ['prod-pisang', 'tenant-1', 'Keripik Pisang Lokal', 12000, 9000, 25, 'pcs', 1, 'https://images.unsplash.com/photo-1613967193490-1d17b930c1a1?w=400']);
+    db.runSync(`INSERT INTO products (id, cooperative_id, name, price, cost_price, stock, unit, is_local, image_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`, 
+      ['prod-sambal', 'tenant-1', 'Sambal Rumahan Ibu Rina', 15000, 11000, 20, 'pcs', 1, 'https://images.unsplash.com/photo-1595124201382-742455b33db6?w=400']);
+    db.runSync(`INSERT INTO products (id, cooperative_id, name, price, cost_price, stock, unit, is_local, image_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`, 
+      ['prod-kangkung', 'tenant-1', 'Kangkung Segar RT 03', 4000, 3000, 15, 'pcs', 1, 'https://images.unsplash.com/photo-1550346048-b472e399580b?w=400']);
+    db.runSync(`INSERT INTO products (id, cooperative_id, name, price, cost_price, stock, unit, is_local, image_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`, 
+      ['prod-gas', 'tenant-1', 'Gas LPG 3kg Melon', 22000, 19000, 12, 'pcs', 0, 'https://images.unsplash.com/photo-1585829365295-ab7cd400c167?w=400']);
+    db.runSync(`INSERT INTO products (id, cooperative_id, name, price, cost_price, stock, unit, is_local, image_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`, 
+      ['prod-sabun', 'tenant-1', 'Sabun Cuci Wangi', 14000, 11500, 35, 'pcs', 0, 'https://images.unsplash.com/photo-1607613009820-a29f7bb81c04?w=400']);
+
+    // Seed Products (Sukasari - tenant-2)
+    db.runSync(`INSERT INTO products (id, cooperative_id, name, price, cost_price, stock, unit, is_local, image_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`, 
+      ['prod-beras-2', 'tenant-2', 'Beras Premium 5kg (Sukasari)', 73000, 66000, 90, 'pcs', 0, 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=400']);
+    db.runSync(`INSERT INTO products (id, cooperative_id, name, price, cost_price, stock, unit, is_local, image_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`, 
+      ['prod-telur-2', 'tenant-2', 'Telur Bebek Asin 10pcs', 35000, 30000, 50, 'pack', 1, 'https://images.unsplash.com/photo-1506976785307-8732e854ad03?w=400']);
+    db.runSync(`INSERT INTO products (id, cooperative_id, name, price, cost_price, stock, unit, is_local, image_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`, 
+      ['prod-minyak-2', 'tenant-2', 'Minyak Kelapa Murni 1L', 32000, 27000, 25, 'liter', 1, 'https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?w=400']);
+    db.runSync(`INSERT INTO products (id, cooperative_id, name, price, cost_price, stock, unit, is_local, image_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`, 
+      ['prod-gula-2', 'tenant-2', 'Gula Merah Aren 1kg', 22000, 18000, 40, 'kg', 1, 'https://images.unsplash.com/photo-1581781870027-04212e231e96?w=400']);
+    db.runSync(`INSERT INTO products (id, cooperative_id, name, price, cost_price, stock, unit, is_local, image_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`, 
+      ['prod-paket-2', 'tenant-2', 'Paket Hemat Sukasari 75K', 75000, 65000, 15, 'pack', 0, 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=400']);
 
     // Seed active batch
     const batchId = 'batch-demo-1';

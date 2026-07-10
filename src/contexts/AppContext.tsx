@@ -110,7 +110,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       }
       try {
         const cartData = await dbService.getAll<any>(
-          `SELECT ci.quantity, p.id as product_id, p.name, p.price, p.cost_price, p.stock, p.unit, p.is_local, p.image_url 
+          `SELECT ci.quantity, p.id as product_id, p.cooperative_id, p.name, p.price, p.cost_price, p.stock, p.unit, p.is_local, p.image_url 
            FROM cart_items ci
            JOIN products p ON ci.product_id = p.id
            WHERE ci.user_id = ?`,
@@ -119,6 +119,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         const cartItems: CartItem[] = cartData.map((item: any) => ({
           product: {
             id: item.product_id,
+            cooperative_id: item.cooperative_id,
             name: item.name,
             price: item.price,
             cost_price: item.cost_price,
@@ -315,7 +316,17 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       // Let's use 1 point = Rp1,000 discount for clear and visible demo values!
       const discount = Math.min(pointsRedeemed * 1000, maxDiscountByPoints);
       const pointsUsed = Math.min(pointsRedeemed, Math.floor(discount / 1000));
-      const total = subtotal - discount;
+      
+      // Check if any product is from a different cooperative (cross-cooperative shopping)
+      let hasCrossCoop = false;
+      for (const item of cart) {
+        const prod = products.find(p => p.id === item.product.id);
+        if (prod && prod.cooperative_id !== buyer.cooperative_id) {
+          hasCrossCoop = true;
+        }
+      }
+      const surcharge = hasCrossCoop ? 5000 : 0;
+      const total = subtotal - discount + surcharge;
 
       const orderId = `order-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
       const nowStr = new Date().toISOString();
