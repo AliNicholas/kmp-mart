@@ -470,10 +470,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     if (buyer?.referred_by && prevOrders.length === 0) {
       const referrer = allUsers.find((u) => u.referral_code === buyer.referred_by);
       if (referrer) {
-        await dbService.run('UPDATE users SET points = ? WHERE id = ?', [referrer.points + 100, referrer.id]);
+        await dbService.run('UPDATE users SET points = ? WHERE id = ?', [referrer.points + 10000, referrer.id]);
         await dbService.run(
           `INSERT INTO point_transactions (id, user_id, type, points, source, reference_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-          [`pt-${Date.now()}-drv-ref`, referrer.id, 'EARN', 100, 'REFERRAL', order.id, new Date().toISOString()]
+          [`pt-${Date.now()}-drv-ref`, referrer.id, 'EARN', 10000, 'REFERRAL', order.id, new Date().toISOString()]
         );
       }
     }
@@ -1174,12 +1174,12 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     if (buyer && buyer.referred_by && prevOrders.length === 0) {
       const referrer = allUsers.find(u => u.referral_code === buyer.referred_by);
       if (referrer) {
-        const newRefPoints = referrer.points + 100;
+        const newRefPoints = referrer.points + 10000;
         await dbService.run('UPDATE users SET points = ? WHERE id = ?', [newRefPoints, referrer.id]);
 
         await dbService.run(
           `INSERT INTO point_transactions (id, user_id, type, points, source, reference_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-          [`pt-${Date.now()}-ref`, referrer.id, 'EARN', 100, 'REFERRAL', orderId, new Date().toISOString()]
+          [`pt-${Date.now()}-ref`, referrer.id, 'EARN', 10000, 'REFERRAL', orderId, new Date().toISOString()]
         );
       }
     }

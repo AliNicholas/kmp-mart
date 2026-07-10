@@ -41,6 +41,7 @@ export default function CitizenPortal() {
     checkout,
     applyReferralCode,
     updateUserField,
+    refreshData,
   } = useApp();
 
   const [subTab, setSubTab] = useState(0); // 0: Belanja, 1: Pesanan, 2: Kartu & Poin, 3: Pos RT
@@ -812,7 +813,7 @@ export default function CitizenPortal() {
                 </Text>
               </Text>
               <Text className="text-stone-400 text-[8px] mt-0.5">
-                Nilai Tukar: 1 Poin = Potongan Rp1.000
+                Nilai Tukar: 1 Poin = Rp1
               </Text>
             </View>
           </View>
@@ -838,7 +839,7 @@ export default function CitizenPortal() {
             Ajak tetangga berbelanja di koperasi. Anda berdua akan mendapat
             bonus{" "}
             <Text className="text-emerald-700 font-bold">
-              100 Poin (Rp100.000)
+              10.000 Poin (Rp10.000)
             </Text>{" "}
             setelah mereka menyelesaikan transaksi pertama mereka.
           </Text>
@@ -972,97 +973,12 @@ export default function CitizenPortal() {
 
 
 
-  const handleToggleWarung = async (isPartner: boolean) => {
-    try {
-      await updateUserField(activeUser!.id, 'is_warung_partner', isPartner ? 1 : 0);
-      await updateUserField(activeUser!.id, 'is_pickup_point', isPartner ? 1 : 0);
-      Alert.alert("Kemitraan Diupdate", isPartner ? "Selamat! Toko Anda terdaftar sebagai Mitra Warung & Titik Pickup RT." : "Kemitraan dinonaktifkan.");
-    } catch (err) {
-      console.error(err);
-      Alert.alert("Gagal", "Gagal memperbarui profil.");
-    }
-  };
-
-
-
-  const renderMitraConsole = () => {
-    const wholesaleProducts = products.filter(p => p.name.toLowerCase().includes("grosir"));
-
-    return (
-      <ScrollView className="flex-1 bg-stone-50" contentContainerClassName="p-4 pb-28">
-        <Text className="text-stone-900 font-black text-lg mb-3">Kemitraan Mitra Warung</Text>
-
-        <View className="bg-white p-4 rounded-xl border border-stone-200 shadow-sm mb-4">
-          <Text className="text-stone-950 font-bold text-xs mb-1">Aktivasi Kemitraan Mitra Warung</Text>
-          <Text className="text-stone-500 text-[9px] mb-3">Mendaftarkan warung Anda untuk harga B2B grosir dan sebagai titik pickup RT.</Text>
-          
-          <View className="flex-row justify-between items-center py-2.5 border-b border-stone-100">
-            <Text className="text-stone-850 text-xs font-bold">Status Warung Mitra Koperasi</Text>
-            <Pressable
-              onPress={() => handleToggleWarung(activeUser?.is_warung_partner !== 1)}
-              className={`px-3 py-1 rounded-full ${activeUser?.is_warung_partner === 1 ? "bg-emerald-700" : "bg-stone-200"}`}
-            >
-              <Text className={`text-[9px] font-bold ${activeUser?.is_warung_partner === 1 ? "text-white" : "text-stone-600"}`}>
-                {activeUser?.is_warung_partner === 1 ? "Aktif (Mitra)" : "Nonaktif"}
-              </Text>
-            </Pressable>
-          </View>
-
-          <View className="flex-row justify-between items-center py-2.5">
-            <Text className="text-stone-850 text-xs font-bold">Buka Sebagai Titik Pickup RT</Text>
-            <Pressable
-              onPress={async () => {
-                const nextVal = activeUser?.is_pickup_point !== 1 ? 1 : 0;
-                await updateUserField(activeUser!.id, 'is_pickup_point', nextVal);
-                Alert.alert("Pickup Point", nextVal === 1 ? "Rumah/Warung Anda kini jadi titik ambil warga RT." : "Status pickup point ditutup.");
-              }}
-              className={`px-3 py-1 rounded-full ${activeUser?.is_pickup_point === 1 ? "bg-emerald-700" : "bg-stone-200"}`}
-            >
-              <Text className={`text-[9px] font-bold ${activeUser?.is_pickup_point === 1 ? "text-white" : "text-stone-600"}`}>
-                {activeUser?.is_pickup_point === 1 ? "Terbuka" : "Tutup"}
-              </Text>
-            </Pressable>
-          </View>
-        </View>
-
-        {/* Wholesale catalog B2B */}
-        <Text className="text-stone-900 font-black text-xs mb-3">Katalog B2B Grosir Mitra</Text>
-        {wholesaleProducts.map((p) => (
-          <View key={p.id} className="bg-white p-3 border border-stone-200 rounded-xl mb-2 flex-row items-center gap-3">
-            <View className="bg-stone-100 w-12 h-12 rounded-lg items-center justify-center border border-stone-150">
-              <SymbolView name="shippingbox" size={20} tintColor="#6b7280" />
-            </View>
-            <View className="flex-1">
-              <Text className="text-stone-900 font-bold text-xs">{p.name}</Text>
-              <Text className="text-stone-400 text-[8px] mt-0.5">Kemasan: {p.unit} • Stok: {p.stock}</Text>
-              <Text className="text-emerald-950 font-black text-xs mt-1">Rp{p.price.toLocaleString("id-ID")}</Text>
-            </View>
-            <Pressable
-              onPress={() => {
-                if (p.stock > 0) {
-                  addToCart(p, 1);
-                  Alert.alert("Ditambahkan", "Paket grosir masuk keranjang B2B Anda.");
-                } else {
-                  Alert.alert("Gagal", "Stok habis.");
-                }
-              }}
-              className="bg-emerald-700 px-3 py-1.5 rounded-lg active:bg-emerald-900"
-            >
-              <Text className="text-white text-[9px] font-bold">Beli</Text>
-            </Pressable>
-          </View>
-        ))}
-      </ScrollView>
-    );
-  };
-
   return (
     <View className="flex-1 bg-stone-100">
       {/* Tab Contents */}
       {subTab === 0 && renderBelanja()}
       {subTab === 1 && renderPesanan()}
       {subTab === 2 && renderKartuPoin()}
-      {subTab === 3 && renderMitraConsole()}
 
       {/* Sub Tabs Bottom Bar */}
       <View className="absolute bottom-0 left-0 right-0 bg-white border-t border-stone-200 h-16 flex-row justify-around items-center">
@@ -1114,23 +1030,7 @@ export default function CitizenPortal() {
           </Text>
         </Pressable>
 
-        {activeUser?.is_warung_partner === 1 && (
-          <Pressable
-            onPress={() => setSubTab(3)}
-            className="items-center justify-center flex-1 h-full active:bg-stone-50"
-          >
-            <SymbolView
-              name="shippingbox.fill"
-              size={18}
-              tintColor={subTab === 3 ? "#0f5132" : "#888"}
-            />
-            <Text
-              className={`text-[10px] mt-1 font-bold ${subTab === 3 ? "text-emerald-800 font-extrabold" : "text-stone-400"}`}
-            >
-              Mitra B2B
-            </Text>
-          </Pressable>
-        )}
+
       </View>
 
       {/* Cart Drawer Modal */}
@@ -1606,6 +1506,45 @@ export default function CitizenPortal() {
                     Anda (Pak Budi) saat mengambil barang di Pos RT.
                   </Text>
                 </View>
+              )}
+
+              {(detailOrder.order_status === "DELIVERED_TO_RT" || detailOrder.order_status === "READY_FOR_PICKUP") && (
+                <Pressable
+                  onPress={async () => {
+                    try {
+                      await dbService.run(
+                        "UPDATE orders SET order_status = 'COMPLETED', payment_status = 'PAID' WHERE id = ?",
+                        [detailOrder.id]
+                      );
+                      await dbService.run(
+                        "INSERT INTO audit_logs (id, actor, action, details, created_at) VALUES (?, ?, ?, ?, ?)",
+                        [
+                          `log-${Date.now()}`,
+                          activeUser?.name || "Warga",
+                          "ORDER_RECEIVED_BY_CITIZEN",
+                          `Citizen confirmed receipt of order ${detailOrder.id}`,
+                          new Date().toISOString(),
+                        ]
+                      );
+                      setDetailOrder({
+                        ...detailOrder,
+                        order_status: "COMPLETED",
+                        payment_status: "PAID"
+                      });
+                      await refreshData();
+                      Alert.alert("Berhasil", "Terima kasih! Pesanan Anda telah ditandai sebagai Selesai.");
+                    } catch (err) {
+                      console.error("Failed to confirm receipt:", err);
+                      Alert.alert("Error", "Gagal memperbarui status pesanan.");
+                    }
+                  }}
+                  className="mt-3 bg-emerald-600 border border-emerald-700 py-2.5 rounded-xl items-center justify-center active:bg-emerald-850 flex-row gap-2"
+                >
+                  <SymbolView name="checkmark.seal.fill" size={12} tintColor="#fff" />
+                  <Text className="text-white font-bold text-xs">
+                    Pesanan Sudah Diterima
+                  </Text>
+                </Pressable>
               )}
 
               {/* Beli Lagi button */}

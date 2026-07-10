@@ -188,7 +188,7 @@ export default function OpenStreetMapView({
       });
     }
     return list;
-  }, [markers]);
+  }, [markers, driverCoord]);
 
   const html = React.useMemo(
     () => buildMapHtml({ region, markers: initialMarkers, polylines }),
@@ -196,6 +196,7 @@ export default function OpenStreetMapView({
   );
 
   React.useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setHasLoadError(false);
   }, [html]);
 

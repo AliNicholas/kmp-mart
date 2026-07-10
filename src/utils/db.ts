@@ -550,11 +550,11 @@ class WebDatabase {
 
     // 2. Seed Users
     db['users'].push(
-      { id: 'user-dinda', name: 'Dinda', phone: '081234567890', role: 'USER', rt_id: 'RT 03', cooperative_id: 'tenant-1', points: 120, referral_code: 'DINDAJAK', referred_by: null, pin: '123456' },
-      { id: 'user-budi', name: 'Pak Budi', phone: '089876543210', role: 'USER', rt_id: 'RT 03', cooperative_id: 'tenant-1', points: 250, referral_code: 'BUDIAJAK', referred_by: null, pin: '654321', is_warung_partner: 1, is_pickup_point: 1 },
+      { id: 'user-dinda', name: 'Dinda', phone: '081234567890', role: 'USER', rt_id: 'RT 03', cooperative_id: 'tenant-1', points: 12000, referral_code: 'DINDAJAK', referred_by: null, pin: '123456' },
+      { id: 'user-budi', name: 'Pak Budi', phone: '089876543210', role: 'USER', rt_id: 'RT 03', cooperative_id: 'tenant-1', points: 25000, referral_code: 'BUDIAJAK', referred_by: null, pin: '654321', is_warung_partner: 1, is_pickup_point: 1 },
       { id: 'user-arif', name: 'Mas Arif', phone: '081122334455', role: 'ADMIN', rt_id: null, cooperative_id: 'tenant-1', points: 0, referral_code: 'ARIFAJAK', referred_by: null, pin: '111222' },
-      { id: 'user-sari', name: 'Bu Sari', phone: '085566778899', role: 'USER', rt_id: 'RT 03', cooperative_id: 'tenant-1', points: 50, referral_code: 'SARIAJAK', referred_by: 'DINDAJAK', pin: '000000' },
-      { id: 'user-rina', name: 'Ibu Rina', phone: '087788990011', role: 'USER', rt_id: 'RT 03', cooperative_id: 'tenant-1', points: 80, referral_code: 'RINAJAK', referred_by: null, pin: '111111' }
+      { id: 'user-sari', name: 'Bu Sari', phone: '085566778899', role: 'USER', rt_id: 'RT 03', cooperative_id: 'tenant-1', points: 5000, referral_code: 'SARIAJAK', referred_by: 'DINDAJAK', pin: '000000' },
+      { id: 'user-rina', name: 'Ibu Rina', phone: '087788990011', role: 'USER', rt_id: 'RT 03', cooperative_id: 'tenant-1', points: 8000, referral_code: 'RINAJAK', referred_by: null, pin: '111111' }
     );
 
     // 3. Seed Products
@@ -904,6 +904,10 @@ const ensureUserIdentityColumns = (db: any) => {
 
   try {
     db.execSync("UPDATE users SET role = 'USER', is_warung_partner = 1, is_pickup_point = 1 WHERE id = 'user-budi';");
+    db.execSync("UPDATE users SET points = 12000 WHERE id = 'user-dinda' AND points = 120;");
+    db.execSync("UPDATE users SET points = 25000 WHERE id = 'user-budi' AND points = 250;");
+    db.execSync("UPDATE users SET points = 5000 WHERE id = 'user-sari' AND points = 50;");
+    db.execSync("UPDATE users SET points = 8000 WHERE id = 'user-rina' AND points = 80;");
   } catch {
     // Ignore migration issues
   }
@@ -1332,15 +1336,15 @@ const initNativeSchema = (db: any) => {
 
     // Seed Users
     db.runSync(`INSERT INTO users (id, name, phone, role, rt_id, cooperative_id, points, referral_code, referred_by, pin) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, 
-      ['user-dinda', 'Dinda', '081234567890', 'USER', 'RT 03', 'tenant-1', 120, 'DINDAJAK', null, '123456']);
+      ['user-dinda', 'Dinda', '081234567890', 'USER', 'RT 03', 'tenant-1', 12000, 'DINDAJAK', null, '123456']);
     db.runSync(`INSERT INTO users (id, name, phone, role, rt_id, cooperative_id, points, referral_code, referred_by, pin) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, 
-      ['user-budi', 'Pak Budi', '089876543210', 'USER', 'RT 03', 'tenant-1', 250, 'BUDIAJAK', null, '654321']);
+      ['user-budi', 'Pak Budi', '089876543210', 'USER', 'RT 03', 'tenant-1', 25000, 'BUDIAJAK', null, '654321']);
     db.runSync(`INSERT INTO users (id, name, phone, role, rt_id, cooperative_id, points, referral_code, referred_by, pin) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, 
       ['user-arif', 'Mas Arif', '081122334455', 'ADMIN', null, 'tenant-1', 0, 'ARIFAJAK', null, '111222']);
     db.runSync(`INSERT INTO users (id, name, phone, role, rt_id, cooperative_id, points, referral_code, referred_by, pin) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, 
-      ['user-sari', 'Bu Sari', '085566778899', 'USER', 'RT 03', 'tenant-1', 50, 'SARIAJAK', 'DINDAJAK', '000000']);
+      ['user-sari', 'Bu Sari', '085566778899', 'USER', 'RT 03', 'tenant-1', 5000, 'SARIAJAK', 'DINDAJAK', '000000']);
     db.runSync(`INSERT INTO users (id, name, phone, role, rt_id, cooperative_id, points, referral_code, referred_by, pin) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, 
-      ['user-rina', 'Ibu Rina', '087788990011', 'USER', 'RT 03', 'tenant-1', 80, 'RINAJAK', null, '111111']);
+      ['user-rina', 'Ibu Rina', '087788990011', 'USER', 'RT 03', 'tenant-1', 8000, 'RINAJAK', null, '111111']);
 
 
     // Seed Products (Sukamaju - tenant-1)
