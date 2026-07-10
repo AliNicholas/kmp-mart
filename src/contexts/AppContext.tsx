@@ -128,6 +128,7 @@ interface AppContextType {
   createOrUpdateProduct: (product: Partial<Product>) => Promise<void>;
   processBatchFulfillment: (batchId: string, newStatus: 'PROCESSING' | 'DELIVERED_TO_RT' | 'COMPLETED') => Promise<void>;
   verifySettlement: (settlementId: string, isVerified: boolean) => Promise<void>;
+  updateUserField: (userId: string, field: string, value: any) => Promise<void>;
 
   // Driver & Dispatch Actions
   createDeliveryTaskFromOrder: (orderId: string) => Promise<{ success: boolean; error?: string; taskId?: string }>;
@@ -1116,6 +1117,16 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     await refreshData();
   };
 
+  const updateUserField = async (userId: string, field: string, value: any) => {
+    const allowed = ['is_warung_partner', 'is_pickup_point', 'points'];
+    if (!allowed.includes(field)) throw new Error('Unsupported field');
+    await dbService.run(
+      `UPDATE users SET ${field} = ? WHERE id = ?`,
+      [value, userId]
+    );
+    await refreshData();
+  };
+
   const markItemPickedUp = async (orderId: string) => {
     const order = orders.find(o => o.id === orderId);
     if (!order) return;
@@ -1371,7 +1382,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       completeDeliveryTask,
       failDeliveryTask,
       registerCitizen,
-      applyReferralCode
+      applyReferralCode,
+      updateUserField
     }}>
       {children}
     </AppContext.Provider>

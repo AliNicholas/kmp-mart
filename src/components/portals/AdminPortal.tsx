@@ -38,6 +38,12 @@ export default function AdminPortal() {
   const [productModalOpen, setProductModalOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] =
     useState<Partial<Product> | null>(null);
+  
+  // Cetak Katalog States
+  const [isCatalogModalOpen, setIsCatalogModalOpen] = useState(false);
+  const [catalogPeriod, setCatalogPeriod] = useState("Periode: 10 - 17 Juli 2026");
+  const [catalogDeadline, setCatalogDeadline] = useState("Order Terakhir: Kamis, 16 Juli 2026");
+  const [selectedCatalogProducts, setSelectedCatalogProducts] = useState<string[]>([]);
   const [prodName, setProdName] = useState("");
   const [prodPrice, setProdPrice] = useState("");
   const [prodCost, setProdCost] = useState("");
@@ -72,6 +78,12 @@ export default function AdminPortal() {
     }
     setProductModalOpen(true);
   };
+
+  const handleOpenCatalogModal = () => {
+    setSelectedCatalogProducts(products.map(p => p.id));
+    setIsCatalogModalOpen(true);
+  };
+
 
   const handleSaveProduct = async () => {
     if (!prodName.trim() || !prodPrice || !prodStock) {
@@ -373,13 +385,22 @@ export default function AdminPortal() {
         <Text className="text-stone-900 font-black text-lg">
           Katalog & Stok Gudang
         </Text>
-        <Pressable
-          onPress={() => handleOpenProductModal()}
-          className="bg-emerald-700 px-4 py-2 rounded-xl flex-row items-center gap-1.5 active:bg-emerald-950"
-        >
-          <SymbolView name="plus" size={12} tintColor="#fff" />
-          <Text className="text-white text-xs font-bold">Produk Baru</Text>
-        </Pressable>
+        <View className="flex-row gap-2">
+          <Pressable
+            onPress={handleOpenCatalogModal}
+            className="bg-stone-900 px-3.5 py-2 rounded-xl flex-row items-center gap-1.5 active:bg-stone-950 border border-stone-850"
+          >
+            <SymbolView name="printer.fill" size={12} tintColor="#fff" />
+            <Text className="text-white text-xs font-bold">Cetak Katalog</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => handleOpenProductModal()}
+            className="bg-emerald-700 px-4 py-2 rounded-xl flex-row items-center gap-1.5 active:bg-emerald-950"
+          >
+            <SymbolView name="plus" size={12} tintColor="#fff" />
+            <Text className="text-white text-xs font-bold">Produk Baru</Text>
+          </Pressable>
+        </View>
       </View>
 
       <ScrollView className="flex-1" contentContainerClassName="p-3 pb-28">
@@ -1424,6 +1445,142 @@ export default function AdminPortal() {
                     </Pressable>
                   )}
                 </View>
+              </ScrollView>
+            </View>
+          </View>
+        </Modal>
+      )}
+
+      {/* Catalog Print Preview Modal */}
+      {isCatalogModalOpen && (
+        <Modal
+          visible={isCatalogModalOpen}
+          transparent={true}
+          animationType="slide"
+          onRequestClose={() => setIsCatalogModalOpen(false)}
+        >
+          <View className="flex-1 justify-end bg-black/60">
+            <View className="bg-white rounded-t-3xl p-5 max-h-[90%] flex-column">
+              <View className="flex-row justify-between items-center border-b border-stone-200 pb-3 mb-4">
+                <View className="flex-row items-center gap-2">
+                  <SymbolView name="printer.fill" size={16} tintColor="#0f5132" />
+                  <Text className="text-emerald-950 font-black text-lg">
+                    Cetak Katalog Kertas (PRD 06)
+                  </Text>
+                </View>
+                <Pressable
+                  onPress={() => setIsCatalogModalOpen(false)}
+                  className="p-1 rounded-full bg-stone-100"
+                >
+                  <SymbolView name="xmark" size={16} tintColor="#555" />
+                </Pressable>
+              </View>
+
+              <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+                {/* Inputs for period and deadline */}
+                <View className="bg-stone-50 p-3.5 rounded-xl border border-stone-250 mb-4 gap-3">
+                  <View>
+                    <Text className="text-stone-700 text-[10px] font-bold uppercase mb-1">Masa Berlaku Katalog:</Text>
+                    <TextInput
+                      value={catalogPeriod}
+                      onChangeText={setCatalogPeriod}
+                      className="bg-white border border-stone-200 rounded-lg p-2 text-xs"
+                      placeholder="cth: Periode 10 - 17 Juli 2026"
+                    />
+                  </View>
+                  <View>
+                    <Text className="text-stone-700 text-[10px] font-bold uppercase mb-1">Batas Pengumpulan Formulir:</Text>
+                    <TextInput
+                      value={catalogDeadline}
+                      onChangeText={setCatalogDeadline}
+                      className="bg-white border border-stone-200 rounded-lg p-2 text-xs"
+                      placeholder="cth: Order Terakhir: Kamis, 16 Juli 2026"
+                    />
+                  </View>
+                </View>
+
+                {/* Printable Flyer Preview */}
+                <Text className="text-stone-900 font-black text-xs mb-2">Preview Lembar Cetak Katalog Kertas:</Text>
+                
+                {/* Visual Flyer Sheet mockup */}
+                <View className="bg-white border-2 border-stone-850 p-4 rounded-xl mb-4 shadow-sm">
+                  {/* Header flyer */}
+                  <View className="items-center border-b-2 border-stone-900 pb-2 mb-3">
+                    <Text className="text-stone-950 font-black text-base tracking-wider">KMP KATALOG BELANJA RT</Text>
+                    <Text className="text-stone-700 font-bold text-[9px] mt-0.5">{catalogPeriod}</Text>
+                    <Text className="text-rose-700 font-black text-[9px] mt-0.5 uppercase">{catalogDeadline}</Text>
+                  </View>
+
+                  <Text className="text-[8px] text-stone-600 mb-2 leading-tight italic">
+                    *Tulis Nama, NIK, dan Kode Produk beserta Jumlah di formulir pesanan. Serahkan ke Dropbox RT Agent terdekat.
+                  </Text>
+
+                  {/* Products table preview */}
+                  <View className="border border-stone-900 rounded overflow-hidden">
+                    <View className="bg-stone-100 flex-row border-b border-stone-900 py-1.5 px-2">
+                      <Text className="text-[8px] font-bold text-stone-800 w-[25%]">KODE</Text>
+                      <Text className="text-[8px] font-bold text-stone-800 w-[45%]">NAMA PRODUK</Text>
+                      <Text className="text-[8px] font-bold text-stone-800 w-[15%]">SATUAN</Text>
+                      <Text className="text-[8px] font-bold text-stone-800 w-[15%] text-right">HARGA</Text>
+                    </View>
+
+                    {products
+                      .filter(p => !p.name.includes("Grosir") && selectedCatalogProducts.includes(p.id))
+                      .map((p, idx) => {
+                        // Generate product shortcode based on ID/name
+                        let code = "P-";
+                        if (p.id.includes("beras")) code += "BERAS";
+                        else if (p.id.includes("telur")) code += "TELUR";
+                        else if (p.id.includes("minyak")) code += "MINYAK";
+                        else if (p.id.includes("gula")) code += "GULA";
+                        else if (p.id.includes("paket")) code += "PAKET";
+                        else if (p.id.includes("pisang")) code += "PISANG";
+                        else if (p.id.includes("sambal")) code += "SAMBAL";
+                        else if (p.id.includes("kangkung")) code += "KANGKUNG";
+                        else if (p.id.includes("gas")) code += "GAS";
+                        else if (p.id.includes("sabun")) code += "SABUN";
+                        else code += String(idx + 1);
+
+                        return (
+                          <View key={p.id} className="flex-row border-b border-stone-200 py-1 px-2 last:border-b-0">
+                            <Text className="text-[8px] font-bold text-emerald-900 w-[25%] font-mono">{code}</Text>
+                            <Text className="text-[8px] text-stone-850 w-[45%] font-bold" numberOfLines={1}>{p.name}</Text>
+                            <Text className="text-[8px] text-stone-600 w-[15%]">{p.unit}</Text>
+                            <Text className="text-[8px] text-stone-900 w-[15%] text-right font-black">Rp{p.price.toLocaleString("id-ID")}</Text>
+                          </View>
+                        );
+                      })}
+                  </View>
+
+                  {/* QR Code and footer */}
+                  <View className="flex-row justify-between items-center mt-4 border-t border-stone-300 pt-3">
+                    <View className="flex-1 pr-4">
+                      <Text className="text-[8px] font-bold text-stone-950">Info Hubungi RT Agent Budi:</Text>
+                      <Text className="text-[7px] text-stone-500 mt-0.5">WhatsApp: 0812-3456-7890</Text>
+                    </View>
+                    {/* Mock QR Card */}
+                    <View className="border border-stone-400 p-1 bg-stone-50 rounded">
+                      <SymbolView name="qrcode" size={24} tintColor="#555" />
+                    </View>
+                  </View>
+                </View>
+
+                {/* Print button */}
+                <Pressable
+                  onPress={() => {
+                    Alert.alert(
+                      "Katalog Siap Cetak",
+                      "Dokumen PDF katalog belanja telah diexport dan dikirim ke printer thermal/kantor Koperasi.",
+                      [{ text: "OK", onPress: () => setIsCatalogModalOpen(false) }]
+                    );
+                  }}
+                  className="bg-emerald-700 border border-emerald-800 py-3 rounded-xl items-center justify-center active:bg-emerald-950 mb-6 flex-row gap-2"
+                >
+                  <SymbolView name="printer.fill" size={14} tintColor="#fff" />
+                  <Text className="text-white font-black text-xs">
+                    Kirim ke Printer / Download PDF
+                  </Text>
+                </Pressable>
               </ScrollView>
             </View>
           </View>

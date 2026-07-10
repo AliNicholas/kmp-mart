@@ -26,6 +26,8 @@ export interface User {
   card_token?: string | null;
   account_status?: 'ACTIVE' | 'SUSPENDED' | 'PENDING' | null;
   created_at?: string | null;
+  is_warung_partner?: number;
+  is_pickup_point?: number;
 }
 
 export interface Product {
@@ -549,7 +551,7 @@ class WebDatabase {
     // 2. Seed Users
     db['users'].push(
       { id: 'user-dinda', name: 'Dinda', phone: '081234567890', role: 'USER', rt_id: 'RT 03', cooperative_id: 'tenant-1', points: 120, referral_code: 'DINDAJAK', referred_by: null, pin: '123456' },
-      { id: 'user-budi', name: 'Pak Budi', phone: '089876543210', role: 'RT_AGENT', rt_id: 'RT 03', cooperative_id: 'tenant-1', points: 250, referral_code: 'BUDIAJAK', referred_by: null, pin: '654321' },
+      { id: 'user-budi', name: 'Pak Budi', phone: '089876543210', role: 'USER', rt_id: 'RT 03', cooperative_id: 'tenant-1', points: 250, referral_code: 'BUDIAJAK', referred_by: null, pin: '654321', is_warung_partner: 1, is_pickup_point: 1 },
       { id: 'user-arif', name: 'Mas Arif', phone: '081122334455', role: 'ADMIN', rt_id: null, cooperative_id: 'tenant-1', points: 0, referral_code: 'ARIFAJAK', referred_by: null, pin: '111222' },
       { id: 'user-sari', name: 'Bu Sari', phone: '085566778899', role: 'USER', rt_id: 'RT 03', cooperative_id: 'tenant-1', points: 50, referral_code: 'SARIAJAK', referred_by: 'DINDAJAK', pin: '000000' },
       { id: 'user-rina', name: 'Ibu Rina', phone: '087788990011', role: 'USER', rt_id: 'RT 03', cooperative_id: 'tenant-1', points: 80, referral_code: 'RINAJAK', referred_by: null, pin: '111111' }
@@ -888,6 +890,8 @@ const ensureUserIdentityColumns = (db: any) => {
     "ALTER TABLE users ADD COLUMN card_token TEXT;",
     "ALTER TABLE users ADD COLUMN account_status TEXT DEFAULT 'ACTIVE';",
     "ALTER TABLE users ADD COLUMN created_at TEXT;",
+    "ALTER TABLE users ADD COLUMN is_warung_partner INTEGER DEFAULT 0;",
+    "ALTER TABLE users ADD COLUMN is_pickup_point INTEGER DEFAULT 0;",
   ];
 
   columns.forEach((statement) => {
@@ -897,6 +901,12 @@ const ensureUserIdentityColumns = (db: any) => {
       // Ignore when a column already exists on an upgraded local database.
     }
   });
+
+  try {
+    db.execSync("UPDATE users SET role = 'USER', is_warung_partner = 1, is_pickup_point = 1 WHERE id = 'user-budi';");
+  } catch {
+    // Ignore migration issues
+  }
 };
 
 const ensureNativeSeedUserIdentity = (db: any) => {
@@ -1081,7 +1091,9 @@ const initNativeSchema = (db: any) => {
       member_id TEXT UNIQUE,
       card_token TEXT UNIQUE,
       account_status TEXT DEFAULT 'ACTIVE',
-      created_at TEXT
+      created_at TEXT,
+      is_warung_partner INTEGER DEFAULT 0,
+      is_pickup_point INTEGER DEFAULT 0
     );
     CREATE TABLE IF NOT EXISTS products (
       id TEXT PRIMARY KEY,
@@ -1322,7 +1334,7 @@ const initNativeSchema = (db: any) => {
     db.runSync(`INSERT INTO users (id, name, phone, role, rt_id, cooperative_id, points, referral_code, referred_by, pin) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, 
       ['user-dinda', 'Dinda', '081234567890', 'USER', 'RT 03', 'tenant-1', 120, 'DINDAJAK', null, '123456']);
     db.runSync(`INSERT INTO users (id, name, phone, role, rt_id, cooperative_id, points, referral_code, referred_by, pin) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, 
-      ['user-budi', 'Pak Budi', '089876543210', 'RT_AGENT', 'RT 03', 'tenant-1', 250, 'BUDIAJAK', null, '654321']);
+      ['user-budi', 'Pak Budi', '089876543210', 'USER', 'RT 03', 'tenant-1', 250, 'BUDIAJAK', null, '654321']);
     db.runSync(`INSERT INTO users (id, name, phone, role, rt_id, cooperative_id, points, referral_code, referred_by, pin) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, 
       ['user-arif', 'Mas Arif', '081122334455', 'ADMIN', null, 'tenant-1', 0, 'ARIFAJAK', null, '111222']);
     db.runSync(`INSERT INTO users (id, name, phone, role, rt_id, cooperative_id, points, referral_code, referred_by, pin) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, 
@@ -1352,6 +1364,10 @@ const initNativeSchema = (db: any) => {
       ['prod-gas', 'tenant-1', 'Gas LPG 3kg Melon', 22000, 19000, 12, 'pcs', 0, 'https://images.unsplash.com/photo-1585829365295-ab7cd400c167?w=400']);
     db.runSync(`INSERT INTO products (id, cooperative_id, name, price, cost_price, stock, unit, is_local, image_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`, 
       ['prod-sabun', 'tenant-1', 'Sabun Cuci Wangi', 14000, 11500, 35, 'pcs', 0, 'https://images.unsplash.com/photo-1607613009820-a29f7bb81c04?w=400']);
+    db.runSync(`INSERT INTO products (id, cooperative_id, name, price, cost_price, stock, unit, is_local, image_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`, 
+      ['prod-beras-grosir', 'tenant-1', 'Beras Premium 25kg (Grosir)', 340000, 310000, 10, 'karung', 0, 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=400']);
+    db.runSync(`INSERT INTO products (id, cooperative_id, name, price, cost_price, stock, unit, is_local, image_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`, 
+      ['prod-minyak-grosir', 'tenant-1', 'Minyak Goreng 1 Dus (Grosir)', 205000, 185000, 8, 'dus', 0, 'https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?w=400']);
 
     // Seed Products (Sukasari - tenant-2)
     db.runSync(`INSERT INTO products (id, cooperative_id, name, price, cost_price, stock, unit, is_local, image_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`, 

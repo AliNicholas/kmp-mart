@@ -15,11 +15,24 @@ import {
 import DeliveryTrackerModal from "../DeliveryTrackerModal";
 import CoopSelectorModal from "../CoopSelectorModal";
 
+interface Mission {
+  id: string;
+  title: string;
+  description: string;
+  targetValue: number;
+  currentValue: number;
+  unit: string;
+  pointsReward: number;
+  badgeReward?: string;
+  isCompleted: boolean;
+}
+
 export default function CitizenPortal() {
   const {
     activeUser,
     products,
     orders,
+    allUsers,
     cart,
     addToCart,
     updateCartQuantity,
@@ -27,9 +40,10 @@ export default function CitizenPortal() {
     clearCart,
     checkout,
     applyReferralCode,
+    updateUserField,
   } = useApp();
 
-  const [subTab, setSubTab] = useState(0); // 0: Belanja, 1: Pesanan, 2: Kartu & Poin
+  const [subTab, setSubTab] = useState(0); // 0: Belanja, 1: Pesanan, 2: Kartu & Poin, 3: Pos RT
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("Semua");
   const [isCartOpen, setIsCartOpen] = useState(false);
@@ -46,6 +60,10 @@ export default function CitizenPortal() {
   >(null);
   const [activeCooperativeId, setActiveCooperativeId] = useState<string>('tenant-1');
   const [coopSelectorVisible, setCoopSelectorVisible] = useState(false);
+  const [missions, setMissions] = useState<Mission[]>([]);
+  const [selectedDetailProduct, setSelectedDetailProduct] = useState<any | null>(null);
+  const [detailQuantity, setDetailQuantity] = useState(1);
+  const [detailOrderItems, setDetailOrderItems] = useState<any[]>([]);
 
   // Synchronize cooperative ID with active user
   React.useEffect(() => {
@@ -62,14 +80,155 @@ export default function CitizenPortal() {
   React.useEffect(() => {
     if (activeUser) {
       dbService
-        .getAll(
-          "SELECT * FROM point_transactions WHERE user_id = ? ORDER BY created_at DESC",
-          [activeUser.id],
-        )
-        .then(setPtHistory)
-        .catch(console.error);
+         .getAll(
+           "SELECT * FROM point_transactions WHERE user_id = ? ORDER BY created_at DESC",
+           [activeUser.id],
+         )
+         .then(setPtHistory)
+         .catch(console.error);
     }
   }, [activeUser, orders, subTab]);
+
+  // Calculate missions progress dynamically
+  React.useEffect(() => {
+    if (!activeUser) return;
+
+    const calculateMissions = async () => {
+      try {
+        // 1. Transaction count
+        const myOrders = orders.filter((o) => o.user_id === activeUser.id);
+        const transactionCount = myOrders.length;
+
+        // 2. Local products purchased
+        const localProductsResult = await dbService.getAll(
+          `SELECT SUM(oi.quantity) as count 
+           FROM order_items oi 
+           JOIN orders o ON oi.order_id = o.id 
+           JOIN products p ON oi.product_id = p.id 
+           WHERE o.user_id = ? AND p.is_local = 1`,
+          [activeUser.id]
+        );
+        const localCount = localProductsResult[0]?.count || 0;
+
+        // 3. Referral count (referred users with at least 1 order)
+        const referredUsers = allUsers.filter((u) => u.referred_by === activeUser.referral_code);
+        let activeReferralCount = 0;
+        for (const refUser of referredUsers) {
+          const refUserOrders = orders.filter((o) => o.user_id === refUser.id);
+          if (refUserOrders.length > 0) {
+            activeReferralCount++;
+          }
+        }
+
+        setMissions([
+          {
+            id: "misi-1",
+            title: "Warga Aktif Koperasi",
+            description: "Lakukan belanja mandiri atau gabung RT Group Order",
+            targetValue: 3,
+            currentValue: transactionCount,
+            unit: "Transaksi",
+            pointsReward: 25,
+            isCompleted: transactionCount >= 3,
+          },
+          {
+            id: "misi-2",
+            title: "Cinta Produk Lokal",
+            description: 'Beli produk berlabel "PRODUK LOKAL" buatan warga desa',
+            targetValue: 2,
+            currentValue: localCount,
+            unit: "Produk",
+            pointsReward: 50,
+            isCompleted: localCount >= 2,
+          },
+          {
+            id: "misi-3",
+            title: "KopAjak Tetangga",
+            description: "Ajak tetangga berbelanja dengan kode referral Anda",
+            targetValue: 1,
+            currentValue: activeReferralCount,
+            unit: "Warga",
+            pointsReward: 100,
+            badgeReward: "Sahabat Gotong Royong",
+            isCompleted: activeReferralCount >= 1,
+          },
+        ]);
+      } catch (err) {
+        console.error("Error calculating missions:", err);
+      }
+    };
+
+    calculateMissions();
+  }, [activeUser, orders, allUsers]);
+
+  // Load items for the selected order detail
+  React.useEffect(() => {
+    if (detailOrder) {
+      dbService
+        .getAll(
+          "SELECT * FROM order_items WHERE order_id = ?",
+          [detailOrder.id]
+        )
+        .then((items) => {
+          setTimeout(() => {
+            setDetailOrderItems(items);
+          }, 0);
+        })
+        .catch(console.error);
+    } else {
+      setTimeout(() => {
+        setDetailOrderItems((prev) => (prev.length > 0 ? [] : prev));
+      }, 0);
+    }
+  }, [detailOrder]);
+
+  // Handle reorder (buying previous basket items)
+  const handleReorder = async (orderId: string) => {
+    try {
+      const items = await dbService.getAll<any>(
+        "SELECT * FROM order_items WHERE order_id = ?",
+        [orderId]
+      );
+      
+      if (!items || items.length === 0) {
+        Alert.alert("Gagal", "Tidak ada item dalam pesanan ini.");
+        return;
+      }
+      
+      let addedCount = 0;
+      let outOfStockCount = 0;
+      
+      for (const item of items) {
+        const prod = products.find(p => p.id === item.product_id);
+        if (prod && prod.stock > 0) {
+          const qty = Math.min(prod.stock, item.quantity);
+          addToCart(prod, qty);
+          addedCount++;
+        } else {
+          outOfStockCount++;
+        }
+      }
+      
+      if (addedCount > 0) {
+        if (outOfStockCount > 0) {
+          Alert.alert(
+            "Berhasil Reorder",
+            `${addedCount} produk dimasukkan ke keranjang. ${outOfStockCount} produk tidak ditambahkan karena stok habis.`
+          );
+        } else {
+          Alert.alert("Berhasil Reorder", "Semua produk berhasil dimasukkan ke keranjang.");
+        }
+        setDetailOrder(null);
+        setIsCartOpen(true);
+        setSubTab(0);
+      } else {
+        Alert.alert("Gagal", "Semua produk dalam pesanan ini sedang habis stok.");
+      }
+    } catch (err) {
+      console.error("Reorder failed", err);
+      Alert.alert("Gagal", "Gagal mengulang pesanan ini.");
+    }
+  };
 
   // Filter products
   const filteredProducts = products
@@ -231,6 +390,16 @@ export default function CitizenPortal() {
           />
         </View>
         <Pressable
+          onPress={() => Alert.alert(
+            "Layanan Layanan Bantuan Koperasi",
+            "Butuh bantuan belanja, referral, atau pendaftaran?\n\nHubungi Petugas Layanan:\n• Pak RT Budi (RT Agent): 0812-3456-7890\n• Koperasi Sukamaju: (021) 555-0199\n• Jam Operasional: 08:00 - 17:00 WIB",
+            [{ text: "Tutup", style: "cancel" }]
+          )}
+          className="bg-stone-50 w-9 h-9 rounded-full items-center justify-center border border-stone-200 active:bg-stone-100"
+        >
+          <SymbolView name="questionmark.circle" size={16} tintColor="#0f5132" />
+        </Pressable>
+        <Pressable
           onPress={() => setIsCartOpen(true)}
           className="relative bg-emerald-50 w-9 h-9 rounded-full items-center justify-center border border-emerald-100"
         >
@@ -313,11 +482,65 @@ export default function CitizenPortal() {
 
       {/* Product List */}
       <ScrollView className="flex-1" contentContainerClassName="p-3 pb-28">
+        {/* Misi Gotong Royong Banner */}
+        <Pressable
+          onPress={() => setSubTab(2)} // Switch to Kartu & Poin tab where missions are listed
+          className="bg-emerald-950 rounded-2xl p-4 mb-4 border border-emerald-900 shadow-sm relative overflow-hidden"
+        >
+          {/* Decorative Background */}
+          <View className="absolute right-0 top-0 bottom-0 w-24 bg-amber-400 opacity-[0.08] rounded-r-2xl transform rotate-12 translate-x-6" />
+          
+          <View className="flex-row justify-between items-center">
+            <View className="flex-1 mr-2">
+              <View className="flex-row items-center gap-1.5 mb-1">
+                <SymbolView name="gift.fill" size={10} tintColor="#fbbf24" />
+                <Text className="text-amber-400 text-[8px] font-black tracking-widest uppercase">
+                  Misi Gotong Royong Warga
+                </Text>
+              </View>
+              <Text className="text-white font-extrabold text-sm leading-tight">
+                Merdeka Belanja Lokal
+              </Text>
+              <Text className="text-emerald-300 text-[9px] mt-0.5" numberOfLines={2}>
+                Selesaikan misi belanja produk lokal desa & referral untuk klaim bonus hingga 175 Poin!
+              </Text>
+            </View>
+            
+            {/* Simple progress indicator */}
+            <View className="items-center justify-center bg-emerald-900 border border-emerald-800 px-3 py-1.5 rounded-xl">
+              <Text className="text-amber-400 font-black text-xs">
+                {missions.filter(m => m.isCompleted).length}/{missions.length}
+              </Text>
+              <Text className="text-white text-[7px] font-bold uppercase tracking-wider mt-0.5">Misi</Text>
+            </View>
+          </View>
+          
+          {/* Progress Bar */}
+          <View className="mt-3">
+            <View className="flex-row justify-between items-center mb-1">
+              <Text className="text-emerald-400 text-[8px] font-bold">Progress Gotong Royong</Text>
+              <Text className="text-emerald-400 text-[8px] font-bold">
+                {Math.round((missions.filter(m => m.isCompleted).length / (missions.length || 1)) * 100)}%
+              </Text>
+            </View>
+            <View className="h-1.5 bg-emerald-900/60 rounded-full overflow-hidden">
+              <View 
+                style={{ width: `${(missions.filter(m => m.isCompleted).length / (missions.length || 1)) * 100}%` }}
+                className="h-full bg-amber-400 rounded-full" 
+              />
+            </View>
+          </View>
+        </Pressable>
+
         <View className="flex-row flex-wrap justify-between">
           {filteredProducts.map((p) => (
-            <View
+            <Pressable
               key={p.id}
-              className="w-[48%] bg-white border border-stone-200 rounded-xl mb-4 overflow-hidden shadow-sm"
+              onPress={() => {
+                setSelectedDetailProduct(p);
+                setDetailQuantity(1);
+              }}
+              className="w-[48%] bg-white border border-stone-200 rounded-xl mb-4 overflow-hidden shadow-sm active:scale-[0.98]"
             >
               <Image
                 source={{ uri: p.image_url }}
@@ -365,7 +588,7 @@ export default function CitizenPortal() {
                   )}
                 </View>
               </View>
-            </View>
+            </Pressable>
           ))}
         </View>
       </ScrollView>
@@ -662,6 +885,53 @@ export default function CitizenPortal() {
           )}
         </View>
 
+        {/* Misi Gotong Royong Section */}
+        <View className="bg-white p-4 rounded-xl border border-stone-200 shadow-sm mb-5">
+          <View className="flex-row items-center gap-2 mb-3">
+            <SymbolView name="sparkles" size={14} tintColor="#b45309" />
+            <Text className="text-amber-900 font-bold text-xs">
+              Misi Gotong Royong Aktif
+            </Text>
+          </View>
+          
+          {missions.map((m) => (
+            <View key={m.id} className="mb-3.5 border-b border-stone-150 pb-3 last:border-b-0 last:pb-0">
+              <View className="flex-row justify-between items-start mb-1.5">
+                <View className="flex-1 mr-2">
+                  <Text className="text-stone-900 font-bold text-[11px] flex-row items-center gap-1.5">
+                    {m.title} {m.isCompleted && <SymbolView name="checkmark.seal.fill" size={10} tintColor="#0f5132" />}
+                  </Text>
+                  <Text className="text-stone-500 text-[9px] mt-0.5 leading-tight">{m.description}</Text>
+                </View>
+                <View className="bg-amber-100 border border-amber-200 px-2 py-0.5 rounded-md">
+                  <Text className="text-amber-800 font-black text-[8px]">+{m.pointsReward} Poin</Text>
+                </View>
+              </View>
+              
+              {/* Progress bar */}
+              <View className="flex-row justify-between items-center mt-1 mb-1">
+                <Text className="text-stone-400 text-[8px]">
+                  Progress: {m.currentValue} / {m.targetValue} {m.unit}
+                </Text>
+                <Text className="text-stone-600 font-bold text-[8px]">
+                  {Math.round(Math.min(100, (m.currentValue / m.targetValue) * 100))}%
+                </Text>
+              </View>
+              <View className="h-1.5 bg-stone-100 rounded-full overflow-hidden">
+                <View 
+                  style={{ width: `${Math.min(100, (m.currentValue / m.targetValue) * 100)}%` }}
+                  className={`h-full rounded-full ${m.isCompleted ? "bg-emerald-600" : "bg-amber-500"}`} 
+                />
+              </View>
+              {m.badgeReward && m.isCompleted && (
+                <Text className="text-emerald-800 text-[8px] font-bold mt-1.5">
+                  🏆 Lencana Didapat: {m.badgeReward}
+                </Text>
+              )}
+            </View>
+          ))}
+        </View>
+
         {/* Ledger Point Transactions */}
         <Text className="text-stone-900 font-black text-xs mb-3">
           Riwayat Transaksi Poin
@@ -700,12 +970,99 @@ export default function CitizenPortal() {
     );
   };
 
+
+
+  const handleToggleWarung = async (isPartner: boolean) => {
+    try {
+      await updateUserField(activeUser!.id, 'is_warung_partner', isPartner ? 1 : 0);
+      await updateUserField(activeUser!.id, 'is_pickup_point', isPartner ? 1 : 0);
+      Alert.alert("Kemitraan Diupdate", isPartner ? "Selamat! Toko Anda terdaftar sebagai Mitra Warung & Titik Pickup RT." : "Kemitraan dinonaktifkan.");
+    } catch (err) {
+      console.error(err);
+      Alert.alert("Gagal", "Gagal memperbarui profil.");
+    }
+  };
+
+
+
+  const renderMitraConsole = () => {
+    const wholesaleProducts = products.filter(p => p.name.toLowerCase().includes("grosir"));
+
+    return (
+      <ScrollView className="flex-1 bg-stone-50" contentContainerClassName="p-4 pb-28">
+        <Text className="text-stone-900 font-black text-lg mb-3">Kemitraan Mitra Warung</Text>
+
+        <View className="bg-white p-4 rounded-xl border border-stone-200 shadow-sm mb-4">
+          <Text className="text-stone-950 font-bold text-xs mb-1">Aktivasi Kemitraan Mitra Warung</Text>
+          <Text className="text-stone-500 text-[9px] mb-3">Mendaftarkan warung Anda untuk harga B2B grosir dan sebagai titik pickup RT.</Text>
+          
+          <View className="flex-row justify-between items-center py-2.5 border-b border-stone-100">
+            <Text className="text-stone-850 text-xs font-bold">Status Warung Mitra Koperasi</Text>
+            <Pressable
+              onPress={() => handleToggleWarung(activeUser?.is_warung_partner !== 1)}
+              className={`px-3 py-1 rounded-full ${activeUser?.is_warung_partner === 1 ? "bg-emerald-700" : "bg-stone-200"}`}
+            >
+              <Text className={`text-[9px] font-bold ${activeUser?.is_warung_partner === 1 ? "text-white" : "text-stone-600"}`}>
+                {activeUser?.is_warung_partner === 1 ? "Aktif (Mitra)" : "Nonaktif"}
+              </Text>
+            </Pressable>
+          </View>
+
+          <View className="flex-row justify-between items-center py-2.5">
+            <Text className="text-stone-850 text-xs font-bold">Buka Sebagai Titik Pickup RT</Text>
+            <Pressable
+              onPress={async () => {
+                const nextVal = activeUser?.is_pickup_point !== 1 ? 1 : 0;
+                await updateUserField(activeUser!.id, 'is_pickup_point', nextVal);
+                Alert.alert("Pickup Point", nextVal === 1 ? "Rumah/Warung Anda kini jadi titik ambil warga RT." : "Status pickup point ditutup.");
+              }}
+              className={`px-3 py-1 rounded-full ${activeUser?.is_pickup_point === 1 ? "bg-emerald-700" : "bg-stone-200"}`}
+            >
+              <Text className={`text-[9px] font-bold ${activeUser?.is_pickup_point === 1 ? "text-white" : "text-stone-600"}`}>
+                {activeUser?.is_pickup_point === 1 ? "Terbuka" : "Tutup"}
+              </Text>
+            </Pressable>
+          </View>
+        </View>
+
+        {/* Wholesale catalog B2B */}
+        <Text className="text-stone-900 font-black text-xs mb-3">Katalog B2B Grosir Mitra</Text>
+        {wholesaleProducts.map((p) => (
+          <View key={p.id} className="bg-white p-3 border border-stone-200 rounded-xl mb-2 flex-row items-center gap-3">
+            <View className="bg-stone-100 w-12 h-12 rounded-lg items-center justify-center border border-stone-150">
+              <SymbolView name="shippingbox" size={20} tintColor="#6b7280" />
+            </View>
+            <View className="flex-1">
+              <Text className="text-stone-900 font-bold text-xs">{p.name}</Text>
+              <Text className="text-stone-400 text-[8px] mt-0.5">Kemasan: {p.unit} • Stok: {p.stock}</Text>
+              <Text className="text-emerald-950 font-black text-xs mt-1">Rp{p.price.toLocaleString("id-ID")}</Text>
+            </View>
+            <Pressable
+              onPress={() => {
+                if (p.stock > 0) {
+                  addToCart(p, 1);
+                  Alert.alert("Ditambahkan", "Paket grosir masuk keranjang B2B Anda.");
+                } else {
+                  Alert.alert("Gagal", "Stok habis.");
+                }
+              }}
+              className="bg-emerald-700 px-3 py-1.5 rounded-lg active:bg-emerald-900"
+            >
+              <Text className="text-white text-[9px] font-bold">Beli</Text>
+            </Pressable>
+          </View>
+        ))}
+      </ScrollView>
+    );
+  };
+
   return (
     <View className="flex-1 bg-stone-100">
       {/* Tab Contents */}
       {subTab === 0 && renderBelanja()}
       {subTab === 1 && renderPesanan()}
       {subTab === 2 && renderKartuPoin()}
+      {subTab === 3 && renderMitraConsole()}
 
       {/* Sub Tabs Bottom Bar */}
       <View className="absolute bottom-0 left-0 right-0 bg-white border-t border-stone-200 h-16 flex-row justify-around items-center">
@@ -756,6 +1113,24 @@ export default function CitizenPortal() {
             Kartu & Poin
           </Text>
         </Pressable>
+
+        {activeUser?.is_warung_partner === 1 && (
+          <Pressable
+            onPress={() => setSubTab(3)}
+            className="items-center justify-center flex-1 h-full active:bg-stone-50"
+          >
+            <SymbolView
+              name="shippingbox.fill"
+              size={18}
+              tintColor={subTab === 3 ? "#0f5132" : "#888"}
+            />
+            <Text
+              className={`text-[10px] mt-1 font-bold ${subTab === 3 ? "text-emerald-800 font-extrabold" : "text-stone-400"}`}
+            >
+              Mitra B2B
+            </Text>
+          </Pressable>
+        )}
       </View>
 
       {/* Cart Drawer Modal */}
@@ -1005,6 +1380,8 @@ export default function CitizenPortal() {
                     }
                   />
                 </Pressable>
+
+
               </View>
 
               {/* Point Loyalty Redeem Option */}
@@ -1159,16 +1536,23 @@ export default function CitizenPortal() {
               </View>
 
               <Text className="text-stone-500 text-[10px] font-bold mb-1">
-                Item:
+                Daftar Produk:
               </Text>
               <View className="bg-stone-50 p-2.5 rounded-lg border border-stone-200 mb-3 max-h-[120px] overflow-scroll">
-                {/* Normally we query order items for this modal. Let's do a simple mockup or mock it based on orders details */}
-                <Text className="text-[10px] text-stone-700">
-                  • Keranjang belanja terisi
-                </Text>
-                <Text className="text-[10px] text-stone-400 italic">
-                  Detail produk dapat dilihat di cetak struk RT.
-                </Text>
+                {detailOrderItems.length === 0 ? (
+                  <Text className="text-[10px] text-stone-400 italic">Memuat daftar produk...</Text>
+                ) : (
+                  detailOrderItems.map((item, idx) => (
+                    <View key={item.id || idx} className="flex-row justify-between py-1 border-b border-stone-100 last:border-b-0">
+                      <Text className="text-[10px] text-stone-700 flex-1" numberOfLines={1}>
+                        • {item.name} <Text className="text-stone-400 font-normal">x{item.quantity}</Text>
+                      </Text>
+                      <Text className="text-[10px] text-stone-900 font-bold">
+                        Rp{(item.price * item.quantity).toLocaleString("id-ID")}
+                      </Text>
+                    </View>
+                  ))
+                )}
               </View>
 
               <View className="flex-row justify-between py-1">
@@ -1214,6 +1598,17 @@ export default function CitizenPortal() {
                   </Text>
                 </View>
               )}
+
+              {/* Beli Lagi button */}
+              <Pressable
+                onPress={() => handleReorder(detailOrder.id)}
+                className="mt-4 bg-emerald-700 border border-emerald-800 py-2.5 rounded-xl items-center justify-center active:bg-emerald-950 flex-row gap-2"
+              >
+                <SymbolView name="arrow.clockwise" size={12} tintColor="#fff" />
+                <Text className="text-white font-bold text-xs">
+                  Beli Lagi (Reorder)
+                </Text>
+              </Pressable>
             </View>
           </View>
         </Modal>
@@ -1224,6 +1619,120 @@ export default function CitizenPortal() {
         visible={!!activeDeliveryOrderId}
         onClose={() => setActiveDeliveryOrderId(null)}
       />
+
+      {/* Product Detail Modal */}
+      {selectedDetailProduct && (
+        <Modal
+          visible={!!selectedDetailProduct}
+          transparent={true}
+          animationType="slide"
+          onRequestClose={() => setSelectedDetailProduct(null)}
+        >
+          <View className="flex-1 justify-end bg-black/60">
+            <View className="bg-white rounded-t-3xl p-5 w-full">
+              <View className="flex-row justify-between items-center border-b border-stone-200 pb-3 mb-4">
+                <Text className="text-emerald-950 font-black text-sm">
+                  Detail Produk Koperasi
+                </Text>
+                <Pressable
+                  onPress={() => setSelectedDetailProduct(null)}
+                  className="p-1 rounded-full bg-stone-100"
+                >
+                  <SymbolView name="xmark" size={14} tintColor="#555" />
+                </Pressable>
+              </View>
+
+              <Image
+                source={{ uri: selectedDetailProduct.image_url }}
+                className="w-full h-48 bg-stone-100 rounded-2xl mb-4"
+                resizeMode="cover"
+              />
+
+              {selectedDetailProduct.is_local === 1 && (
+                <View className="self-start bg-amber-500 border border-amber-600 rounded px-2 py-0.5 mb-2.5">
+                  <Text className="text-[9px] text-emerald-950 font-black tracking-wider">
+                    PRODUK LOKAL DESA (2x POIN)
+                  </Text>
+                </View>
+              )}
+
+              <Text className="text-stone-900 font-extrabold text-base mb-1">
+                {selectedDetailProduct.name}
+              </Text>
+              
+              <Text className="text-emerald-800 font-black text-lg mb-2">
+                Rp{selectedDetailProduct.price.toLocaleString("id-ID")}
+                <Text className="text-stone-400 text-xs font-semibold"> / {selectedDetailProduct.unit}</Text>
+              </Text>
+
+              <View className="bg-stone-50 p-3 rounded-xl border border-stone-200 mb-4">
+                <Text className="text-stone-600 text-[10px] leading-relaxed">
+                  Stok tersedia: <Text className="text-stone-900 font-bold">{selectedDetailProduct.stock} {selectedDetailProduct.unit}</Text>
+                </Text>
+                {selectedDetailProduct.is_local === 1 ? (
+                  <Text className="text-emerald-800 text-[9px] font-bold mt-1.5 flex-row items-center gap-1">
+                    💡 Produk Lokal Desa: Belanja produk ini membuat seluruh transaksi Anda mendapatkan 2x lipat Poin Gotong Royong!
+                  </Text>
+                ) : (
+                  <Text className="text-stone-500 text-[9px] mt-1.5">
+                    💡 Setiap pembelanjaan kelipatan Rp10.000 akan mendapatkan 1 Poin Gotong Royong.
+                  </Text>
+                )}
+              </View>
+
+              {/* Quantity Selector */}
+              {selectedDetailProduct.stock > 0 ? (
+                <View className="flex-row justify-between items-center mb-5 bg-stone-100 p-2.5 rounded-xl border border-stone-200">
+                  <Text className="text-stone-700 text-xs font-bold pl-1">Jumlah</Text>
+                  <View className="flex-row items-center gap-3">
+                    <Pressable
+                      onPress={() => setDetailQuantity(q => Math.max(1, q - 1))}
+                      className="bg-white border border-stone-300 w-8 h-8 rounded-lg items-center justify-center active:bg-stone-200"
+                    >
+                      <Text className="font-extrabold text-stone-850">-</Text>
+                    </Pressable>
+                    <Text className="text-stone-900 font-black text-sm w-6 text-center">
+                      {detailQuantity}
+                    </Text>
+                    <Pressable
+                      onPress={() => setDetailQuantity(q => Math.min(selectedDetailProduct.stock, q + 1))}
+                      className="bg-white border border-stone-300 w-8 h-8 rounded-lg items-center justify-center active:bg-stone-200"
+                    >
+                      <Text className="font-extrabold text-stone-850">+</Text>
+                    </Pressable>
+                  </View>
+                </View>
+              ) : (
+                <View className="bg-stone-100 p-3 rounded-xl border border-stone-200 mb-5 items-center justify-center">
+                  <Text className="text-stone-400 font-bold text-xs">Stok produk sedang habis</Text>
+                </View>
+              )}
+
+              {/* Action Buttons */}
+              <View className="flex-row gap-2">
+                <Pressable
+                  onPress={() => setSelectedDetailProduct(null)}
+                  className="flex-1 bg-stone-100 border border-stone-300 py-3 rounded-xl items-center justify-center active:bg-stone-200"
+                >
+                  <Text className="text-stone-700 font-bold text-xs">Kembali</Text>
+                </Pressable>
+                {selectedDetailProduct.stock > 0 && (
+                  <Pressable
+                    onPress={() => {
+                      addToCart(selectedDetailProduct, detailQuantity);
+                      setSelectedDetailProduct(null);
+                      Alert.alert("Sukses", `${detailQuantity} ${selectedDetailProduct.unit} berhasil dimasukkan ke keranjang.`);
+                    }}
+                    className="flex-[2] bg-emerald-700 border border-emerald-800 py-3 rounded-xl items-center justify-center active:bg-emerald-950"
+                  >
+                    <Text className="text-white font-black text-xs">Tambah ke Keranjang</Text>
+                  </Pressable>
+                )}
+              </View>
+            </View>
+          </View>
+        </Modal>
+      )}
 
       <CoopSelectorModal
         visible={coopSelectorVisible}

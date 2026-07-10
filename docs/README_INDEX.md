@@ -23,10 +23,9 @@ This means warga can access cooperative commerce through multiple channels:
 5. **Mitra Warung KopMart** untuk warga yang tetap belanja offline di warung.
 6. **Paper-to-Digital Catalog** untuk warga yang terbiasa dengan katalog/formulir fisik.
 7. **Voice-to-Digital Order** untuk warga yang bisa berbicara tetapi tidak nyaman mengetik.
-8. **Kiosk Mode** untuk balai desa/koperasi/pos layanan yang sudah siap perangkat.
-9. **Driver & Local Logistics** untuk pickup, delivery, kurir koperasi, dan integrasi opsional dengan provider logistik.
-10. **Misi Gotong Royong** sebagai gamification and national-value engagement layer.
-11. **Financial, Audit & Impact Dashboard** untuk GMV, profit/loss, cashflow, settlement, audit, dan dampak.
+8. **Driver & Local Logistics** untuk pickup, delivery, kurir koperasi, dan integrasi opsional dengan provider logistik.
+9. **Misi Gotong Royong** sebagai gamification and national-value engagement layer.
+10. **Financial, Audit & Impact Dashboard** untuk GMV, profit/loss, cashflow, settlement, audit, dan dampak.
 
 ## Recommended development order
 
@@ -43,8 +42,7 @@ This means warga can access cooperative commerce through multiple channels:
 | 9 | Paper-to-Digital Catalog | Low-tech fallback for offline users |
 | 10 | Driver & Local Logistics | Delivery/pickup operation |
 | 11 | Voice-to-Digital Order | Voice + operator validation |
-| 12 | Kiosk Mode | Optional channel for locations with devices |
-| 13 | AI Features | Demand forecast, package generation, fraud detection |
+| 12 | AI Features | Demand forecast, package generation, fraud detection |
 
 ## Files included
 
@@ -58,7 +56,6 @@ This means warga can access cooperative commerce through multiple channels:
 | `05_Mitra_Warung_KopMart_PRD.md` | PRD for local warung as B2B2C hub |
 | `06_Paper_to_Digital_Catalog_PRD.md` | PRD for physical catalog and paper order forms |
 | `07_Voice_to_Digital_Order_PRD.md` | PRD for WhatsApp/voice order with operator validation |
-| `08_Kiosk_Mode_PRD.md` | PRD for cooperative/balai desa kiosk mode |
 | `09_Driver_Local_Logistics_PRD.md` | PRD for KopKurir and logistics integration |
 | `10_Misi_Gotong_Royong_PRD.md` | PRD for gamified national-value missions |
 | `11_Financial_Audit_Impact_Dashboard_PRD.md` | PRD for financial, audit, and impact reporting |
@@ -67,4 +64,4 @@ This means warga can access cooperative commerce through multiple channels:
 
 ## Core product principle
 
-> **KopMart RT tidak memaksa semua warga menjadi digital-native. KopMart RT membuat koperasi menjadi transaction-native: semua transaksi, stok, pembayaran, poin, pengiriman, dan laporan tercatat digital, meskipun warga masuk dari aplikasi, kartu, RT, warung, voice note, katalog kertas, kios, atau petugas layanan.**
+> **KopMart RT tidak memaksa semua warga menjadi digital-native. KopMart RT membuat koperasi menjadi transaction-native: semua transaksi, stok, pembayaran, poin, pengiriman, dan laporan tercatat digital, meskipun warga masuk dari aplikasi, kartu, RT, warung, voice note, katalog kertas, atau petugas layanan.**
