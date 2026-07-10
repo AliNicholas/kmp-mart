@@ -3,7 +3,6 @@ import { View, ActivityIndicator, Text } from 'react-native';
 import { useApp } from '@/contexts/AppContext';
 import Header from '@/components/Header';
 import CitizenPortal from '@/components/portals/CitizenPortal';
-import RTAgentPortal from '@/components/portals/RTAgentPortal';
 import AdminPortal from '@/components/portals/AdminPortal';
 
 export default function HomeScreen() {
@@ -27,7 +26,6 @@ export default function HomeScreen() {
       {/* Role specific portals */}
       <View className="flex-1">
         {activeRole === 'USER' && <CitizenPortal />}
-        {activeRole === 'RT_AGENT' && <RTAgentPortal />}
         {activeRole === 'ADMIN' && <AdminPortal />}
       </View>
     </View>

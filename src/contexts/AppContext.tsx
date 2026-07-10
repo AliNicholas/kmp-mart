@@ -8,7 +8,7 @@ export interface CartItem {
 }
 
 interface AppContextType {
-  activeRole: 'USER' | 'RT_AGENT' | 'ADMIN';
+  activeRole: 'USER' | 'ADMIN';
   activeUser: User | null;
   allUsers: User[];
   products: Product[];
@@ -20,7 +20,7 @@ interface AppContextType {
   isLoading: boolean;
   
   // Setters/Refreshers
-  setActiveRole: (role: 'USER' | 'RT_AGENT' | 'ADMIN') => void;
+  setActiveRole: (role: 'USER' | 'ADMIN') => void;
   setActiveUser: (user: User) => void;
   refreshData: () => Promise<void>;
   resetAllData: () => Promise<void>;
@@ -60,7 +60,7 @@ interface AppContextType {
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider = ({ children }: { children: ReactNode }) => {
-  const [activeRole, setActiveRoleState] = useState<'USER' | 'RT_AGENT' | 'ADMIN'>('USER');
+  const [activeRole, setActiveRoleState] = useState<'USER' | 'ADMIN'>('USER');
   const [activeUser, setActiveUserState] = useState<User | null>(null);
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
@@ -91,9 +91,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       if (activeRole === 'USER') {
         const dinda = allUsers.find(u => u.id === 'user-dinda') || allUsers[0];
         setActiveUserState(dinda || null);
-      } else if (activeRole === 'RT_AGENT') {
-        const budi = allUsers.find(u => u.id === 'user-budi') || allUsers[0];
-        setActiveUserState(budi || null);
       } else if (activeRole === 'ADMIN') {
         const arif = allUsers.find(u => u.id === 'user-arif') || allUsers[0];
         setActiveUserState(arif || null);
@@ -154,17 +151,15 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       const productsData = await dbService.getAll<Product>('SELECT * FROM products');
       setProducts(productsData);
 
-      // 3. Fetch Batches
-      const batchesData = await dbService.getAll<RTBatch>('SELECT * FROM rt_batches ORDER BY deadline DESC');
-      setBatches(batchesData);
+      // 3. Fetch Batches (Empty since RT is gone)
+      setBatches([]);
 
       // 4. Fetch Orders
       const ordersData = await dbService.getAll<Order>('SELECT * FROM orders ORDER BY created_at DESC');
       setOrders(ordersData);
 
-      // 5. Fetch Settlements
-      const settlementsData = await dbService.getAll<Settlement>('SELECT * FROM settlements');
-      setSettlements(settlementsData);
+      // 5. Fetch Settlements (Empty since RT is gone)
+      setSettlements([]);
 
       // 6. Fetch Audit Logs
       const logsData = await dbService.getAll<AuditLog>('SELECT * FROM audit_logs ORDER BY created_at DESC LIMIT 50');
@@ -187,7 +182,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const setActiveRole = (role: 'USER' | 'RT_AGENT' | 'ADMIN') => {
+  const setActiveRole = (role: 'USER' | 'ADMIN') => {
     setActiveRoleState(role);
     setCart([]); // Clear cart when switching roles
   };
@@ -486,25 +481,18 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const markItemPickedUp = async (orderId: string) => {
-    // Retrieve order to award points
     const order = orders.find(o => o.id === orderId);
     if (!order) return;
 
-    // Update order status to COMPLETED and paid
     await dbService.run(
       "UPDATE orders SET order_status = 'COMPLETED', payment_status = 'PAID' WHERE id = ?",
       [orderId]
     );
 
-    // 1. Calculate Poin Gotong Royong:
-    // - Every Rp10.000 = 1 point
-    // - Local product items = 2x points
-    // - If inside RT batch = +25 points
     const orderItems = await dbService.getAll<OrderItem>('SELECT * FROM order_items WHERE order_id = ?', [orderId]);
     
     let basePoints = Math.floor(order.total / 10000);
     
-    // Check if there are local products
     let containsLocal = false;
     for (const item of orderItems) {
       const p = products.find(prod => prod.id === item.product_id);
@@ -513,19 +501,14 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       }
     }
 
-    // Multiplier for local product
     if (containsLocal) {
       basePoints = basePoints * 2;
     }
 
-    // RT batch bonus
-    let bonusPoints = order.rt_batch_id ? 25 : 0;
-    
-    // First order bonus check
     const prevOrders = orders.filter(o => o.user_id === order.user_id && o.order_status === 'COMPLETED');
     const firstOrderBonus = prevOrders.length === 0 ? 100 : 0;
 
-    const totalEarnedPoints = basePoints + bonusPoints + firstOrderBonus;
+    const totalEarnedPoints = basePoints + firstOrderBonus;
 
     if (totalEarnedPoints > 0) {
       const user = allUsers.find(u => u.id === order.user_id);
@@ -533,7 +516,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         const newPoints = user.points + totalEarnedPoints;
         await dbService.run('UPDATE users SET points = ? WHERE id = ?', [newPoints, order.user_id]);
 
-        // Insert points transaction
         await dbService.run(
           `INSERT INTO point_transactions (id, user_id, type, points, source, reference_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
           [`pt-${Date.now()}-earn`, order.user_id, 'EARN', totalEarnedPoints, 'ORDER', orderId, new Date().toISOString()]
@@ -541,16 +523,13 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       }
     }
 
-    // 2. Handle Referral reward if this is the user's first completed order
     const buyer = allUsers.find(u => u.id === order.user_id);
     if (buyer && buyer.referred_by && prevOrders.length === 0) {
-      // Award referrer: +100 points
       const referrer = allUsers.find(u => u.referral_code === buyer.referred_by);
       if (referrer) {
         const newRefPoints = referrer.points + 100;
         await dbService.run('UPDATE users SET points = ? WHERE id = ?', [newRefPoints, referrer.id]);
 
-        // Log points transaction for referrer
         await dbService.run(
           `INSERT INTO point_transactions (id, user_id, type, points, source, reference_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
           [`pt-${Date.now()}-ref`, referrer.id, 'EARN', 100, 'REFERRAL', orderId, new Date().toISOString()]
@@ -559,29 +538,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
 
     await logAudit(
-      `${activeUser?.name} (RT Agent)`,
-      'CONFIRM_PICKUP',
-      `Confirmed resident pickup & payment for order ${orderId}. Points awarded: +${totalEarnedPoints}.`
+      'Sistem',
+      'COMPLETE_ORDER',
+      `Confirmed resident pickup/delivery & payment for order ${orderId}. Points awarded: +${totalEarnedPoints}.`
     );
-
-    // Update active batch stats or complete batch if all orders completed
-    if (order.rt_batch_id) {
-      const batchOrders = await dbService.getAll<Order>('SELECT * FROM orders WHERE rt_batch_id = ?', [order.rt_batch_id]);
-      const incomplete = batchOrders.filter(o => o.order_status !== 'COMPLETED' && o.order_status !== 'CANCELLED');
-      if (incomplete.length === 0) {
-        // Complete the batch!
-        await dbService.run("UPDATE rt_batches SET status = 'COMPLETED' WHERE id = ?", [order.rt_batch_id]);
-        
-        // Auto-verify settlement if already submitted and amounts match
-        const batchSettlement = settlements.find(s => s.rt_batch_id === order.rt_batch_id);
-        if (batchSettlement && batchSettlement.status === 'SUBMITTED' && batchSettlement.amount_expected === batchSettlement.amount_submitted) {
-          await dbService.run(
-            "UPDATE settlements SET status = 'VERIFIED', verified_at = ? WHERE id = ?",
-            [new Date().toISOString(), batchSettlement.id]
-          );
-        }
-      }
-    }
 
     await refreshData();
   };

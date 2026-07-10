@@ -8,10 +8,12 @@ import {
   Modal,
   Pressable,
   ScrollView,
-  Text,
   TextInput,
   View,
 } from "react-native";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Text } from "@/components/ui/text";
 
 export default function AdminPortal() {
   const {
@@ -200,34 +202,58 @@ export default function AdminPortal() {
     }
   };
 
-  const handleUpdateBatchFulfillment = async (
-    batchId: string,
-    status: "PROCESSING" | "DELIVERED_TO_RT",
+  const handleUpdateHomeDeliveryFulfillment = async (
+    orderId: string,
+    status: string,
   ) => {
-    await processBatchFulfillment(batchId, status);
+    try {
+      const isCompleted = status === "COMPLETED";
+      const sql = isCompleted
+        ? `UPDATE orders SET order_status = 'COMPLETED', payment_status = 'PAID' WHERE id = ?`
+        : `UPDATE orders SET order_status = ? WHERE id = ?`;
+      const args = isCompleted ? [orderId] : [status, orderId];
 
-    // Update local modal state status
-    if (activeFulfillBatch) {
-      setActiveFulfillBatch((prev) => (prev ? { ...prev, status } : null));
+      await dbService.run(sql, args);
+
+      const logId = `log-${Date.now()}`;
+      await dbService.run(
+        "INSERT INTO audit_logs (id, actor, action, details, created_at) VALUES (?, ?, ?, ?, ?)",
+        [
+          logId,
+          "Pegawai Koperasi",
+          isCompleted ? "DELIVERY_COMPLETE" : "DELIVERY_STATUS_UPDATE",
+          `Order ${orderId} updated to ${status}`,
+          new Date().toISOString(),
+        ],
+      );
+
+      if (activeSelfOrder && activeSelfOrder.id === orderId) {
+        setActiveSelfOrder((prev) =>
+          prev
+            ? {
+                ...prev,
+                order_status: status as any,
+                payment_status: isCompleted ? "PAID" : prev.payment_status,
+              }
+            : null,
+        );
+      }
+
+      await refreshData();
+      Alert.alert(
+        "Sukses",
+        `Status pesanan berhasil diperbarui menjadi: ${
+          status === "COMPLETED"
+            ? "Selesai Dikirim"
+            : status === "PICKED_UP"
+              ? "Dalam Pengiriman"
+              : "Sedang Dikemas"
+        }`,
+      );
+    } catch (err) {
+      console.error(err);
+      Alert.alert("Gagal", "Gagal memperbarui status pengiriman.");
     }
-
-    Alert.alert(
-      "Fulfillment Update",
-      `Batch telah diupdate menjadi ${status === "PROCESSING" ? "Sedang Dikemas" : "Barang Dikirim ke RT"}`,
-    );
-  };
-
-  const handleVerifySettlement = async (
-    settlementId: string,
-    verified: boolean,
-  ) => {
-    await verifySettlement(settlementId, verified);
-    Alert.alert(
-      "Settlement",
-      verified
-        ? "Setoran tunai berhasil terverifikasi dan masuk kasir!"
-        : "Setoran bermasalah (Dispute) ditandai.",
-    );
   };
 
   // Calculate Financial dashboard values
@@ -267,11 +293,7 @@ export default function AdminPortal() {
   }, [orders, products]);
 
   const grossProfit = gmv - cogsVal;
-  // RT Incentive (1.5% of batch completed GMV as per rules)
-  const rtIncentive = batches
-    .filter((b) => b.status === "COMPLETED")
-    .reduce((sum, b) => sum + b.total_gmv * 0.015, 0);
-  const operatingProfit = grossProfit - totalRewardsUsed - rtIncentive;
+  const operatingProfit = grossProfit - totalRewardsUsed;
 
   // Render Inventory Tab
   const renderInventory = () => (
@@ -389,25 +411,18 @@ export default function AdminPortal() {
     </View>
   );
 
-  // Render Fulfillment / Process Batch
+  // Render Fulfillment / Process Orders
   const renderFulfillment = () => {
-    // Sort batches: submitted/processing first
-    const activeBatches = batches.filter(
-      (b) =>
-        b.status === "SUBMITTED" ||
-        b.status === "PROCESSING" ||
-        b.status === "DELIVERED_TO_RT",
-    );
-    const inactiveBatches = batches.filter(
-      (b) =>
-        b.status === "COMPLETED" ||
-        b.status === "LOCKED" ||
-        b.status === "OPEN",
-    );
-
     const selfPickupOrders = orders.filter(
       (o) =>
         o.fulfillment === "PICKUP_AT_COOP" &&
+        o.order_status !== "COMPLETED" &&
+        o.order_status !== "CANCELLED",
+    );
+
+    const homeDeliveryOrders = orders.filter(
+      (o) =>
+        o.fulfillment === "DELIVERY_TO_HOME" &&
         o.order_status !== "COMPLETED" &&
         o.order_status !== "CANCELLED",
     );
@@ -417,61 +432,104 @@ export default function AdminPortal() {
         className="flex-1 bg-stone-50"
         contentContainerClassName="p-4 pb-28"
       >
+        {/* Antrean Kirim ke Rumah */}
         <Text className="text-stone-900 font-black text-lg mb-3">
-          Antrean Batch Order RT (Kolektif)
+          Antrean Kirim ke Rumah (Home Delivery)
         </Text>
-
-        {activeBatches.length === 0 ? (
+        {homeDeliveryOrders.length === 0 ? (
           <View className="bg-white p-6 rounded-xl border border-stone-200 items-center justify-center mb-5">
-            <SymbolView
-              name="checkmark.seal.fill"
-              size={32}
-              tintColor="#10b981"
-            />
+            <SymbolView name="shippingbox.fill" size={32} tintColor="#10b981" />
             <Text className="text-stone-500 text-xs mt-2 text-center">
-              Tidak ada antrean batch masuk dari RT.
+              Tidak ada antrean kirim ke rumah saat ini.
             </Text>
           </View>
         ) : (
-          activeBatches.map((b) => (
-            <Pressable
-              key={b.id}
-              onPress={() => handleOpenFulfillmentDetails(b)}
-              className="bg-white p-4 rounded-xl border border-stone-200 mb-3 shadow-sm active:bg-stone-100 flex-row justify-between items-center"
-            >
-              <View className="flex-1">
-                <View className="flex-row items-center gap-2">
-                  <Text className="text-stone-950 font-bold text-sm">
-                    {b.name}
-                  </Text>
-                  <View className="bg-emerald-100 px-2 py-0.5 rounded border border-emerald-200">
-                    <Text className="text-emerald-800 text-[8px] font-bold">
-                      {b.rt_id}
+          homeDeliveryOrders.map((o) => {
+            const user = allUsers.find((u) => u.id === o.user_id);
+            return (
+              <Pressable
+                key={o.id}
+                onPress={() => handleOpenSelfOrderDetails(o)}
+                className="bg-white p-4 rounded-xl border border-stone-200 mb-3 shadow-sm active:bg-stone-100 flex-row justify-between items-center"
+              >
+                <View className="flex-1 pr-2">
+                  <View className="flex-row items-center gap-2">
+                    <Text className="text-stone-955 font-bold text-sm">
+                      {user?.name || "Warga"}
                     </Text>
+                    <View className="bg-blue-100 px-2 py-0.5 rounded border border-blue-200">
+                      <Text className="text-blue-800 text-[8px] font-bold">
+                        KIRIM
+                      </Text>
+                    </View>
                   </View>
-                </View>
-                <Text className="text-stone-400 text-[10px] mt-0.5">
-                  Deadline: {new Date(b.deadline).toLocaleDateString("id-ID")} •
-                  Poin Pickup: {b.pickup_point}
-                </Text>
-                <Text className="text-stone-500 text-[10px] mt-1.5 font-bold">
-                  Total: {b.total_orders} Warga • GMV: Rp
-                  {b.total_gmv.toLocaleString("id-ID")}
-                </Text>
-              </View>
-
-              <View className="items-end gap-1.5">
-                <View className="bg-amber-100 px-2 py-0.5 rounded border border-amber-250">
-                  <Text className="text-amber-800 text-[8px] font-bold">
-                    {b.status}
+                  <Text className="text-stone-400 text-[10px] mt-0.5">
+                    ID: {o.id.substring(0, 12)}... • Telp: {user?.phone || "—"}
+                  </Text>
+                  <Text className="text-stone-500 text-[10px] mt-1.5 font-bold">
+                    Total: Rp{o.total.toLocaleString("id-ID")} •{" "}
+                    {o.payment_status === "PAID" ? "💳 Lunas" : "💵 Bayar COD"}
                   </Text>
                 </View>
-                <Text className="text-emerald-700 text-[10px] font-bold underline mt-1">
-                  Proses Packing
-                </Text>
-              </View>
-            </Pressable>
-          ))
+
+                <View className="items-end gap-2">
+                  <Badge
+                    variant="outline"
+                    className={
+                      o.order_status === "PICKED_UP"
+                        ? "bg-amber-100 border-amber-200"
+                        : o.order_status === "PACKED"
+                          ? "bg-emerald-100 border-emerald-250"
+                          : "bg-blue-50 border-blue-200"
+                    }
+                  >
+                    <Text className="text-stone-700 text-[8px] font-bold">
+                      {o.order_status === "PICKED_UP"
+                        ? "DI JALAN"
+                        : o.order_status === "PACKED"
+                          ? "SIAP KIRIM"
+                          : o.order_status}
+                    </Text>
+                  </Badge>
+
+                  {o.order_status === "PENDING_PAYMENT" || o.order_status === "PAID" || o.order_status === "CONFIRMED" ? (
+                    <Button
+                      onPress={() =>
+                        handleUpdateHomeDeliveryFulfillment(o.id, "PACKED")
+                      }
+                      className="bg-emerald-700 active:bg-emerald-950 px-3 h-8"
+                    >
+                      <Text className="text-white text-[9px] font-bold">
+                        Kemas Barang
+                      </Text>
+                    </Button>
+                  ) : o.order_status === "PACKED" ? (
+                    <Button
+                      onPress={() =>
+                        handleUpdateHomeDeliveryFulfillment(o.id, "PICKED_UP")
+                      }
+                      className="bg-blue-600 active:bg-blue-800 px-3 h-8"
+                    >
+                      <Text className="text-white text-[9px] font-bold">
+                        Kirim Pesanan
+                      </Text>
+                    </Button>
+                  ) : (
+                    <Button
+                      onPress={() =>
+                        handleUpdateHomeDeliveryFulfillment(o.id, "COMPLETED")
+                      }
+                      className="bg-emerald-700 active:bg-emerald-950 px-3 h-8"
+                    >
+                      <Text className="text-white text-[9px] font-bold">
+                        Tandai Selesai
+                      </Text>
+                    </Button>
+                  )}
+                </View>
+              </Pressable>
+            );
+          })
         )}
 
         {/* Antrean Ambil Mandiri */}
@@ -500,7 +558,7 @@ export default function AdminPortal() {
               >
                 <View className="flex-1 pr-2">
                   <View className="flex-row items-center gap-2">
-                    <Text className="text-stone-950 font-bold text-sm">
+                    <Text className="text-stone-955 font-bold text-sm">
                       {user?.name || "Warga"}
                     </Text>
                     <View className="bg-emerald-100 px-2 py-0.5 rounded border border-emerald-200">
@@ -521,77 +579,52 @@ export default function AdminPortal() {
                 </View>
 
                 <View className="items-end gap-2">
-                  <View
-                    className={`px-2 py-0.5 rounded border ${
+                  <Badge
+                    variant="outline"
+                    className={
                       o.order_status === "READY_FOR_PICKUP"
                         ? "bg-amber-100 border-amber-200"
                         : "bg-blue-50 border-blue-200"
-                    }`}
+                    }
                   >
                     <Text className="text-stone-700 text-[8px] font-bold">
                       {o.order_status === "READY_FOR_PICKUP"
                         ? "SIAP DIAMBIL"
                         : o.order_status}
                     </Text>
-                  </View>
+                  </Badge>
 
                   {o.order_status === "READY_FOR_PICKUP" ? (
-                    <Pressable
+                    <Button
                       onPress={() =>
                         handleUpdateSelfOrderFulfillment(o.id, "COMPLETED")
                       }
-                      className="bg-emerald-700 px-3 py-1.5 rounded-lg active:bg-emerald-950"
+                      className="bg-emerald-700 px-3 h-8 active:bg-emerald-950"
                     >
                       <Text className="text-white text-[9px] font-bold">
                         Serahkan Barang
                       </Text>
-                    </Pressable>
+                    </Button>
                   ) : (
-                    <Pressable
+                    <Button
                       onPress={() =>
                         handleUpdateSelfOrderFulfillment(
                           o.id,
                           "READY_FOR_PICKUP",
                         )
                       }
-                      className="bg-blue-600 px-3 py-1.5 rounded-lg active:bg-blue-800"
+                      className="bg-blue-600 px-3 h-8 active:bg-blue-800"
                     >
                       <Text className="text-white text-[9px] font-bold">
                         Tandai Siap
                       </Text>
-                    </Pressable>
+                    </Button>
                   )}
                 </View>
               </Pressable>
             );
           })
         )}
-
-        <Text className="text-stone-900 font-black text-xs mt-6 mb-2">
-          Riwayat Batch Kolektif Lainnya
-        </Text>
-        {inactiveBatches.map((b) => (
-          <View
-            key={b.id}
-            className="bg-white p-3.5 rounded-xl border border-stone-150 mb-2 flex-row justify-between items-center"
-          >
-            <View>
-              <Text className="text-stone-800 font-bold text-xs">
-                {b.name} ({b.rt_id})
-              </Text>
-              <Text className="text-stone-400 text-[8px] mt-0.5">
-                Status: {b.status} • Total: Rp
-                {b.total_gmv.toLocaleString("id-ID")}
-              </Text>
-            </View>
-            <Pressable
-              onPress={() => handleOpenFulfillmentDetails(b)}
-              className="px-2 py-1 rounded border border-stone-200 active:bg-stone-50"
-            >
-              <Text className="text-stone-500 text-[9px] font-bold">Lihat</Text>
-            </Pressable>
-          </View>
-        ))}
       </ScrollView>
     );
   };
@@ -709,14 +742,7 @@ export default function AdminPortal() {
               -Rp{totalRewardsUsed.toLocaleString("id-ID")}
             </Text>
           </View>
-          <View className="flex-row justify-between py-1 border-b border-stone-100">
-            <Text className="text-stone-600 text-xs">
-              Insentif RT Agent (1.5% GMV Batch)
-            </Text>
-            <Text className="text-stone-700 text-xs">
-              -Rp{rtIncentive.toLocaleString("id-ID")}
-            </Text>
-          </View>
+
           <View className="flex-row justify-between py-1.5 border-t border-stone-200 mt-1 bg-emerald-900 text-white px-2 rounded">
             <Text className="text-white text-xs font-black">
               Proyeksi SHU / Surplus Operasional
@@ -727,91 +753,7 @@ export default function AdminPortal() {
           </View>
         </View>
 
-        {/* Settlements verification */}
-        <Text className="text-stone-900 font-black text-xs mb-2">
-          3. Verifikasi Setoran Uang Tunai RT
-        </Text>
-        {pendingSettlements.length === 0 ? (
-          <View className="bg-white p-4 rounded-xl border border-stone-200 mb-5 items-center justify-center">
-            <Text className="text-stone-400 text-[10px] italic">
-              Tidak ada setoran setelmen RT yang masuk.
-            </Text>
-          </View>
-        ) : (
-          pendingSettlements.map((s) => {
-            const batch = batches.find((b) => b.id === s.rt_batch_id);
-            return (
-              <View
-                key={s.id}
-                className="bg-white p-3.5 rounded-xl border border-stone-200 shadow-sm mb-3"
-              >
-                <View className="flex-row justify-between items-start mb-2">
-                  <View>
-                    <Text className="text-stone-900 font-bold text-xs">
-                      {batch?.name || "RT Batch"}
-                    </Text>
-                    <Text className="text-stone-400 text-[9px]">
-                      Fulfillment RT: {batch?.rt_id || "RT 03"}
-                    </Text>
-                  </View>
-                  <View
-                    className={`px-2 py-0.5 rounded border ${s.status === "SUBMITTED" ? "bg-blue-150 border-blue-200" : "bg-rose-100 border-rose-250"}`}
-                  >
-                    <Text className="text-stone-700 text-[8px] font-bold">
-                      {s.status}
-                    </Text>
-                  </View>
-                </View>
 
-                <View className="flex-row justify-between py-1 border-b border-stone-100">
-                  <Text className="text-stone-500 text-[9px]">
-                    Uang Seharusnya Disetor:
-                  </Text>
-                  <Text className="text-stone-800 font-bold text-xs">
-                    Rp{s.amount_expected.toLocaleString("id-ID")}
-                  </Text>
-                </View>
-
-                {s.status === "SUBMITTED" && (
-                  <View className="flex-row justify-between py-1 border-b border-stone-100 mb-2">
-                    <Text className="text-stone-500 text-[9px]">
-                      Uang Fisik Diterima Kasir:
-                    </Text>
-                    <Text className="text-emerald-800 font-black text-xs">
-                      Rp{s.amount_submitted.toLocaleString("id-ID")}
-                    </Text>
-                  </View>
-                )}
-
-                {s.status === "SUBMITTED" ? (
-                  <View className="flex-row justify-end gap-2 mt-2.5">
-                    <Pressable
-                      onPress={() => handleVerifySettlement(s.id, false)}
-                      className="bg-rose-50 border border-rose-300 px-3 py-1.5 rounded-lg active:bg-rose-100"
-                    >
-                      <Text className="text-rose-700 text-[9px] font-bold">
-                        Dispute / Selisih
-                      </Text>
-                    </Pressable>
-                    <Pressable
-                      onPress={() => handleVerifySettlement(s.id, true)}
-                      className="bg-emerald-700 border border-emerald-800 px-3 py-1.5 rounded-lg active:bg-emerald-950"
-                    >
-                      <Text className="text-white text-[9px] font-bold">
-                        Sesuai, Verifikasi
-                      </Text>
-                    </Pressable>
-                  </View>
-                ) : (
-                  <Text className="text-stone-400 text-[9px] italic mt-2">
-                    Menunggu RT Budi mengumpulkan kas COD dari warga dan
-                    menyetorkan.
-                  </Text>
-                )}
-              </View>
-            );
-          })
-        )}
 
         {/* Live Immutable Audit Logs */}
         <Text className="text-stone-900 font-black text-xs mb-2">
@@ -1023,182 +965,6 @@ export default function AdminPortal() {
           </View>
         </View>
       </Modal>
-
-      {/* Fulfillment Aggregated details Modal */}
-      {activeFulfillBatch && (
-        <Modal
-          visible={!!activeFulfillBatch}
-          transparent={true}
-          animationType="slide"
-          onRequestClose={() => setActiveFulfillBatch(null)}
-        >
-          <View className="flex-1 justify-end bg-black/60">
-            <View className="bg-white rounded-t-3xl p-5 max-h-[85%]">
-              <View className="flex-row justify-between items-center border-b border-stone-200 pb-3 mb-4">
-                <View>
-                  <Text className="text-emerald-955 font-black text-lg">
-                    Detail Kemas & Pengiriman Batch
-                  </Text>
-                  <Text className="text-stone-400 text-[10px]">
-                    {activeFulfillBatch.name} • {activeFulfillBatch.rt_id}
-                  </Text>
-                </View>
-                <Pressable
-                  onPress={() => setActiveFulfillBatch(null)}
-                  className="p-1 rounded-full bg-stone-100"
-                >
-                  <SymbolView name="xmark" size={16} tintColor="#555" />
-                </Pressable>
-              </View>
-
-              <ScrollView className="space-y-4">
-                {/* Visual Status Indicator */}
-                <View className="bg-stone-50 border border-stone-200 p-3 rounded-xl flex-row justify-between items-center mb-3">
-                  <Text className="text-stone-500 text-[10px]">
-                    Status Pengiriman Saat Ini:
-                  </Text>
-                  <Text className="text-emerald-800 font-extrabold text-xs">
-                    {activeFulfillBatch.status}
-                  </Text>
-                </View>
-
-                {/* Aggregate list (packing list of items to package) */}
-                <Text className="text-stone-900 font-black text-xs mb-1.5">
-                  1. Total Gabungan Produk yang Harus Dikemas Gudang
-                </Text>
-                <View className="bg-stone-100 border border-stone-200 rounded-xl p-3 mb-4">
-                  {batchItemsAggregate.length === 0 ? (
-                    <Text className="text-stone-400 text-[10px] italic text-center py-4">
-                      Belum ada item pesanan dalam batch ini.
-                    </Text>
-                  ) : (
-                    batchItemsAggregate.map((item, idx) => (
-                      <View
-                        key={item.product_id || idx}
-                        className="flex-row justify-between py-1.5 border-b border-stone-100 last:border-0"
-                      >
-                        <Text className="text-stone-800 text-xs font-semibold">
-                          {item.name}
-                        </Text>
-                        <Text className="text-emerald-900 font-black text-xs">
-                          {item.total_qty} {item.unit || "pcs"}
-                        </Text>
-                      </View>
-                    ))
-                  )}
-                </View>
-
-                {/* Individual checklist (sorting by citizen) */}
-                <Text className="text-stone-900 font-black text-xs mb-1.5">
-                  2. Pengelompokan Kantong Belanja Per Rumah Tangga
-                </Text>
-                <View className="space-y-3 mb-5">
-                  {batchOrdersList.length === 0 ? (
-                    <Text className="text-stone-400 text-[10px] italic">
-                      Tidak ada order terdaftar.
-                    </Text>
-                  ) : (
-                    batchOrdersList.map((order, idx) => {
-                      const user = allUsers.find((u) => u.id === order.user_id);
-                      return (
-                        <View
-                          key={order.id || idx}
-                          className="bg-stone-50 border border-stone-200 p-3 rounded-xl"
-                        >
-                          <View className="flex-row justify-between items-center border-b border-stone-150 pb-1.5 mb-1.5">
-                            <Text className="text-stone-900 font-black text-xs">
-                              Kantong: {user?.name || "Warga"}
-                            </Text>
-                            <Text className="text-[9px] text-stone-500 font-mono">
-                              ID Order: {order.id.substring(0, 8)}
-                            </Text>
-                          </View>
-                          {/* Inside actual app, order items are loaded, here we show total summary */}
-                          <View className="flex-row justify-between items-center">
-                            <Text className="text-stone-500 text-[10px]">
-                              Nilai Belanja:{" "}
-                              <Text className="font-bold text-emerald-800">
-                                Rp{order.total.toLocaleString("id-ID")}
-                              </Text>
-                            </Text>
-                            <Text className="text-stone-400 text-[9px]">
-                              Status: {order.order_status}
-                            </Text>
-                          </View>
-                        </View>
-                      );
-                    })
-                  )}
-                </View>
-
-                {/* Fulfillment Actions */}
-                {activeFulfillBatch.status === "SUBMITTED" && (
-                  <Pressable
-                    onPress={() =>
-                      handleUpdateBatchFulfillment(
-                        activeFulfillBatch.id,
-                        "PROCESSING",
-                      )
-                    }
-                    className="bg-amber-500 border border-amber-600 py-3.5 rounded-xl items-center justify-center active:bg-amber-600 mb-3"
-                  >
-                    <Text className="text-emerald-950 font-black text-xs">
-                      Mulai Kemas Batch (Tandai 'Packing')
-                    </Text>
-                  </Pressable>
-                )}
-
-                {(activeFulfillBatch.status === "PROCESSING" ||
-                  activeFulfillBatch.status === "SUBMITTED") && (
-                  <Pressable
-                    onPress={() =>
-                      handleUpdateBatchFulfillment(
-                        activeFulfillBatch.id,
-                        "DELIVERED_TO_RT",
-                      )
-                    }
-                    className="bg-emerald-700 border border-emerald-800 py-3.5 rounded-xl items-center justify-center active:bg-emerald-950 mb-5"
-                  >
-                    <Text className="text-white font-black text-xs">
-                      Kirim ke Pos RT (Tandai 'Tiba di RT')
-                    </Text>
-                  </Pressable>
-                )}
-
-                {activeFulfillBatch.status === "DELIVERED_TO_RT" && (
-                  <View className="bg-blue-50 border border-blue-200 p-3.5 rounded-xl mb-4 items-center">
-                    <SymbolView
-                      name="paperplane.fill"
-                      size={16}
-                      tintColor="#2563eb"
-                    />
-                    <Text className="text-blue-800 text-[10px] font-bold mt-1 text-center">
-                      Barang telah dikirim dan tiba di RT Budi. Menunggu RT
-                      Agent menyerahkan barang ke masing-masing warga dan
-                      menyetorkan kas COD.
-                    </Text>
-                  </View>
-                )}
-
-                {activeFulfillBatch.status === "COMPLETED" && (
-                  <View className="bg-stone-150 border border-stone-200 p-3.5 rounded-xl mb-4 items-center">
-                    <SymbolView
-                      name="checkmark.circle.fill"
-                      size={16}
-                      tintColor="#777"
-                    />
-                    <Text className="text-stone-500 text-[10px] text-center mt-1">
-                      Fulfillment batch ini selesai. Seluruh barang telah
-                      didistribusikan ke warga dan setoran tunai telah
-                      diverifikasi lunas.
-                    </Text>
-                  </View>
-                )}
-              </ScrollView>
-            </View>
-          </View>
-        </Modal>
-      )}
 
       {/* Self-Pickup details Modal */}
       {activeSelfOrder && (

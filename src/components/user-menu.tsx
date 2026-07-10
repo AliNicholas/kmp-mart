@@ -29,12 +29,11 @@ export function UserMenu() {
   const getRoleLabel = (role: string) => {
     switch (role) {
       case 'ADMIN': return 'Admin Koperasi';
-      case 'RT_AGENT': return 'RT Agent';
       default: return 'Warga Digital';
     }
   };
 
-  const handleRoleSelect = (role: 'USER' | 'RT_AGENT' | 'ADMIN', user: any) => {
+  const handleRoleSelect = (role: 'USER' | 'ADMIN', user: any) => {
     setActiveRole(role);
     setActiveUser(user);
     popoverTriggerRef.current?.close();
@@ -47,12 +46,6 @@ export function UserMenu() {
           bg: '#fef3c7', // amber-100
           text: '#92400e', // amber-800
           border: '#fde68a', // amber-200
-        };
-      case 'RT_AGENT': 
-        return {
-          bg: '#dbeafe', // blue-100
-          text: '#1e40af', // blue-800
-          border: '#bfdbfe', // blue-200
         };
       default: 
         return {
@@ -79,7 +72,7 @@ export function UserMenu() {
               {activeUser?.name || 'Loading'}
             </Text>
             <Text className="text-emerald-200 text-[9px] font-medium leading-3">
-              {activeRole === 'USER' ? 'Warga' : activeRole === 'RT_AGENT' ? 'RT Agent' : 'Admin'}
+              {activeRole === 'USER' ? 'Warga' : 'Admin'}
             </Text>
           </View>
           <SymbolView name="chevron.down" size={10} tintColor="#fbbf24" />
@@ -113,7 +106,7 @@ export function UserMenu() {
               Beralih Akun (Demo Hackathon)
             </Text>
             <ScrollView className="max-h-60" showsVerticalScrollIndicator={true}>
-              {allUsers.map((user) => {
+              {allUsers.filter(u => u.role !== 'RT_AGENT').map((user) => {
                 const isSelected = activeUser?.id === user.id;
                 const badgeStyle = getRoleBadgeStyle(user.role);
                 return (
@@ -121,7 +114,6 @@ export function UserMenu() {
                     key={user.id}
                     onPress={() => {
                       if (user.role === 'ADMIN') handleRoleSelect('ADMIN', user);
-                      else if (user.role === 'RT_AGENT') handleRoleSelect('RT_AGENT', user);
                       else handleRoleSelect('USER', user);
                     }}
                     className={cn(

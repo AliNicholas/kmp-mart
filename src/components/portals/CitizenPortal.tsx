@@ -37,9 +37,8 @@ export default function CitizenPortal() {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [checkoutModalOpen, setCheckoutModalOpen] = useState(false);
   const [selectedFulfillment, setSelectedFulfillment] = useState<
-    "PICKUP_AT_COOP" | "DELIVERY_TO_HOME" | "RT_PICKUP_POINT"
-  >("RT_PICKUP_POINT");
-  const [selectedBatchId, setSelectedBatchId] = useState<string | null>(null);
+    "PICKUP_AT_COOP" | "DELIVERY_TO_HOME"
+  >("DELIVERY_TO_HOME");
   const [usePoints, setUsePoints] = useState(false);
   const [referralInput, setReferralInput] = useState("");
   const [detailOrder, setDetailOrder] = useState<any | null>(null);
@@ -111,32 +110,17 @@ export default function CitizenPortal() {
   const handleCheckout = async () => {
     if (cart.length === 0) return;
 
-    // Validate batch selection if RT pickup is chosen
-    let batchId = null;
-    if (selectedFulfillment === "RT_PICKUP_POINT") {
-      if (userRTBatches.length > 0) {
-        batchId = selectedBatchId || userRTBatches[0].id;
-      } else {
-        Alert.alert(
-          "Error",
-          "Tidak ada batch RT yang buka untuk RT Anda. Silakan pilih Ambil di Koperasi.",
-        );
-        return;
-      }
-    }
-
     const res = await checkout(
       selectedFulfillment,
       "SELF_ORDER",
       pointsToRedeem,
-      batchId,
+      null,
     );
 
     if (res.success) {
       setCheckoutModalOpen(false);
       setIsCartOpen(false);
       setUsePoints(false);
-      setSelectedBatchId(null);
       setSubTab(1); // Switch to orders tab
 
       if (selectedFulfillment === "DELIVERY_TO_HOME") {
@@ -465,19 +449,15 @@ export default function CitizenPortal() {
               <View className="flex-row justify-between items-center mt-1">
                 <View>
                   <Text className="text-stone-700 text-xs font-semibold">
-                    {o.channel === "RT_ASSISTED"
-                      ? "Dibantu RT Budi"
-                      : o.channel === "CARD_PURCHASE"
-                        ? "Kartu Kopdes"
-                        : "Belanja Mandiri"}
+                    {o.channel === "CARD_PURCHASE"
+                      ? "Kartu Kopdes"
+                      : "Belanja Mandiri"}
                   </Text>
                   <Text className="text-stone-500 text-[10px] mt-0.5">
                     Fulfillment:{" "}
-                    {o.fulfillment === "RT_PICKUP_POINT"
-                      ? "Ambil di Pos RT"
-                      : o.fulfillment === "DELIVERY_TO_HOME"
-                        ? "Kirim ke Rumah"
-                        : "Ambil di Koperasi"}
+                    {o.fulfillment === "DELIVERY_TO_HOME"
+                      ? "Kirim ke Rumah"
+                      : "Ambil di Koperasi"}
                   </Text>
                 </View>
                 <View className="items-end">
@@ -490,16 +470,7 @@ export default function CitizenPortal() {
                 </View>
               </View>
 
-              {o.rt_batch_id && (
-                <View className="mt-2 bg-amber-50 px-2 py-1 rounded flex-row justify-between items-center">
-                  <Text className="text-[9px] text-amber-800 font-semibold">
-                    Pesanan Tergabung Batch RT
-                  </Text>
-                  <Text className="text-[8px] bg-amber-200 text-amber-900 px-1 rounded font-bold">
-                    RT 03
-                  </Text>
-                </View>
-              )}
+
 
               {o.fulfillment === "DELIVERY_TO_HOME" && (
                 <Pressable
@@ -946,46 +917,6 @@ export default function CitizenPortal() {
                 Pilih Metode Pengiriman
               </Text>
               <View className="space-y-2 mb-3">
-                {/* RT Pickup option */}
-                <Pressable
-                  onPress={() => setSelectedFulfillment("RT_PICKUP_POINT")}
-                  className={`p-3 rounded-xl border flex-row items-center gap-3 mb-2 ${
-                    selectedFulfillment === "RT_PICKUP_POINT"
-                      ? "bg-emerald-50 border-emerald-600"
-                      : "bg-white border-stone-200"
-                  }`}
-                >
-                  <View className="bg-emerald-100 p-2 rounded-full">
-                    <SymbolView
-                      name="house.fill"
-                      size={14}
-                      tintColor="#0f5132"
-                    />
-                  </View>
-                  <View className="flex-1">
-                    <Text className="text-stone-900 font-bold text-xs">
-                      RT Group Order Pickup (Rekomendasi)
-                    </Text>
-                    <Text className="text-[10px] text-stone-500 mt-0.5">
-                      Dikirim kolektif per RT. Bebas ongkir & dapat +25 Poin
-                      bonus.
-                    </Text>
-                  </View>
-                  <SymbolView
-                    name={
-                      selectedFulfillment === "RT_PICKUP_POINT"
-                        ? "checkmark.circle.fill"
-                        : "circle"
-                    }
-                    size={18}
-                    tintColor={
-                      selectedFulfillment === "RT_PICKUP_POINT"
-                        ? "#0f5132"
-                        : "#ccc"
-                    }
-                  />
-                </Pressable>
-
                 {/* Self Pickup at Coop */}
                 <Pressable
                   onPress={() => setSelectedFulfillment("PICKUP_AT_COOP")}
@@ -1064,56 +995,6 @@ export default function CitizenPortal() {
                   />
                 </Pressable>
               </View>
-
-              {/* Batch selection for RT Pickup */}
-              {selectedFulfillment === "RT_PICKUP_POINT" && (
-                <View className="mb-3">
-                  <Text className="text-stone-900 font-bold text-xs mb-1.5">
-                    Pilih Batch Pengiriman RT Anda ({activeUser?.rt_id})
-                  </Text>
-                  {userRTBatches.length === 0 ? (
-                    <View className="bg-amber-50 p-3 rounded-lg border border-amber-250">
-                      <Text className="text-[10px] text-amber-850 font-bold">
-                        ⚠️ Tidak ada batch RT yang aktif/buka saat ini. RT Agent
-                        Anda (
-                        {batches.find((b) => b.rt_id === activeUser?.rt_id)
-                          ?.status === "LOCKED"
-                          ? "Pak Budi sedang memproses batch sebelumnya"
-                          : "belum membuka batch baru"}
-                        ). Anda disarankan memilih 'Ambil Mandiri di Koperasi'.
-                      </Text>
-                    </View>
-                  ) : (
-                    userRTBatches.map((b) => (
-                      <Pressable
-                        key={b.id}
-                        onPress={() => setSelectedBatchId(b.id)}
-                        className={`p-3 rounded-lg border flex-row justify-between items-center ${
-                          selectedBatchId === b.id ||
-                          (!selectedBatchId && userRTBatches[0].id === b.id)
-                            ? "bg-amber-50 border-amber-500"
-                            : "bg-white border-stone-200"
-                        }`}
-                      >
-                        <View>
-                          <Text className="text-stone-900 font-bold text-[11px]">
-                            {b.name}
-                          </Text>
-                          <Text className="text-stone-400 text-[9px] mt-0.5">
-                            Lokasi: {b.pickup_point} • Deadl:{" "}
-                            {new Date(b.deadline).toLocaleDateString("id-ID")}
-                          </Text>
-                        </View>
-                        <SymbolView
-                          name="checkmark.circle.fill"
-                          size={14}
-                          tintColor="#d97706"
-                        />
-                      </Pressable>
-                    ))
-                  )}
-                </View>
-              )}
 
               {/* Point Loyalty Redeem Option */}
               <View className="bg-stone-50 border border-stone-200 p-3.5 rounded-xl mb-4">
@@ -1252,11 +1133,9 @@ export default function CitizenPortal() {
               <View className="flex-row justify-between py-1">
                 <Text className="text-stone-500 text-[10px]">Fulfillment</Text>
                 <Text className="text-stone-700 text-[10px]">
-                  {detailOrder.fulfillment === "RT_PICKUP_POINT"
-                    ? "Kolektif Pos RT"
-                    : detailOrder.fulfillment === "DELIVERY_TO_HOME"
-                      ? "Kirim ke Rumah"
-                      : "Kantor Koperasi"}
+                  {detailOrder.fulfillment === "DELIVERY_TO_HOME"
+                    ? "Kirim ke Rumah"
+                    : "Ambil Mandiri Koperasi"}
                 </Text>
               </View>
               <View className="flex-row justify-between py-1 border-b border-stone-100 pb-2 mb-2">
