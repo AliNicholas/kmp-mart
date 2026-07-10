@@ -1,6 +1,8 @@
 import { useApp } from "@/contexts/AppContext";
-import { dbService } from "@/utils/db";
+import { formatWibDateTime, getOrderStatusLabel } from "@/lib/utils";
+import { dbService, OrderStatusHistory } from "@/utils/db";
 import { SymbolView } from "@/components/app-symbol";
+import { OrderStatusHistoryCards } from "@/components/order-status-history-cards";
 import React, { useState } from "react";
 import {
   Alert,
@@ -68,6 +70,14 @@ export default function CitizenPortal() {
   >(null);
   const [detailQuantity, setDetailQuantity] = useState(1);
   const [detailOrderItems, setDetailOrderItems] = useState<any[]>([]);
+  const [detailOrderStatusHistory, setDetailOrderStatusHistory] = useState<
+    OrderStatusHistory[]
+  >([]);
+
+  const openOrderDetail = (order: any) => {
+    setDetailOrderStatusHistory([]);
+    setDetailOrder(order);
+  };
 
   // Synchronize cooperative ID with active user
   React.useEffect(() => {
@@ -79,6 +89,27 @@ export default function CitizenPortal() {
       return () => clearTimeout(syncTask);
     }
   }, [activeUser]);
+
+  React.useEffect(() => {
+    if (!detailOrder?.id) {
+      return;
+    }
+
+    let isCurrent = true;
+    dbService
+      .getAll<OrderStatusHistory>(
+        "SELECT * FROM order_status_history WHERE order_id = ? ORDER BY changed_at ASC",
+        [detailOrder.id],
+      )
+      .then((history) => {
+        if (isCurrent) setDetailOrderStatusHistory(history);
+      })
+      .catch((error) => console.error("Failed to load order status history:", error));
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [detailOrder?.id, detailOrder?.order_status]);
 
   // Fetch point history for active user
   React.useEffect(() => {
@@ -340,29 +371,6 @@ export default function CitizenPortal() {
       setReferralInput("");
     } else {
       Alert.alert("Gagal", res.error || "Gagal menerapkan kode referral.");
-    }
-  };
-
-  const getOrderStatusLabel = (status: string) => {
-    switch (status) {
-      case "PENDING_PAYMENT":
-        return "Menunggu Pembayaran";
-      case "PAID":
-        return "Sudah Dibayar";
-      case "CONFIRMED":
-        return "Dikonfirmasi Koperasi";
-      case "PACKED":
-        return "Sedang Dikemas";
-      case "READY_FOR_PICKUP":
-        return "Siap Diambil";
-      case "DELIVERED_TO_RT":
-        return "Tiba di Agen Transit";
-      case "PICKED_UP":
-        return "Sudah Diambil";
-      case "COMPLETED":
-        return "Selesai";
-      default:
-        return "Dibatalkan";
     }
   };
 
@@ -755,19 +763,13 @@ export default function CitizenPortal() {
           myOrders.map((o) => (
             <Pressable
               key={o.id}
-              onPress={() => setDetailOrder(o)}
+              onPress={() => openOrderDetail(o)}
               className="bg-white p-4 rounded-xl border border-stone-200 mb-3 shadow-sm active:bg-stone-100"
             >
               <View className="flex-row justify-between items-center border-b border-stone-100 pb-2 mb-2">
                 <View>
                   <Text className="text-stone-400 text-[10px]">
-                    {new Date(o.created_at).toLocaleDateString("id-ID", {
-                      day: "numeric",
-                      month: "short",
-                      year: "numeric",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
+                    {formatWibDateTime(o.created_at)}
                   </Text>
                   <Text className="text-[10px] text-emerald-950 font-bold mt-0.5">
                     ID: {o.id.substring(0, 12)}...
@@ -1716,9 +1718,11 @@ export default function CitizenPortal() {
               </Text>
 
               <View className="flex-row justify-between py-1">
-                <Text className="text-stone-500 text-[10px]">Tanggal</Text>
+                <Text className="text-stone-500 text-[10px]">
+                  Pesanan dibuat
+                </Text>
                 <Text className="text-stone-700 text-[10px]">
-                  {new Date(detailOrder.created_at).toLocaleDateString("id-ID")}
+                  {formatWibDateTime(detailOrder.created_at)}
                 </Text>
               </View>
               <View className="flex-row justify-between py-1">
@@ -1736,6 +1740,10 @@ export default function CitizenPortal() {
                 <Text className="text-emerald-800 font-bold text-[10px]">
                   {getOrderStatusLabel(detailOrder.order_status)}
                 </Text>
+              </View>
+
+              <View className="max-h-[220px] overflow-scroll">
+                <OrderStatusHistoryCards history={detailOrderStatusHistory} />
               </View>
 
               <Text className="text-stone-500 text-[10px] font-bold mb-1">

@@ -1,6 +1,7 @@
 import {
   AuditLog,
   CashCollection,
+  DatabaseWrite,
   dbService,
   DeliveryProof,
   DeliveryStatus,
@@ -9,6 +10,7 @@ import {
   KopRequest,
   Order,
   OrderItem,
+  PointTransaction,
   Product,
   PurchaseOrder,
   RTBatch,
@@ -22,6 +24,7 @@ import {
   ReactNode,
   useContext,
   useEffect,
+  useRef,
   useState,
 } from "react";
 import { Alert } from "react-native";
@@ -136,6 +139,7 @@ interface AppContextType {
     rtBatchId: string | null,
     overrideUserId?: string, // used for assisted checkout
     isQris?: boolean,
+    cartOverride?: CartItem[],
   ) => Promise<{ success: boolean; error?: string; orderId?: string }>;
 
 
@@ -153,6 +157,11 @@ interface AppContextType {
     amountSubmitted: number,
   ) => Promise<void>;
   completeOrder: (orderId: string) => Promise<void>;
+  updateOrderStatus: (
+    orderId: string,
+    status: Order["order_status"],
+    paymentStatus?: Order["payment_status"],
+  ) => Promise<void>;
 
   // Admin Actions
   updateProductStock: (productId: string, newStock: number) => Promise<void>;
@@ -262,6 +271,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
   const [kopRequests, setKopRequests] = useState<KopRequest[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const checkoutInFlightRef = useRef(false);
+  const completingOrderIdsRef = useRef(new Set<string>());
+  const completingDeliveryTaskIdsRef = useRef(new Set<string>());
 
   // Initialize DB and load initial data
   useEffect(() => {
@@ -614,6 +626,49 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     );
   };
 
+  const updateOrderStatus = async (
+    orderId: string,
+    status: Order["order_status"],
+    paymentStatus?: Order["payment_status"],
+  ) => {
+    const order = await dbService.getFirst<Order>(
+      "SELECT * FROM orders WHERE id = ?",
+      [orderId],
+    );
+    if (!order) throw new Error("Pesanan tidak ditemukan.");
+
+    const nextPaymentStatus = paymentStatus || order.payment_status;
+    if (
+      order.order_status === status &&
+      order.payment_status === nextPaymentStatus
+    ) {
+      return;
+    }
+
+    await dbService.run(
+      "UPDATE orders SET order_status = ?, payment_status = ? WHERE id = ?",
+      [status, nextPaymentStatus, orderId],
+    );
+
+    if (order.order_status !== status) {
+      const changedAt = new Date().toISOString();
+      await dbService.run(
+        "INSERT INTO order_status_history (id, order_id, status, changed_at) VALUES (?, ?, ?, ?)",
+        [
+          `order-status-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+          orderId,
+          status,
+          changedAt,
+        ],
+      );
+      await logAudit(
+        activeUser?.name || "Sistem",
+        "ORDER_STATUS_CHANGED",
+        `Order ${orderId}: ${order.order_status} -> ${status}`,
+      );
+    }
+  };
+
   async function createCashCollectionIfNeeded(
     taskId: string,
     collectorId: string | null,
@@ -655,6 +710,12 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   async function issueCompletionRewards(order: Order) {
     if (order.order_status === "COMPLETED") return 0;
 
+    const existingOrderReward = await dbService.getFirst<PointTransaction>(
+      "SELECT * FROM point_transactions WHERE reference_id = ? AND source = 'ORDER' AND type = 'EARN'",
+      [order.id],
+    );
+    if (existingOrderReward) return 0;
+
     const orderItems = await dbService.getAll<OrderItem>(
       "SELECT * FROM order_items WHERE order_id = ?",
       [order.id],
@@ -669,17 +730,19 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       basePoints *= 2;
     }
 
-    const prevOrders = orders.filter(
-      (o) =>
-        o.user_id === order.user_id &&
-        o.id !== order.id &&
-        o.order_status === "COMPLETED",
+    const previousCompletedOrders = await dbService.getAll<Order>(
+      "SELECT * FROM orders WHERE user_id = ? AND order_status = 'COMPLETED'",
+      [order.user_id],
     );
-    const firstOrderBonus = prevOrders.length === 0 ? 100 : 0;
+    const isFirstCompletedOrder = previousCompletedOrders.length === 0;
+    const firstOrderBonus = isFirstCompletedOrder ? 100 : 0;
     const totalEarnedPoints = basePoints + firstOrderBonus;
 
     if (totalEarnedPoints > 0) {
-      const user = allUsers.find((u) => u.id === order.user_id);
+      const user = await dbService.getFirst<User>(
+        "SELECT * FROM users WHERE id = ?",
+        [order.user_id],
+      );
       if (user) {
         await dbService.run("UPDATE users SET points = ? WHERE id = ?", [
           user.points + totalEarnedPoints,
@@ -700,47 +763,61 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       }
     }
 
-    const buyer = allUsers.find((u) => u.id === order.user_id);
-    if (buyer?.referred_by && prevOrders.length === 0) {
-      const referrer = allUsers.find(
-        (u) => u.referral_code === buyer.referred_by,
+    const buyer = await dbService.getFirst<User>(
+      "SELECT * FROM users WHERE id = ?",
+      [order.user_id],
+    );
+    if (buyer?.referred_by && isFirstCompletedOrder) {
+      const referrer = await dbService.getFirst<User>(
+        "SELECT * FROM users WHERE referral_code = ?",
+        [buyer.referred_by],
       );
       if (referrer) {
-        // Referrer points
-        await dbService.run("UPDATE users SET points = ? WHERE id = ?", [
-          referrer.points + 10000,
-          referrer.id,
-        ]);
-        await dbService.run(
-          `INSERT INTO point_transactions (id, user_id, type, points, source, reference_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-          [
-            `pt-${Date.now()}-drv-ref`,
+        const referrerReward = await dbService.getFirst<PointTransaction>(
+          "SELECT * FROM point_transactions WHERE user_id = ? AND source = 'REFERRAL' AND reference_id = ?",
+          [referrer.id, order.id],
+        );
+        if (!referrerReward) {
+          await dbService.run("UPDATE users SET points = ? WHERE id = ?", [
+            referrer.points + 10000,
             referrer.id,
-            "EARN",
-            10000,
-            "REFERRAL",
-            order.id,
-            new Date().toISOString(),
-          ],
-        );
+          ]);
+          await dbService.run(
+            `INSERT INTO point_transactions (id, user_id, type, points, source, reference_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+            [
+              `pt-${Date.now()}-drv-ref`,
+              referrer.id,
+              "EARN",
+              10000,
+              "REFERRAL",
+              order.id,
+              new Date().toISOString(),
+            ],
+          );
+        }
 
-        // Buyer points (referred user reward)
-        await dbService.run("UPDATE users SET points = ? WHERE id = ?", [
-          buyer.points + 10000,
-          buyer.id,
-        ]);
-        await dbService.run(
-          `INSERT INTO point_transactions (id, user_id, type, points, source, reference_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-          [
-            `pt-${Date.now()}-drv-buyer-ref`,
-            buyer.id,
-            "EARN",
-            10000,
-            "REFERRAL",
-            order.id,
-            new Date().toISOString(),
-          ],
+        const buyerReward = await dbService.getFirst<PointTransaction>(
+          "SELECT * FROM point_transactions WHERE user_id = ? AND source = 'REFERRAL' AND reference_id = ?",
+          [buyer.id, order.id],
         );
+        if (!buyerReward) {
+          await dbService.run("UPDATE users SET points = ? WHERE id = ?", [
+            buyer.points + 10000,
+            buyer.id,
+          ]);
+          await dbService.run(
+            `INSERT INTO point_transactions (id, user_id, type, points, source, reference_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+            [
+              `pt-${Date.now()}-drv-buyer-ref`,
+              buyer.id,
+              "EARN",
+              10000,
+              "REFERRAL",
+              order.id,
+              new Date().toISOString(),
+            ],
+          );
+        }
       }
     }
 
@@ -986,10 +1063,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     );
 
     if (task.order_id) {
-      await dbService.run(
-        "UPDATE orders SET order_status = 'PICKED_UP' WHERE id = ?",
-        [task.order_id],
-      );
+      await updateOrderStatus(task.order_id, "PICKED_UP");
     }
 
     await logAudit(
@@ -1087,10 +1161,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     );
 
     if (task.order_id) {
-      await dbService.run(
-        "UPDATE orders SET order_status = 'PICKED_UP' WHERE id = ?",
-        [task.order_id],
-      );
+      await updateOrderStatus(task.order_id, "PICKED_UP");
     } else if (task.rt_batch_id) {
       await dbService.run(
         "UPDATE rt_batches SET status = 'PROCESSING' WHERE id = ?",
@@ -1110,10 +1181,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   async function startDeliveryTransit(taskId: string) {
     const task = deliveryTasks.find((item) => item.id === taskId);
     if (task?.order_id) {
-      await dbService.run(
-        "UPDATE orders SET order_status = 'PICKED_UP' WHERE id = ?",
-        [task.order_id],
-      );
+      await updateOrderStatus(task.order_id, "PICKED_UP");
     }
     return updateDeliveryTaskStatus(
       taskId,
@@ -1127,17 +1195,25 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     proofValue: string,
     collectedAmount: number,
   ) {
-    const task = deliveryTasks.find((item) => item.id === taskId);
+    if (completingDeliveryTaskIdsRef.current.has(taskId)) {
+      return { success: true };
+    }
+
+    const task = await dbService.getFirst<DeliveryTask>(
+      "SELECT * FROM delivery_tasks WHERE id = ?",
+      [taskId],
+    );
     if (!task)
       return { success: false, error: "Tugas pengiriman tidak ditemukan." };
+    if (task.status === "DELIVERED") return { success: true };
+
+    completingDeliveryTaskIdsRef.current.add(taskId);
+
+    try {
 
     const nowStr = new Date().toISOString();
     const proofType =
       task.delivery_type === "RT_BATCH_DELIVERY" ? "RT_CONFIRMATION" : "PIN";
-    await dbService.run(
-      "UPDATE delivery_tasks SET status = ?, updated_at = ? WHERE id = ?",
-      ["DELIVERED", nowStr, taskId],
-    );
     await dbService.run(
       `INSERT INTO delivery_proofs (
         id, delivery_task_id, proof_type, proof_value, photo_url, latitude, longitude, confirmed_by_user_id, created_at
@@ -1174,17 +1250,13 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
 
     if (task.order_id) {
-      const order =
-        orders.find((item) => item.id === task.order_id) ||
-        (await dbService.getFirst<Order>("SELECT * FROM orders WHERE id = ?", [
-          task.order_id,
-        ]));
+      const order = await dbService.getFirst<Order>(
+        "SELECT * FROM orders WHERE id = ?",
+        [task.order_id],
+      );
       if (order) {
         const earned = await issueCompletionRewards(order);
-        await dbService.run(
-          "UPDATE orders SET order_status = 'COMPLETED', payment_status = 'PAID' WHERE id = ?",
-          [order.id],
-        );
+        await updateOrderStatus(order.id, "COMPLETED", "PAID");
         await logAudit(
           activeUser?.name || "KopKurir",
           "DELIVERY_COMPLETED",
@@ -1196,10 +1268,13 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         "UPDATE rt_batches SET status = 'DELIVERED_TO_RT' WHERE id = ?",
         [task.rt_batch_id],
       );
-      await dbService.run(
-        "UPDATE orders SET order_status = 'DELIVERED_TO_RT' WHERE rt_batch_id = ?",
+      const batchOrders = await dbService.getAll<Order>(
+        "SELECT * FROM orders WHERE rt_batch_id = ?",
         [task.rt_batch_id],
       );
+      for (const batchOrder of batchOrders) {
+        await updateOrderStatus(batchOrder.id, "DELIVERED_TO_RT");
+      }
       await logAudit(
         activeUser?.name || "KopKurir",
         "RT_BATCH_DELIVERED",
@@ -1208,7 +1283,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
 
     if (task.driver_id) {
-      const driver = driverProfiles.find((item) => item.id === task.driver_id);
+      const driver = await dbService.getFirst<DriverProfile>(
+        "SELECT * FROM driver_profiles WHERE id = ?",
+        [task.driver_id],
+      );
       if (driver) {
         await dbService.run(
           "UPDATE driver_profiles SET total_completed_deliveries = ? WHERE id = ?",
@@ -1217,8 +1295,16 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       }
     }
 
-    await refreshData();
-    return { success: true };
+    await dbService.run(
+      "UPDATE delivery_tasks SET status = ?, updated_at = ? WHERE id = ?",
+      ["DELIVERED", nowStr, taskId],
+    );
+
+      await refreshData();
+      return { success: true };
+    } finally {
+      completingDeliveryTaskIdsRef.current.delete(taskId);
+    }
   }
 
   async function failDeliveryTask(taskId: string, reason: string) {
@@ -1439,15 +1525,29 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     rtBatchId: string | null,
     overrideUserId?: string,
     isQris?: boolean,
+    cartOverride?: CartItem[],
   ) => {
     const targetUserId = overrideUserId || activeUser?.id;
+    const checkoutCart = cartOverride || cart;
     if (!targetUserId)
       return { success: false, error: "No active user found." };
-    if (cart.length === 0) return { success: false, error: "Cart is empty." };
+    if (checkoutCart.length === 0)
+      return { success: false, error: "Cart is empty." };
+    if (checkoutInFlightRef.current) {
+      return {
+        success: false,
+        error: "Pesanan sedang diproses. Mohon tunggu sebentar.",
+      };
+    }
+
+    checkoutInFlightRef.current = true;
 
     try {
       // Fetch target user's updated profile to check points
-      const buyer = allUsers.find((u) => u.id === targetUserId);
+      const buyer = await dbService.getFirst<User>(
+        "SELECT * FROM users WHERE id = ?",
+        [targetUserId],
+      );
       if (!buyer) return { success: false, error: "Buyer not found." };
 
       if (pointsRedeemed > buyer.points) {
@@ -1456,7 +1556,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
       // 1. Calculate values
       let subtotal = 0;
-      for (const item of cart) {
+      for (const item of checkoutCart) {
         // Validate stock
         const p = products.find((prod) => prod.id === item.product.id);
         if (!p || p.stock < item.quantity) {
@@ -1477,7 +1577,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
       // Check if any product is from a different cooperative (cross-cooperative shopping)
       let logisticsSurcharge = 0;
-      for (const item of cart) {
+      for (const item of checkoutCart) {
         const prod = products.find((p) => p.id === item.product.id);
         if (prod && prod.cooperative_id !== buyer.cooperative_id) {
           if (
@@ -1515,11 +1615,31 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       const paymentStatus = isPaidUpfront ? "PAID" : "UNPAID";
       const orderStatus = isPaidUpfront ? "CONFIRMED" : "PENDING_PAYMENT";
 
-      // 2. Insert Order
-      await dbService.run(
-        `INSERT INTO orders (id, user_id, rt_batch_id, channel, fulfillment, subtotal, discount, points_redeemed, total, payment_status, order_status, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [
+      const writes: DatabaseWrite[] = checkoutCart.flatMap((item, index) => [
+        {
+          query:
+            "UPDATE products SET stock = stock - ? WHERE id = ? AND stock >= ?",
+          params: [item.quantity, item.product.id, item.quantity],
+          requireRowsAffected: true,
+        },
+        {
+          query:
+            "INSERT INTO order_items (id, order_id, product_id, name, price, quantity) VALUES (?, ?, ?, ?, ?, ?)",
+          params: [
+            `oi-${orderId}-${index}`,
+            orderId,
+            item.product.id,
+            item.product.name,
+            item.product.price,
+            item.quantity,
+          ],
+        },
+      ]);
+
+      writes.unshift({
+        query:
+          "INSERT INTO orders (id, user_id, rt_batch_id, channel, fulfillment, subtotal, discount, points_redeemed, total, payment_status, order_status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        params: [
           orderId,
           targetUserId,
           rtBatchId,
@@ -1533,67 +1653,49 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           orderStatus,
           nowStr,
         ],
-      );
+      });
 
-      // 3. Insert Order Items and Update Stock
-      for (const item of cart) {
-        const itemId = `oi-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-        // Insert order item
-        await dbService.run(
-          `INSERT INTO order_items (id, order_id, product_id, name, price, quantity) VALUES (?, ?, ?, ?, ?, ?)`,
-          [
-            itemId,
-            orderId,
-            item.product.id,
-            item.product.name,
-            item.product.price,
-            item.quantity,
-          ],
-        );
-
-        // Update product stock
-        const newStock = item.product.stock - item.quantity;
-        await dbService.run(`UPDATE products SET stock = ? WHERE id = ?`, [
-          newStock,
-          item.product.id,
-        ]);
-      }
-
-      // 4. Update user points balance (subtract redeemed points)
       if (pointsUsed > 0) {
-        const newUserPoints = buyer.points - pointsUsed;
-        await dbService.run(`UPDATE users SET points = ? WHERE id = ?`, [
-          newUserPoints,
-          targetUserId,
-        ]);
-
-        // Log point transaction
-        await dbService.run(
-          `INSERT INTO point_transactions (id, user_id, type, points, source, reference_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-          [
-            `pt-${Date.now()}-red`,
-            targetUserId,
-            "REDEEM",
-            pointsUsed,
-            "ORDER",
-            orderId,
-            nowStr,
-          ],
+        writes.push(
+          {
+            query:
+              "UPDATE users SET points = points - ? WHERE id = ? AND points >= ?",
+            params: [pointsUsed, targetUserId, pointsUsed],
+            requireRowsAffected: true,
+          },
+          {
+            query:
+              "INSERT INTO point_transactions (id, user_id, type, points, source, reference_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            params: [
+              `pt-${orderId}-red`,
+              targetUserId,
+              "REDEEM",
+              pointsUsed,
+              "ORDER",
+              orderId,
+              nowStr,
+            ],
+          },
         );
       }
 
-      // 5. Update batch totals if order is linked to a batch
       if (rtBatchId) {
-        const batch = batches.find((b) => b.id === rtBatchId);
-        if (batch) {
-          const newOrdersCount = batch.total_orders + 1;
-          const newGmv = batch.total_gmv + total;
-          await dbService.run(
-            `UPDATE rt_batches SET total_orders = ?, total_gmv = ? WHERE id = ?`,
-            [newOrdersCount, newGmv, rtBatchId],
-          );
-        }
+        writes.push({
+          query:
+            "UPDATE rt_batches SET total_orders = total_orders + 1, total_gmv = total_gmv + ? WHERE id = ?",
+          params: [total, rtBatchId],
+          requireRowsAffected: true,
+        });
       }
+
+      if (!cartOverride) {
+        writes.push({
+          query: "DELETE FROM cart_items WHERE user_id = ?",
+          params: [activeUser?.id || targetUserId],
+        });
+      }
+
+      await dbService.transaction(writes);
 
       // 6. Audit log
       const actorName = activeUser?.name || "System";
@@ -1602,27 +1704,27 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           ? "Kartu Kopdes"
           : channel === "RT_ASSISTED"
             ? "RT-Assisted"
-            : "Self-Order";
+            : channel === "B2B_AGENT"
+              ? "B2B Mitra"
+              : "Self-Order";
       await logAudit(
         `${actorName} (${activeRole})`,
         "CHECKOUT",
-        `Fulfillment: ${fulfillment}, Channel: ${channelDesc}, Total: Rp${total.toLocaleString("id-ID")}, Items: ${cart.length} SKUs for User: ${buyer.name}`,
+        `Fulfillment: ${fulfillment}, Channel: ${channelDesc}, Total: Rp${total.toLocaleString("id-ID")}, Items: ${checkoutCart.length} SKUs for User: ${buyer.name}`,
       );
 
       if (fulfillment === "DELIVERY_TO_HOME") {
         await createDeliveryTaskFromOrder(orderId);
       }
 
-      // Clear cart from database
-      await dbService.run(`DELETE FROM cart_items WHERE user_id = ?`, [
-        activeUser?.id || targetUserId,
-      ]);
-      setCart([]);
+      if (!cartOverride) setCart([]);
       await refreshData();
       return { success: true, orderId };
     } catch (err: any) {
       console.error(err);
       return { success: false, error: err.message || "Checkout failed." };
+    } finally {
+      checkoutInFlightRef.current = false;
     }
   };
 
@@ -1678,10 +1780,13 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       [batchId],
     );
 
-    // Get batch GMV to create Settlement
+    // Get batch GMV to create exactly one pending settlement.
     const batch = batches.find((b) => b.id === batchId);
-    if (batch) {
-      // Create pending settlement
+    const existingSettlement = await dbService.getFirst<Settlement>(
+      "SELECT * FROM settlements WHERE rt_batch_id = ?",
+      [batchId],
+    );
+    if (batch && !existingSettlement) {
       const settlementId = `set-${Date.now()}`;
       await dbService.run(
         "INSERT INTO settlements (id, rt_batch_id, amount_expected, amount_submitted, status, submitted_at, verified_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
@@ -1690,10 +1795,13 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
 
     // Update all UNPAID orders in this batch to paymentStatus = 'WAITING_VERIFICATION' and orderStatus = 'CONFIRMED'
-    await dbService.run(
-      "UPDATE orders SET order_status = 'CONFIRMED' WHERE rt_batch_id = ? AND order_status = 'PENDING_PAYMENT'",
+    const pendingOrders = await dbService.getAll<Order>(
+      "SELECT * FROM orders WHERE rt_batch_id = ? AND order_status = 'PENDING_PAYMENT'",
       [batchId],
     );
+    for (const order of pendingOrders) {
+      await updateOrderStatus(order.id, "CONFIRMED");
+    }
 
     await logAudit(
       `${activeUser?.name} (RT Agent)`,
@@ -1715,123 +1823,29 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const completeOrder = async (orderId: string) => {
-    const order =
-      orders.find((o) => o.id === orderId) ||
-      (await dbService.getFirst<Order>("SELECT * FROM orders WHERE id = ?", [
-        orderId,
-      ]));
-    if (!order) return;
+    if (completingOrderIdsRef.current.has(orderId)) return;
 
-    await dbService.run(
-      "UPDATE orders SET order_status = 'COMPLETED', payment_status = 'PAID' WHERE id = ?",
+    const order = await dbService.getFirst<Order>(
+      "SELECT * FROM orders WHERE id = ?",
       [orderId],
     );
+    if (!order || order.order_status === "COMPLETED") return;
 
-    const orderItems = await dbService.getAll<OrderItem>(
-      "SELECT * FROM order_items WHERE order_id = ?",
-      [orderId],
-    );
+    completingOrderIdsRef.current.add(orderId);
+    try {
+      const totalEarnedPoints = await issueCompletionRewards(order);
+      await updateOrderStatus(orderId, "COMPLETED", "PAID");
 
-    let basePoints = Math.floor(order.total / 10000);
-
-    let containsLocal = false;
-    for (const item of orderItems) {
-      const p = products.find((prod) => prod.id === item.product_id);
-      if (p && p.is_local === 1) {
-        containsLocal = true;
-      }
-    }
-
-    if (containsLocal) {
-      basePoints = basePoints * 2;
-    }
-
-    const prevOrders = orders.filter(
-      (o) => o.user_id === order.user_id && o.order_status === "COMPLETED",
-    );
-    const firstOrderBonus = prevOrders.length === 0 ? 100 : 0;
-
-    const totalEarnedPoints = basePoints + firstOrderBonus;
-
-    if (totalEarnedPoints > 0) {
-      const user = allUsers.find((u) => u.id === order.user_id);
-      if (user) {
-        const newPoints = user.points + totalEarnedPoints;
-        await dbService.run("UPDATE users SET points = ? WHERE id = ?", [
-          newPoints,
-          order.user_id,
-        ]);
-
-        await dbService.run(
-          `INSERT INTO point_transactions (id, user_id, type, points, source, reference_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-          [
-            `pt-${Date.now()}-earn`,
-            order.user_id,
-            "EARN",
-            totalEarnedPoints,
-            "ORDER",
-            orderId,
-            new Date().toISOString(),
-          ],
-        );
-      }
-    }
-
-    const buyer = allUsers.find((u) => u.id === order.user_id);
-    if (buyer && buyer.referred_by && prevOrders.length === 0) {
-      const referrer = allUsers.find(
-        (u) => u.referral_code === buyer.referred_by,
+      await logAudit(
+        "Sistem",
+        "COMPLETE_ORDER",
+        `Confirmed resident pickup/delivery & payment for order ${orderId}. Points awarded: +${totalEarnedPoints}.`,
       );
-      if (referrer) {
-        // Award points to Referrer
-        const newRefPoints = referrer.points + 10000;
-        await dbService.run("UPDATE users SET points = ? WHERE id = ?", [
-          newRefPoints,
-          referrer.id,
-        ]);
 
-        await dbService.run(
-          `INSERT INTO point_transactions (id, user_id, type, points, source, reference_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-          [
-            `pt-${Date.now()}-ref`,
-            referrer.id,
-            "EARN",
-            10000,
-            "REFERRAL",
-            orderId,
-            new Date().toISOString(),
-          ],
-        );
-
-        // Award points to Buyer (the newly registered user)
-        const newBuyerPoints = buyer.points + 10000;
-        await dbService.run("UPDATE users SET points = ? WHERE id = ?", [
-          newBuyerPoints,
-          buyer.id,
-        ]);
-
-        await dbService.run(
-          `INSERT INTO point_transactions (id, user_id, type, points, source, reference_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-          [
-            `pt-${Date.now()}-buyer-ref`,
-            buyer.id,
-            "EARN",
-            10000,
-            "REFERRAL",
-            orderId,
-            new Date().toISOString(),
-          ],
-        );
-      }
+      await refreshData();
+    } finally {
+      completingOrderIdsRef.current.delete(orderId);
     }
-
-    await logAudit(
-      "Sistem",
-      "COMPLETE_ORDER",
-      `Confirmed resident pickup/delivery & payment for order ${orderId}. Points awarded: +${totalEarnedPoints}.`,
-    );
-
-    await refreshData();
   };
 
   const markItemPickedUp = async (orderId: string) => {
@@ -1888,8 +1902,18 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
     if (isNew) {
       await dbService.run(
-        "INSERT INTO products (id, name, price, cost_price, stock, unit, is_local, image_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-        [nowId, name, price, cost_price, stock, unit, is_local, image_url],
+        "INSERT INTO products (id, cooperative_id, name, price, cost_price, stock, unit, is_local, image_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        [
+          nowId,
+          activeUser?.cooperative_id || "tenant-1",
+          name,
+          price,
+          cost_price,
+          stock,
+          unit,
+          is_local,
+          image_url,
+        ],
       );
       await logAudit(
         `${activeUser?.name} (Admin)`,
@@ -1928,11 +1952,18 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           ? "DELIVERED_TO_RT"
           : "COMPLETED";
 
-    // Update all orders linked to this batch
-    await dbService.run(
-      "UPDATE orders SET order_status = ? WHERE rt_batch_id = ?",
-      [targetOrderStatus, batchId],
+    // Update all orders linked to this batch and record each status transition.
+    const batchOrders = await dbService.getAll<Order>(
+      "SELECT * FROM orders WHERE rt_batch_id = ?",
+      [batchId],
     );
+    for (const order of batchOrders) {
+      if (targetOrderStatus === "COMPLETED") {
+        await completeOrder(order.id);
+      } else {
+        await updateOrderStatus(order.id, targetOrderStatus);
+      }
+    }
 
     await logAudit(
       `${activeUser?.name} (Admin)`,
@@ -2043,13 +2074,15 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const receiveGoods = async (poId: string, receivedQty: number) => {
     try {
-      const po =
-        purchaseOrders.find((p) => p.id === poId) ||
-        (await dbService.getFirst<PurchaseOrder>(
-          "SELECT * FROM purchase_orders WHERE id = ?",
-          [poId],
-        ));
+      const po = await dbService.getFirst<PurchaseOrder>(
+        "SELECT * FROM purchase_orders WHERE id = ?",
+        [poId],
+      );
       if (!po) return;
+      if (po.status === "RECEIVED") return;
+      if (!Number.isFinite(receivedQty) || receivedQty <= 0) {
+        throw new Error("Jumlah barang diterima harus lebih dari nol.");
+      }
 
       await dbService.run(
         `UPDATE purchase_orders SET status = 'RECEIVED' WHERE id = ?`,
@@ -2188,6 +2221,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         submitBatch,
         markItemPickedUp,
         completeOrder,
+        updateOrderStatus,
         submitSettlement,
 
         updateProductStock,

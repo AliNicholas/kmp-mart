@@ -48,8 +48,9 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "66b694b0-bba1-47d4-9ee0-0c8a778644d1"
+        "projectId": "dca03486-71ec-45bd-9f64-79c5b11b2fe1"
       }
-    }
+    },
+    "owner": "nicholasali"
   }
 }

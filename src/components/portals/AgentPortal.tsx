@@ -1,5 +1,5 @@
 import { useApp } from "@/contexts/AppContext";
-import { dbService, Product } from "@/utils/db";
+import { Product } from "@/utils/db";
 import { SymbolView } from "@/components/app-symbol";
 import { useState } from "react";
 import {
@@ -19,8 +19,7 @@ export default function AgentPortal() {
     createKopRequest,
     checkout,
     refreshData,
-    addToCart,
-    clearCart,
+    completeOrder,
   } = useApp();
 
   const [activeTab, setActiveTab] = useState(0); // 0: Katalog & B2B, 1: Riwayat Order, 2: KopRequest
@@ -82,28 +81,32 @@ export default function AgentPortal() {
           {
             text: "Kirim",
             onPress: async () => {
-              // 1. Clear current active cart
-              clearCart();
+              const b2bItems = cartItems.flatMap(([prodId, qty]) => {
+                const product = products.find((item) => item.id === prodId);
+                if (!product) return [];
+                return [
+                  {
+                    product: { ...product, price: getPartnerPrice(product) },
+                    quantity: qty,
+                  },
+                ];
+              });
 
-              // 2. Populate cart with B2B Partner-priced products
-              for (const [prodId, qty] of cartItems) {
-                const p = products.find((prod) => prod.id === prodId);
-                if (p) {
-                  const partnerPrice = getPartnerPrice(p);
-                  const partnerProduct = { ...p, price: partnerPrice };
-                  addToCart(partnerProduct, qty);
-                }
-              }
-
-              // 3. Checkout under B2B_AGENT channel
-              const res = await checkout(fulfillment, "B2B_AGENT", 0, null);
+              const res = await checkout(
+                fulfillment,
+                "B2B_AGENT",
+                0,
+                null,
+                undefined,
+                false,
+                b2bItems,
+              );
               if (res.success) {
                 Alert.alert(
                   "Sukses",
                   `Order B2B ${res.orderId} berhasil dikirim ke Koperasi Desa.`,
                 );
                 setB2bCart({});
-                clearCart();
               } else {
                 Alert.alert("Gagal", res.error || "Gagal membuat order B2B.");
               }
@@ -324,10 +327,7 @@ export default function AgentPortal() {
                         {
                           text: "Sudah & Sesuai",
                           onPress: async () => {
-                            await dbService.run(
-                              `UPDATE orders SET order_status = 'COMPLETED', payment_status = 'PAID' WHERE id = ?`,
-                              [o.id],
-                            );
+                            await completeOrder(o.id);
                             Alert.alert(
                               "Sukses",
                               "Terima kasih! Transaksi selesai.",

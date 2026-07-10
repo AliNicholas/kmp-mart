@@ -84,6 +84,13 @@ export interface Order {
   created_at: string;
 }
 
+export interface OrderStatusHistory {
+  id: string;
+  order_id: string;
+  status: Order["order_status"];
+  changed_at: string;
+}
+
 export interface OrderItem {
   id: string;
   order_id: string;
@@ -243,6 +250,12 @@ export interface KopRequest {
   created_at: string;
 }
 
+export interface DatabaseWrite {
+  query: string;
+  params?: any[];
+  requireRowsAffected?: boolean;
+}
+
 // ----------------------------------------------------
 // DATABASE WEB FALLBACK IMPLEMENTATION (localStorage)
 // ----------------------------------------------------
@@ -250,7 +263,14 @@ export interface KopRequest {
 class WebDatabase {
   private getStorage(): { [table: string]: any[] } {
     const data = localStorage.getItem("kopmart_db");
-    return data ? JSON.parse(data) : {};
+    if (!data) return {};
+
+    try {
+      return JSON.parse(data);
+    } catch {
+      localStorage.removeItem("kopmart_db");
+      return {};
+    }
   }
 
   private setStorage(data: { [table: string]: any[] }) {
@@ -271,6 +291,7 @@ class WebDatabase {
       "products",
       "rt_batches",
       "orders",
+      "order_status_history",
       "order_items",
       "point_transactions",
       "settlements",
@@ -1235,9 +1256,64 @@ class WebDatabase {
   public async executeSql(query: string, params: any[] = []): Promise<any> {
     const db = this.getStorage();
     const cleanQuery = query.replace(/\s+/g, " ").trim();
+    const normalizedQuery = cleanQuery.toUpperCase();
 
     // 1. SELECT queries
-    if (cleanQuery.toUpperCase().startsWith("SELECT")) {
+    if (normalizedQuery.startsWith("SELECT")) {
+      // Queries below are the only joins/aggregates used by the application.
+      // Keep the localStorage fallback behaviour equivalent to SQLite.
+      if (normalizedQuery.includes("FROM CART_ITEMS CI JOIN PRODUCTS P")) {
+        const userId = params[0];
+        return (db["cart_items"] || [])
+          .filter((cartItem) => String(cartItem.user_id) === String(userId))
+          .map((cartItem) => {
+            const product = (db["products"] || []).find(
+              (item) => item.id === cartItem.product_id,
+            );
+            if (!product) return null;
+
+            return {
+              quantity: cartItem.quantity,
+              product_id: product.id,
+              cooperative_id: product.cooperative_id,
+              name: product.name,
+              price: product.price,
+              cost_price: product.cost_price,
+              stock: product.stock,
+              unit: product.unit,
+              is_local: product.is_local,
+              image_url: product.image_url,
+            };
+          })
+          .filter(Boolean);
+      }
+
+      if (
+        normalizedQuery.includes("SELECT SUM(OI.QUANTITY) AS COUNT") &&
+        normalizedQuery.includes("FROM ORDER_ITEMS OI JOIN ORDERS O")
+      ) {
+        const userId = params[0];
+        const count = (db["order_items"] || []).reduce(
+          (sum, item) => {
+            const order = (db["orders"] || []).find(
+              (candidate) => candidate.id === item.order_id,
+            );
+            const product = (db["products"] || []).find(
+              (candidate) => candidate.id === item.product_id,
+            );
+            if (
+              order?.user_id !== userId ||
+              Number(product?.is_local) !== 1
+            ) {
+              return sum;
+            }
+            return sum + Number(item.quantity || 0);
+          },
+          0,
+        );
+        return [{ count }];
+      }
+
       // Determine table name
       const fromMatch = cleanQuery.match(/FROM\s+(\w+)/i);
       if (!fromMatch) return [];
@@ -1245,7 +1321,9 @@ class WebDatabase {
       let rows = db[tableName] || [];
 
       // Simple WHERE clause parsing
-      const whereMatch = cleanQuery.match(/WHERE\s+(.+)$/i);
+      const whereMatch = cleanQuery.match(
+        /WHERE\s+(.+?)(?:\s+ORDER\s+BY\b|\s+LIMIT\b|$)/i,
+      );
       if (whereMatch) {
         const whereClause = whereMatch[1].split(/AND/i);
         let paramIdx = 0;
@@ -1306,7 +1384,7 @@ class WebDatabase {
     }
 
     // 2. INSERT queries
-    if (cleanQuery.toUpperCase().startsWith("INSERT")) {
+    if (normalizedQuery.startsWith("INSERT")) {
       const intoMatch = cleanQuery.match(
         /INTO\s+(\w+)\s*\(([^)]+)\)\s*VALUES\s*\(([^)]+)\)/i,
       );
@@ -1331,14 +1409,80 @@ class WebDatabase {
       });
 
       if (!db[tableName]) db[tableName] = [];
-      db[tableName].push(newRow);
+
+      const isIgnore = /^INSERT\s+OR\s+IGNORE\b/i.test(cleanQuery);
+      const isReplace = /^INSERT\s+OR\s+REPLACE\b/i.test(cleanQuery);
+      const identityKeys =
+        tableName === "cart_items"
+          ? ["user_id", "product_id"]
+          : newRow.id
+            ? ["id"]
+            : [];
+      const existingIndex = db[tableName].findIndex((row) =>
+        identityKeys.length > 0 &&
+        identityKeys.every((key) => String(row[key]) === String(newRow[key])),
+      );
+
+      if (existingIndex >= 0 && isIgnore) {
+        return { insertId: db[tableName][existingIndex].id, rowsAffected: 0 };
+      }
+
+      if (existingIndex >= 0 && isReplace) {
+        db[tableName][existingIndex] = newRow;
+      } else {
+        db[tableName].push(newRow);
+      }
       this.setStorage(db);
 
       return { insertId: newRow.id, rowsAffected: 1 };
     }
 
     // 3. UPDATE queries
-    if (cleanQuery.toUpperCase().startsWith("UPDATE")) {
+    if (normalizedQuery.startsWith("UPDATE")) {
+      const decrementMatch = cleanQuery.match(
+        /^UPDATE\s+(\w+)\s+SET\s+(\w+)\s*=\s*\2\s*-\s*\?\s+WHERE\s+(\w+)\s*=\s*\?\s+AND\s+(\w+)\s*>=\s*\?$/i,
+      );
+      if (decrementMatch) {
+        const [, tableName, targetColumn, idColumn, minimumColumn] =
+          decrementMatch;
+        const [amount, id, minimum] = params;
+        let affectedCount = 0;
+        db[tableName] = (db[tableName] || []).map((row) => {
+          if (
+            String(row[idColumn]) !== String(id) ||
+            Number(row[minimumColumn]) < Number(minimum)
+          ) {
+            return row;
+          }
+          affectedCount += 1;
+          return {
+            ...row,
+            [targetColumn]: Number(row[targetColumn]) - Number(amount),
+          };
+        });
+        this.setStorage(db);
+        return { rowsAffected: affectedCount };
+      }
+
+      if (
+        /^UPDATE\s+rt_batches\s+SET\s+total_orders\s*=\s*total_orders\s*\+\s*1,\s*total_gmv\s*=\s*total_gmv\s*\+\s*\?\s+WHERE\s+id\s*=\s*\?$/i.test(
+          cleanQuery,
+        )
+      ) {
+        const [amount, id] = params;
+        let affectedCount = 0;
+        db["rt_batches"] = (db["rt_batches"] || []).map((row) => {
+          if (String(row.id) !== String(id)) return row;
+          affectedCount += 1;
+          return {
+            ...row,
+            total_orders: Number(row.total_orders || 0) + 1,
+            total_gmv: Number(row.total_gmv || 0) + Number(amount),
+          };
+        });
+        this.setStorage(db);
+        return { rowsAffected: affectedCount };
+      }
       const updateMatch = cleanQuery.match(
         /UPDATE\s+(\w+)\s+SET\s+(.+?)(?:\s+WHERE\s+(.+))?$/i,
       );
@@ -1835,6 +1979,12 @@ const initNativeSchema = (db: any) => {
       payment_status TEXT,
       order_status TEXT,
       created_at TEXT
+    );
+    CREATE TABLE IF NOT EXISTS order_status_history (
+      id TEXT PRIMARY KEY,
+      order_id TEXT,
+      status TEXT,
+      changed_at TEXT
     );
     CREATE TABLE IF NOT EXISTS order_items (
       id TEXT PRIMARY KEY,
@@ -2867,6 +3017,62 @@ export const dbService = {
   },
 
   /**
+   * Execute related writes atomically. Native uses Expo SQLite's synchronous
+   * transaction API; web restores the localStorage snapshot on failure.
+   */
+  async transaction(
+    writes: DatabaseWrite[],
+  ): Promise<Array<{ insertId?: string; rowsAffected: number }>> {
+    if (Platform.OS === "web") {
+      const snapshot = localStorage.getItem("kopmart_db");
+      try {
+        const results: Array<{ insertId?: string; rowsAffected: number }> = [];
+        for (const write of writes) {
+          const result = await getWebDb().executeSql(
+            write.query,
+            write.params || [],
+          );
+          const normalizedResult = {
+            insertId: result?.insertId,
+            rowsAffected: result?.rowsAffected || 0,
+          };
+          if (write.requireRowsAffected && normalizedResult.rowsAffected === 0) {
+            throw new Error("Data berubah atau persediaan tidak mencukupi.");
+          }
+          results.push(normalizedResult);
+        }
+        return results;
+      } catch (error) {
+        if (snapshot === null) {
+          localStorage.removeItem("kopmart_db");
+        } else {
+          localStorage.setItem("kopmart_db", snapshot);
+        }
+        throw error;
+      }
+    }
+
+    const db = getNativeDb();
+    const results: Array<{ insertId?: string; rowsAffected: number }> = [];
+    db.withTransactionSync(() => {
+      for (const write of writes) {
+        const result = db.runSync(write.query, write.params || []);
+        const normalizedResult = {
+          insertId: result.lastInsertRowId
+            ? String(result.lastInsertRowId)
+            : undefined,
+          rowsAffected: result.changes || 0,
+        };
+        if (write.requireRowsAffected && normalizedResult.rowsAffected === 0) {
+          throw new Error("Data berubah atau persediaan tidak mencukupi.");
+        }
+        results.push(normalizedResult);
+      }
+    });
+    return results;
+  },
+
+  /**
    * Fetch all records matching the query
    */
   async getAll<T = any>(query: string, params: any[] = []): Promise<T[]> {
@@ -2900,6 +3106,7 @@ export const dbService = {
   async resetDatabase(): Promise<void> {
     if (Platform.OS === "web") {
       localStorage.removeItem("kopmart_db");
+      webDbInstance = null;
       getWebDb(); // This triggers re-initialization and seeding
     } else {
       const db = getNativeDb();
@@ -2909,6 +3116,7 @@ export const dbService = {
         DROP TABLE IF EXISTS products;
         DROP TABLE IF EXISTS rt_batches;
         DROP TABLE IF EXISTS orders;
+        DROP TABLE IF EXISTS order_status_history;
         DROP TABLE IF EXISTS order_items;
         DROP TABLE IF EXISTS point_transactions;
         DROP TABLE IF EXISTS settlements;

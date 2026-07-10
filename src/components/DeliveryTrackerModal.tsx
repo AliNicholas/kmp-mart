@@ -1,13 +1,11 @@
 import type { MapCoordinate } from "@/components/open-street-map";
 import OpenStreetMapView from "@/components/open-street-map";
-import { useApp } from "@/contexts/AppContext";
 import { dbService } from "@/utils/db";
 import type { SFSymbol } from "expo-symbols";
 import { SymbolView } from "@/components/app-symbol";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Animated,
   Modal,
   Platform,
@@ -434,8 +432,6 @@ export default function DeliveryTrackerModal({
   visible,
   onClose,
 }: DeliveryTrackerModalProps) {
-  const { refreshData, allUsers } = useApp();
-
   const [stage, setStage] = useState(0);
   const [targetStage, setTargetStage] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -453,10 +449,20 @@ export default function DeliveryTrackerModal({
           "SELECT * FROM orders WHERE id = ?",
           [orderId],
         );
-        setCurrentOrder(orderData);
+        const buyer = orderData
+          ? await dbService.getFirst<{ cooperative_id?: string }>(
+              "SELECT * FROM users WHERE id = ?",
+              [orderData.user_id],
+            )
+          : null;
+        setCurrentOrder(
+          orderData
+            ? { ...orderData, cooperative_id: buyer?.cooperative_id }
+            : null,
+        );
 
         const start =
-          COOP_COORDS_MAP[orderData?.cooperative_id] ||
+          COOP_COORDS_MAP[buyer?.cooperative_id || ""] ||
           COOP_COORDS_MAP["tenant-1"];
         const end = USER_HOME_COORD;
 
@@ -503,49 +509,13 @@ export default function DeliveryTrackerModal({
     }
   }, [targetStage]);
 
-  // Set visual stage and update DB/Alert only when driver actually arrives at destination
-  const handleStageReached = useCallback(
-    async (reachedStage: number) => {
-      setStage(reachedStage);
+  // The tracker only simulates map progress. Delivery completion remains the
+  // driver's responsibility through the delivery-task workflow.
+  const handleStageReached = useCallback((reachedStage: number) => {
+    setStage(reachedStage);
+  }, []);
 
-      if (
-        reachedStage === 3 &&
-        currentOrder &&
-        currentOrder.order_status !== "COMPLETED"
-      ) {
-        try {
-          await dbService.run(
-            `UPDATE orders SET order_status = 'COMPLETED', payment_status = 'PAID' WHERE id = ?`,
-            [orderId],
-          );
-          const buyer = allUsers.find(
-            (u: any) => u.id === currentOrder.user_id,
-          );
-          const logId = `log-${Date.now()}`;
-          await dbService.run(
-            "INSERT INTO audit_logs (id, actor, action, details, created_at) VALUES (?, ?, ?, ?, ?)",
-            [
-              logId,
-              "Mang Ujang (Kurir)",
-              "DELIVERY_COMPLETE",
-              `Delivered order ${orderId} to ${buyer?.name ?? "Warga"}`,
-              new Date().toISOString(),
-            ],
-          );
-          await refreshData();
-          Alert.alert(
-            "✅ Pengiriman Selesai!",
-            "Sembako telah diterima. Status pesanan: SELESAI.",
-          );
-        } catch (err) {
-          console.error("Failed to complete delivery:", err);
-        }
-      }
-    },
-    [allUsers, currentOrder, orderId, refreshData],
-  );
-
-  // Auto-progress stages every 7s
+  // Auto-progress stages every 7s for the visual simulation only.
   useEffect(() => {
     if (!visible || !orderId || loading || !currentOrder) return;
     if (currentOrder.order_status === "COMPLETED" || targetStage === 3) return;
