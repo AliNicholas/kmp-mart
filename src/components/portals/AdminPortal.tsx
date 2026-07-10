@@ -1204,8 +1204,11 @@ export default function AdminPortal() {
         animationType="slide"
         onRequestClose={() => setProductModalOpen(false)}
       >
-        <View className="flex-1 justify-end bg-black/60">
-          <View className="bg-white rounded-t-3xl p-5 max-h-[85%]">
+        <Pressable
+          onPress={() => setProductModalOpen(false)}
+          className="flex-1 justify-end bg-black/60"
+        >
+          <Pressable onPress={() => {}} className="bg-white rounded-t-3xl p-5 max-h-[85%]">
             <View className="flex-row justify-between items-center border-b border-stone-200 pb-3 mb-4">
               <Text className="text-emerald-950 font-black text-lg">
                 {selectedProduct
@@ -1313,8 +1316,8 @@ export default function AdminPortal() {
                 </Text>
               </Pressable>
             </ScrollView>
-          </View>
-        </View>
+          </Pressable>
+        </Pressable>
       </Modal>
 
       {/* Self-Pickup details Modal */}
@@ -1325,8 +1328,11 @@ export default function AdminPortal() {
           animationType="slide"
           onRequestClose={() => setActiveSelfOrder(null)}
         >
-          <View className="flex-1 justify-end bg-black/60">
-            <View className="bg-white rounded-t-3xl p-5 max-h-[80%]">
+          <Pressable
+            onPress={() => setActiveSelfOrder(null)}
+            className="flex-1 justify-end bg-black/60"
+          >
+            <Pressable onPress={() => {}} className="bg-white rounded-t-3xl p-5 max-h-[80%]">
               <View className="flex-row justify-between items-center border-b border-stone-200 pb-3 mb-4">
                 <View>
                   <Text className="text-emerald-950 font-black text-lg">
@@ -1446,8 +1452,8 @@ export default function AdminPortal() {
                   )}
                 </View>
               </ScrollView>
-            </View>
-          </View>
+            </Pressable>
+          </Pressable>
         </Modal>
       )}
 
@@ -1459,8 +1465,11 @@ export default function AdminPortal() {
           animationType="slide"
           onRequestClose={() => setIsCatalogModalOpen(false)}
         >
-          <View className="flex-1 justify-end bg-black/60">
-            <View className="bg-white rounded-t-3xl p-5 max-h-[90%] flex-column">
+          <Pressable
+            onPress={() => setIsCatalogModalOpen(false)}
+            className="flex-1 justify-end bg-black/60"
+          >
+            <Pressable onPress={() => {}} className="bg-white rounded-t-3xl p-5 max-h-[90%] flex-column">
               <View className="flex-row justify-between items-center border-b border-stone-200 pb-3 mb-4">
                 <View className="flex-row items-center gap-2">
                   <SymbolView name="printer.fill" size={16} tintColor="#0f5132" />
@@ -1582,8 +1591,8 @@ export default function AdminPortal() {
                   </Text>
                 </Pressable>
               </ScrollView>
-            </View>
-          </View>
+            </Pressable>
+          </Pressable>
         </Modal>
       )}
     </View>

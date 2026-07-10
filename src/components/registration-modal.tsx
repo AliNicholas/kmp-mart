@@ -374,10 +374,15 @@ export default function RegistrationModal({ visible, onClose }: RegistrationModa
     <Modal visible={visible} transparent animationType="slide" onRequestClose={handleClose}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        className="flex-1 justify-end bg-black/60"
+        className="flex-1"
       >
-        <View className="bg-stone-50 rounded-t-3xl max-h-[92%]">
-          <View className="px-5 pt-5 pb-3 border-b border-stone-200 bg-white rounded-t-3xl">
+        <Pressable
+          onPress={handleClose}
+          disabled={isSubmitting}
+          className="flex-1 justify-end bg-black/60"
+        >
+          <Pressable onPress={() => {}} className="bg-stone-50 rounded-t-3xl max-h-[92%] w-full">
+            <View className="px-5 pt-5 pb-3 border-b border-stone-200 bg-white rounded-t-3xl">
             <View className="flex-row justify-between items-start gap-3">
               <View className="flex-1">
                 <Text className="text-emerald-950 font-black text-lg">Registrasi Warga</Text>
@@ -403,7 +408,8 @@ export default function RegistrationModal({ visible, onClose }: RegistrationModa
             {step === 1 && renderOtpStep()}
             {step === 2 && renderPinStep()}
           </ScrollView>
-        </View>
+          </Pressable>
+        </Pressable>
       </KeyboardAvoidingView>
     </Modal>
   );

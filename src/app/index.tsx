@@ -110,8 +110,11 @@ export default function HomeScreen() {
         animationType="slide"
         onRequestClose={() => setDevToolsOpen(false)}
       >
-        <View className="flex-1 justify-end bg-black/60">
-          <View className="bg-stone-900 rounded-t-3xl p-5 w-full border-t border-stone-800">
+        <Pressable
+          onPress={() => setDevToolsOpen(false)}
+          className="flex-1 justify-end bg-black/60"
+        >
+          <Pressable onPress={() => {}} className="bg-stone-900 rounded-t-3xl p-5 w-full border-t border-stone-800">
             <View className="flex-row justify-between items-center border-b border-stone-800 pb-3 mb-4">
               <View className="flex-row items-center gap-2">
                 <SymbolView name="hammer.fill" size={14} tintColor="#fbbf24" />
@@ -203,8 +206,8 @@ export default function HomeScreen() {
                 <Text className="text-white font-bold text-xs">Tutup</Text>
               </Pressable>
             </View>
-          </View>
-        </View>
+          </Pressable>
+        </Pressable>
       </Modal>
     </View>
   );

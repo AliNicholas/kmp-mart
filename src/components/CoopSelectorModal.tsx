@@ -134,8 +134,11 @@ export default function CoopSelectorModal({ visible, onClose, activeCoopId, onSe
         animationType="slide"
         onRequestClose={onClose}
       >
-        <View className={styles.overlay}>
-          <View className={styles.content}>
+        <Pressable
+          onPress={onClose}
+          className={styles.overlay}
+        >
+          <Pressable onPress={() => {}} className={styles.content}>
             
             <View className={styles.header}>
               <View style={{ flex: 1 }}>
@@ -166,8 +169,14 @@ export default function CoopSelectorModal({ visible, onClose, activeCoopId, onSe
                 const isFar = coop.id === 'tenant-4' || coop.id === 'tenant-5' || coop.id === 'tenant-6';
                 
                 return (
-                  <View 
+                  <Pressable 
                     key={coop.id}
+                    onPress={() => {
+                      if (!isActive) {
+                        onSelectCoop(coop.id);
+                        onClose();
+                      }
+                    }}
                     className={cn(
                       styles.coopCard,
                       isActive && styles.activeCard
@@ -214,37 +223,30 @@ export default function CoopSelectorModal({ visible, onClose, activeCoopId, onSe
 
                     <View className={styles.actionColumn}>
                       <Pressable
-                        onPress={() => handleOpenMap(coop)}
+                        onPress={(e) => {
+                          e.stopPropagation();
+                          handleOpenMap(coop);
+                        }}
                         className={styles.mapBtn}
                       >
                         <SymbolView name="map.fill" size={12} tintColor="#047857" />
                         <Text className={styles.mapBtnText}>Peta</Text>
                       </Pressable>
 
-                      {!isActive ? (
-                        <Pressable
-                          onPress={() => {
-                            onSelectCoop(coop.id);
-                            onClose();
-                          }}
-                          className={styles.selectBtn}
-                        >
-                          <Text className={styles.selectBtnText}>Pilih</Text>
-                        </Pressable>
-                      ) : (
+                      {isActive && (
                         <View className={styles.selectedIndicator}>
                           <SymbolView name="checkmark.circle.fill" size={16} tintColor="#059669" />
                           <Text className={styles.selectedIndicatorText}>Aktif</Text>
                         </View>
                       )}
                     </View>
-                  </View>
+                  </Pressable>
                 );
               })}
             </ScrollView>
 
-          </View>
-        </View>
+          </Pressable>
+        </Pressable>
       </Modal>
 
       {/* Real Maps Modal */}
@@ -255,8 +257,11 @@ export default function CoopSelectorModal({ visible, onClose, activeCoopId, onSe
           animationType="fade"
           onRequestClose={() => setMapVisible(false)}
         >
-          <View className={styles.mapOverlay}>
-            <View className={styles.mapWindow}>
+          <Pressable
+            onPress={() => setMapVisible(false)}
+            className={styles.mapOverlay}
+          >
+            <Pressable onPress={() => {}} className={styles.mapWindow}>
               
               {/* Map Header */}
               <View className={styles.mapHeader}>
@@ -422,8 +427,8 @@ export default function CoopSelectorModal({ visible, onClose, activeCoopId, onSe
                 </View>
               </View>
 
-            </View>
-          </View>
+            </Pressable>
+          </Pressable>
         </Modal>
       )}
     </View>
@@ -441,7 +446,7 @@ const styles = {
   nationalMapBannerTitle: 'text-white text-[11px] font-black',
   nationalMapBannerSubtitle: 'text-sky-100 text-[8.5px] mt-0.5',
   coopCard: 'bg-white border border-stone-200 rounded-2xl p-3.5 mb-3 flex-row items-center gap-3 shadow-sm elevation-1',
-  activeCard: 'border-emerald-500 bg-emerald-50 border-l-[5px] border-l-emerald-600',
+  activeCard: 'border-emerald-600 bg-emerald-50/60 border-2 shadow-sm',
   coopName: 'text-xs font-black text-stone-900',
   activeTextGreen: 'text-emerald-950',
   activeTag: 'bg-emerald-600 px-1.5 py-0.5 rounded',
@@ -456,8 +461,6 @@ const styles = {
   actionColumn: 'items-end gap-2.5 min-w-[80px]',
   mapBtn: 'flex-row items-center gap-1 border border-emerald-200 bg-emerald-50 px-2 py-1 rounded-lg',
   mapBtnText: 'text-emerald-700 text-[9px] font-bold',
-  selectBtn: 'bg-emerald-600 px-3 py-1.5 rounded-lg',
-  selectBtnText: 'text-white text-[10px] font-bold',
   selectedIndicator: 'flex-row items-center gap-1',
   selectedIndicatorText: 'text-emerald-600 text-[9px] font-bold',
   mapOverlay: 'flex-1 bg-black/70 justify-center items-center p-5',

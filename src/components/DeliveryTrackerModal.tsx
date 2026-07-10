@@ -144,6 +144,8 @@ function DeliveryMap({
   );
   const mapRef = useRef<any>(null);
   const currentWpIdxRef = useRef<number>(0);
+  const [currentWpIdx, setCurrentWpIdx] = useState<number>(0);
+  const lastAnimatedStageRef = useRef<number>(-1);
   const animationTimeoutsRef = useRef<any[]>([]);
   const [pulseAnim] = useState(() => new Animated.Value(1));
 
@@ -155,6 +157,7 @@ function DeliveryMap({
   useEffect(() => {
     if (!visible) {
       clearTimeouts();
+      lastAnimatedStageRef.current = -1;
     }
     return () => {
       clearTimeouts();
@@ -193,18 +196,21 @@ function DeliveryMap({
       if (Platform.OS === "web") {
         setDriverCoord(coordsList[targetIdx]);
         currentWpIdxRef.current = targetIdx;
+        setCurrentWpIdx(targetIdx);
         if (onComplete) onComplete();
         return;
       }
 
       if (targetIdx === from) {
         setDriverCoord(coordsList[targetIdx]);
+        setCurrentWpIdx(targetIdx);
         if (onComplete) onComplete();
         return;
       }
 
       if (targetIdx < from) {
         currentWpIdxRef.current = targetIdx;
+        setCurrentWpIdx(targetIdx);
         setDriverCoord(coordsList[targetIdx]);
         if (onComplete) onComplete();
         return;
@@ -225,6 +231,7 @@ function DeliveryMap({
         const t = setTimeout(() => {
           setDriverCoord(coord);
           currentWpIdxRef.current = idx;
+          setCurrentWpIdx(idx);
 
           // Pan map smoothly to follow driver
           if (mapRef.current) {
@@ -254,15 +261,19 @@ function DeliveryMap({
   useEffect(() => {
     if (!visible || routeCoords.length === 0) return;
     const targetWpIdx = getWaypointForStage(targetStage, routeCoords.length);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setDriverCoord(routeCoords[targetWpIdx]);
     currentWpIdxRef.current = targetWpIdx;
+    setCurrentWpIdx(targetWpIdx);
   }, [visible, routeCoords, targetStage]);
 
   // Animate driver along route when targetStage changes
   useEffect(() => {
     if (!visible || routeCoords.length === 0) return;
+    if (lastAnimatedStageRef.current === targetStage) return;
     const targetWpIdx = getWaypointForStage(targetStage, routeCoords.length);
     animateDriverAlongRoute(targetWpIdx, routeCoords, () => {
+      lastAnimatedStageRef.current = targetStage;
       onStageReached(targetStage);
     });
   }, [
@@ -289,8 +300,8 @@ function DeliveryMap({
     ),
   };
 
-  const travelledRoute = routeCoords.slice(0, currentWpIdxRef.current + 1);
-  const remainingRoute = routeCoords.slice(currentWpIdxRef.current);
+  const travelledRoute = routeCoords.slice(0, currentWpIdx + 1);
+  const remainingRoute = routeCoords.slice(currentWpIdx);
   const stageInfo = STAGE_INFO[targetStage] || STAGE_INFO[0];
 
   return (

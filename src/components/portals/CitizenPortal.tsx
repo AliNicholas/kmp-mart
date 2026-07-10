@@ -254,11 +254,11 @@ export default function CitizenPortal() {
     (sum, item) => sum + item.product.price * item.quantity,
     0,
   );
-  const maxPointsToUse = Math.floor((subtotal * 0.2) / 1000); // Max 20% discount, 1 point = Rp1,000
+  const maxPointsToUse = Math.floor(subtotal * 0.2); // Max 20% discount
   const pointsToRedeem = usePoints
     ? Math.min(maxPointsToUse, activeUser?.points || 0)
     : 0;
-  const discount = pointsToRedeem * 1000;
+  const discount = pointsToRedeem;
   const isCrossCoop = activeCooperativeId !== (activeUser?.cooperative_id || 'tenant-1');
   const logisticsSurcharge = activeCooperativeId === 'tenant-4'
     ? 15000
@@ -1140,8 +1140,11 @@ export default function CitizenPortal() {
         animationType="slide"
         onRequestClose={() => setIsCartOpen(false)}
       >
-        <View className="flex-1 justify-end bg-black/60">
-          <View className="bg-white rounded-t-3xl p-4 h-[70%]">
+        <Pressable
+          onPress={() => setIsCartOpen(false)}
+          className="flex-1 justify-end bg-black/60"
+        >
+          <Pressable onPress={() => {}} className="bg-white rounded-t-3xl p-4 h-[70%]">
             <View className="flex-row justify-between items-center border-b border-stone-200 pb-3 mb-3">
               <Text className="text-emerald-950 font-black text-lg">
                 Keranjang Belanja
@@ -1269,8 +1272,8 @@ export default function CitizenPortal() {
                 </View>
               </View>
             )}
-          </View>
-        </View>
+          </Pressable>
+        </Pressable>
       </Modal>
 
       {/* Checkout Screen Modal */}
@@ -1280,8 +1283,11 @@ export default function CitizenPortal() {
         animationType="slide"
         onRequestClose={() => setCheckoutModalOpen(false)}
       >
-        <View className="flex-1 justify-end bg-black/60">
-          <View className="bg-white rounded-t-3xl p-5 h-[80%]">
+        <Pressable
+          onPress={() => setCheckoutModalOpen(false)}
+          className="flex-1 justify-end bg-black/60"
+        >
+          <Pressable onPress={() => {}} className="bg-white rounded-t-3xl p-5 h-[80%]">
             <View className="flex-row justify-between items-center border-b border-stone-200 pb-3 mb-4">
               <Text className="text-emerald-950 font-black text-lg">
                 Metode & Alamat Pengiriman
@@ -1416,12 +1422,12 @@ export default function CitizenPortal() {
                       </Text>
                       <Text className="text-stone-400 text-[9px] max-w-[180px]">
                         Diskon maks. 20% total belanja (Rp
-                        {maxPointsToUse * 1000})
+                        {maxPointsToUse.toLocaleString("id-ID")})
                       </Text>
                     </View>
                     <Text className="text-emerald-800 font-extrabold text-xs">
-                      -{pointsToRedeem} Poin (-Rp
-                      {(pointsToRedeem * 1000).toLocaleString("id-ID")})
+                      -{pointsToRedeem.toLocaleString("id-ID")} Poin (-Rp
+                      {pointsToRedeem.toLocaleString("id-ID")})
                     </Text>
                   </View>
                 )}
@@ -1481,8 +1487,8 @@ export default function CitizenPortal() {
                 </Text>
               </Pressable>
             </ScrollView>
-          </View>
-        </View>
+          </Pressable>
+        </Pressable>
       </Modal>
 
       {/* Order Detail Modal */}
@@ -1493,8 +1499,11 @@ export default function CitizenPortal() {
           animationType="fade"
           onRequestClose={() => setDetailOrder(null)}
         >
-          <View className="flex-1 justify-center items-center bg-black/60 p-4">
-            <View className="bg-white rounded-2xl p-5 w-full max-w-[340px]">
+          <Pressable
+            onPress={() => setDetailOrder(null)}
+            className="flex-1 justify-center items-center bg-black/60 p-4"
+          >
+            <Pressable onPress={() => {}} className="bg-white rounded-2xl p-5 w-full max-w-[340px]">
               <View className="flex-row justify-between items-center border-b border-stone-200 pb-3 mb-4">
                 <Text className="text-emerald-950 font-black text-sm">
                   Rincian Transaksi
@@ -1609,8 +1618,8 @@ export default function CitizenPortal() {
                   Beli Lagi (Reorder)
                 </Text>
               </Pressable>
-            </View>
-          </View>
+            </Pressable>
+          </Pressable>
         </Modal>
       )}
 
@@ -1628,8 +1637,11 @@ export default function CitizenPortal() {
           animationType="slide"
           onRequestClose={() => setSelectedDetailProduct(null)}
         >
-          <View className="flex-1 justify-end bg-black/60">
-            <View className="bg-white rounded-t-3xl p-5 w-full">
+          <Pressable
+            onPress={() => setSelectedDetailProduct(null)}
+            className="flex-1 justify-end bg-black/60"
+          >
+            <Pressable onPress={() => {}} className="bg-white rounded-t-3xl p-5 w-full">
               <View className="flex-row justify-between items-center border-b border-stone-200 pb-3 mb-4">
                 <Text className="text-emerald-950 font-black text-sm">
                   Detail Produk Koperasi
@@ -1729,8 +1741,8 @@ export default function CitizenPortal() {
                   </Pressable>
                 )}
               </View>
-            </View>
-          </View>
+            </Pressable>
+          </Pressable>
         </Modal>
       )}
 

@@ -938,8 +938,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       const maxDiscountByPoints = Math.floor(subtotal * 0.20);
       // Let's say 1 point = Rp1,000 discount (or standard 1:1 format, let's use 1 point = Rp100 discount, or simply 1 point = Rp1,000)
       // Let's use 1 point = Rp1,000 discount for clear and visible demo values!
-      const discount = Math.min(pointsRedeemed * 1000, maxDiscountByPoints);
-      const pointsUsed = Math.min(pointsRedeemed, Math.floor(discount / 1000));
+      const discount = Math.min(pointsRedeemed, maxDiscountByPoints);
+      const pointsUsed = discount;
       
       // Check if any product is from a different cooperative (cross-cooperative shopping)
       let logisticsSurcharge = 0;
