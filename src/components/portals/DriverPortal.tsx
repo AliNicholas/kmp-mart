@@ -31,7 +31,7 @@ const statusMeta: Record<DeliveryStatus, { label: string; color: string }> = {
   READY_FOR_PICKUP: { label: "Siap Pickup", color: "bg-amber-50 text-amber-800 border-amber-200" },
   PICKED_UP: { label: "Sudah Pickup", color: "bg-indigo-50 text-indigo-800 border-indigo-200" },
   IN_TRANSIT: { label: "Dalam Perjalanan", color: "bg-cyan-50 text-cyan-800 border-cyan-200" },
-  ARRIVED_AT_RT: { label: "Tiba di RT", color: "bg-emerald-50 text-emerald-800 border-emerald-200" },
+  ARRIVED_AT_RT: { label: "Tiba di Dropoff", color: "bg-emerald-50 text-emerald-800 border-emerald-200" },
   ARRIVED_AT_USER: { label: "Tiba di Warga", color: "bg-emerald-50 text-emerald-800 border-emerald-200" },
   DELIVERED: { label: "Selesai", color: "bg-emerald-100 text-emerald-900 border-emerald-200" },
   FAILED: { label: "Gagal", color: "bg-rose-100 text-rose-800 border-rose-200" },
@@ -67,7 +67,7 @@ export default function DriverPortal() {
   
   const getDestinationCoordinates = (task: DeliveryTask) => {
     if (task.delivery_type === "RT_BATCH_DELIVERY") {
-      // Drop to Pos RT 03
+      // Drop to Dropoff Hub
       return { latitude: -8.407500, longitude: 115.191500 };
     }
     // citizen home
@@ -178,7 +178,7 @@ export default function DriverPortal() {
             value={proofInputs[task.id] || ""}
             onChangeText={(value) => updateInput(setProofInputs, task.id, value)}
             className="bg-stone-100 border border-stone-200 rounded-xl px-3 py-2 text-xs"
-            placeholder={task.delivery_type === "RT_BATCH_DELIVERY" ? "Kode/PIN RT penerima" : "PIN warga / catatan bukti"}
+            placeholder={task.delivery_type === "RT_BATCH_DELIVERY" ? "Kode/PIN penerima" : "PIN warga / catatan bukti"}
           />
           {task.cod_amount > 0 && (
             <TextInput
@@ -266,14 +266,14 @@ export default function DriverPortal() {
                   <View className="flex-1">
                     <View className="flex-row gap-2 items-center flex-wrap">
                       <Text className="text-stone-900 font-black text-sm">
-                        {task.delivery_type === "RT_BATCH_DELIVERY" ? "Drop ke Pos RT" : "Kirim ke Rumah"}
+                        {task.delivery_type === "RT_BATCH_DELIVERY" ? "Drop ke Dropoff Hub" : "Kirim ke Rumah"}
                       </Text>
                       <View className={`px-2 py-0.5 rounded-full border ${meta.color}`}>
                         <Text className="text-[8px] font-black">{meta.label}</Text>
                       </View>
                     </View>
                     <Text className="text-stone-500 text-[10px] mt-1">
-                      {task.recipient_name} • {task.recipient_phone || "kontak RT"}
+                      {task.recipient_name} • {task.recipient_phone || "kontak"}
                     </Text>
                   </View>
                   <View className="items-end">

@@ -670,7 +670,7 @@ export default function DeliveryTrackerModal({
                 <View style={{ flex: 1 }}>
                   <Text className={styles.driverName}>Mang Ujang</Text>
                   <Text className={styles.driverVehicle}>
-                    Honda Supra Fit · DK 4821 RT
+                    Honda Supra Fit · DK 4821 AA
                   </Text>
                   <View className={styles.ratingRow}>
                     <SymbolView name="star.fill" size={9} tintColor="#f59e0b" />

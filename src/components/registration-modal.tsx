@@ -48,7 +48,7 @@ export default function RegistrationModal({ visible, onClose }: RegistrationModa
   const [nik, setNik] = React.useState('3275011508900001');
   const [phone, setPhone] = React.useState('081298765432');
   const [address, setAddress] = React.useState('Jl. Merah Putih No. 17, Desa Sukamaju');
-  const [rt, setRt] = React.useState('03');
+  const rt = '00';
   const [rw, setRw] = React.useState('02');
   const [cooperativeId, setCooperativeId] = React.useState('tenant-1');
   const [referralCode, setReferralCode] = React.useState('');
@@ -79,7 +79,7 @@ export default function RegistrationModal({ visible, onClose }: RegistrationModa
     const cleanPhone = phone.replace(/\D/g, '');
     if (cleanPhone.length < 10 || cleanPhone.length > 13) return 'Nomor HP belum valid.';
     if (!address.trim()) return 'Alamat KTP wajib diisi.';
-    if (!rt.replace(/\D/g, '') || !rw.replace(/\D/g, '')) return 'RT dan RW wajib diisi.';
+    if (!rw.replace(/\D/g, '')) return 'RW wajib diisi.';
     return '';
   };
 
@@ -220,43 +220,13 @@ export default function RegistrationModal({ visible, onClose }: RegistrationModa
         />
       </View>
 
-      <View className="flex-row gap-3">
-        <View className="flex-1">
-          <Text className={labelClass}>RT</Text>
-          <TextInput value={rt} onChangeText={setRt} keyboardType="numeric" maxLength={2} className={fieldClass} />
-        </View>
-        <View className="flex-1">
-          <Text className={labelClass}>RW</Text>
-          <TextInput value={rw} onChangeText={setRw} keyboardType="numeric" maxLength={2} className={fieldClass} />
-        </View>
+      <View>
+        <Text className={labelClass}>RW</Text>
+        <TextInput value={rw} onChangeText={setRw} keyboardType="numeric" maxLength={2} className={fieldClass} />
       </View>
 
-      <View>
-        <Text className={labelClass}>Koperasi tujuan</Text>
-        <View className="gap-2">
-          {cooperatives.map((coop) => {
-            const isSelected = cooperativeId === coop.id;
-            return (
-              <Pressable
-                key={coop.id}
-                onPress={() => setCooperativeId(coop.id)}
-                className={`p-3 rounded-xl border flex-row items-center gap-3 ${
-                  isSelected ? 'bg-emerald-50 border-emerald-600' : 'bg-white border-stone-200'
-                }`}
-              >
-                <SymbolView name={isSelected ? 'checkmark.circle.fill' : 'circle'} size={16} tintColor={isSelected ? '#047857' : '#a8a29e'} />
-                <View className="flex-1">
-                  <Text className="text-stone-900 text-xs font-black">{coop.title}</Text>
-                  <Text className="text-stone-500 text-[10px] mt-0.5">{coop.subtitle}</Text>
-                </View>
-              </Pressable>
-            );
-          })}
-        </View>
-      </View>
-
-      <View>
-        <Text className={labelClass}>Kode KopAjak opsional</Text>
+      <View className="mb-2">
+        <Text className={labelClass}>Kode Referral opsional</Text>
         <TextInput
           value={referralCode}
           onChangeText={setReferralCode}
@@ -266,7 +236,7 @@ export default function RegistrationModal({ visible, onClose }: RegistrationModa
         />
       </View>
 
-      <Pressable onPress={handleSendOtp} className="bg-emerald-700 border border-emerald-800 py-3 rounded-xl items-center active:bg-emerald-950">
+      <Pressable onPress={handleSendOtp} className="bg-emerald-700 border border-emerald-800 py-3 rounded-xl items-center active:bg-emerald-950 mt-2">
         <Text className="text-white text-xs font-black">Kirim OTP</Text>
       </Pressable>
     </View>
@@ -315,7 +285,7 @@ export default function RegistrationModal({ visible, onClose }: RegistrationModa
           <Text className="text-white font-black text-sm">Buat PIN transaksi</Text>
         </View>
         <Text className="text-stone-300 text-[10px] leading-4">
-          PIN dipakai saat warga belanja mandiri, pakai Kartu Kopdes, atau dibantu RT.
+          PIN dipakai saat warga belanja mandiri atau menggunakan Kartu Kopdes.
         </Text>
       </View>
 
@@ -347,7 +317,7 @@ export default function RegistrationModal({ visible, onClose }: RegistrationModa
 
       <View className="bg-emerald-50 border border-emerald-100 rounded-xl p-3">
         <Text className="text-emerald-900 text-[10px] leading-4">
-          Setelah aktif, warga langsung punya member ID, Kartu Kopdes QR token, dan kode KopAjak sendiri.
+          Setelah aktif, warga langsung punya member ID, Kartu Kopdes QR token, dan kode referral sendiri.
         </Text>
       </View>
 

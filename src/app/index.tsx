@@ -26,7 +26,7 @@ export default function HomeScreen() {
       setActiveUser(user);
       setActiveRole(role);
       setDevToolsOpen(false);
-      Alert.alert("Identitas Berganti", `Masuk sebagai: ${name} (${role === 'USER' && userId === 'user-budi' ? 'RT Agent' : role})`);
+      Alert.alert("Identitas Berganti", `Masuk sebagai: ${name} (${role === 'USER' && userId === 'user-budi' ? 'Agen Transit' : role})`);
     } else {
       Alert.alert("Gagal", `Identitas ${name} tidak ditemukan di database.`);
     }
@@ -171,7 +171,7 @@ export default function HomeScreen() {
                 </View>
                 <View className="flex-1">
                   <Text className="text-white font-bold text-xs">Mang Ujang (KopKurir/Driver)</Text>
-                  <Text className="text-stone-400 text-[9px] mt-0.5">Role: DRIVER • Ambil kiriman koperasi, antar ke warga/RT, COD.</Text>
+                  <Text className="text-stone-400 text-[9px] mt-0.5">Role: DRIVER • Ambil kiriman koperasi, antar ke warga, COD.</Text>
                 </View>
               </Pressable>
             </ScrollView>

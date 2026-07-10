@@ -12,8 +12,8 @@ import {
   TextInput,
   View,
 } from "react-native";
-import DeliveryTrackerModal from "../DeliveryTrackerModal";
 import CoopSelectorModal from "../CoopSelectorModal";
+import DeliveryTrackerModal from "../DeliveryTrackerModal";
 
 interface Mission {
   id: string;
@@ -58,10 +58,13 @@ export default function CitizenPortal() {
   const [activeDeliveryOrderId, setActiveDeliveryOrderId] = useState<
     string | null
   >(null);
-  const [activeCooperativeId, setActiveCooperativeId] = useState<string>('tenant-1');
+  const [activeCooperativeId, setActiveCooperativeId] =
+    useState<string>("tenant-1");
   const [coopSelectorVisible, setCoopSelectorVisible] = useState(false);
   const [missions, setMissions] = useState<Mission[]>([]);
-  const [selectedDetailProduct, setSelectedDetailProduct] = useState<any | null>(null);
+  const [selectedDetailProduct, setSelectedDetailProduct] = useState<
+    any | null
+  >(null);
   const [detailQuantity, setDetailQuantity] = useState(1);
   const [detailOrderItems, setDetailOrderItems] = useState<any[]>([]);
 
@@ -80,12 +83,12 @@ export default function CitizenPortal() {
   React.useEffect(() => {
     if (activeUser) {
       dbService
-         .getAll(
-           "SELECT * FROM point_transactions WHERE user_id = ? ORDER BY created_at DESC",
-           [activeUser.id],
-         )
-         .then(setPtHistory)
-         .catch(console.error);
+        .getAll(
+          "SELECT * FROM point_transactions WHERE user_id = ? ORDER BY created_at DESC",
+          [activeUser.id],
+        )
+        .then(setPtHistory)
+        .catch(console.error);
     }
   }, [activeUser, orders, subTab]);
 
@@ -106,12 +109,14 @@ export default function CitizenPortal() {
            JOIN orders o ON oi.order_id = o.id 
            JOIN products p ON oi.product_id = p.id 
            WHERE o.user_id = ? AND p.is_local = 1`,
-          [activeUser.id]
+          [activeUser.id],
         );
         const localCount = localProductsResult[0]?.count || 0;
 
         // 3. Referral count (referred users with at least 1 order)
-        const referredUsers = allUsers.filter((u) => u.referred_by === activeUser.referral_code);
+        const referredUsers = allUsers.filter(
+          (u) => u.referred_by === activeUser.referral_code,
+        );
         let activeReferralCount = 0;
         for (const refUser of referredUsers) {
           const refUserOrders = orders.filter((o) => o.user_id === refUser.id);
@@ -124,7 +129,7 @@ export default function CitizenPortal() {
           {
             id: "misi-1",
             title: "Warga Aktif Koperasi",
-            description: "Lakukan belanja mandiri atau gabung RT Group Order",
+            description: "Lakukan belanja mandiri di Koperasi desa",
             targetValue: 3,
             currentValue: transactionCount,
             unit: "Transaksi",
@@ -134,7 +139,8 @@ export default function CitizenPortal() {
           {
             id: "misi-2",
             title: "Cinta Produk Lokal",
-            description: 'Beli produk berlabel "PRODUK LOKAL" buatan warga desa',
+            description:
+              'Beli produk berlabel "PRODUK LOKAL" buatan warga desa',
             targetValue: 2,
             currentValue: localCount,
             unit: "Produk",
@@ -165,10 +171,9 @@ export default function CitizenPortal() {
   React.useEffect(() => {
     if (detailOrder) {
       dbService
-        .getAll(
-          "SELECT * FROM order_items WHERE order_id = ?",
-          [detailOrder.id]
-        )
+        .getAll("SELECT * FROM order_items WHERE order_id = ?", [
+          detailOrder.id,
+        ])
         .then((items) => {
           setTimeout(() => {
             setDetailOrderItems(items);
@@ -187,19 +192,19 @@ export default function CitizenPortal() {
     try {
       const items = await dbService.getAll<any>(
         "SELECT * FROM order_items WHERE order_id = ?",
-        [orderId]
+        [orderId],
       );
-      
+
       if (!items || items.length === 0) {
         Alert.alert("Gagal", "Tidak ada item dalam pesanan ini.");
         return;
       }
-      
+
       let addedCount = 0;
       let outOfStockCount = 0;
-      
+
       for (const item of items) {
-        const prod = products.find(p => p.id === item.product_id);
+        const prod = products.find((p) => p.id === item.product_id);
         if (prod && prod.stock > 0) {
           const qty = Math.min(prod.stock, item.quantity);
           addToCart(prod, qty);
@@ -208,21 +213,27 @@ export default function CitizenPortal() {
           outOfStockCount++;
         }
       }
-      
+
       if (addedCount > 0) {
         if (outOfStockCount > 0) {
           Alert.alert(
             "Berhasil Reorder",
-            `${addedCount} produk dimasukkan ke keranjang. ${outOfStockCount} produk tidak ditambahkan karena stok habis.`
+            `${addedCount} produk dimasukkan ke keranjang. ${outOfStockCount} produk tidak ditambahkan karena stok habis.`,
           );
         } else {
-          Alert.alert("Berhasil Reorder", "Semua produk berhasil dimasukkan ke keranjang.");
+          Alert.alert(
+            "Berhasil Reorder",
+            "Semua produk berhasil dimasukkan ke keranjang.",
+          );
         }
         setDetailOrder(null);
         setIsCartOpen(true);
         setSubTab(0);
       } else {
-        Alert.alert("Gagal", "Semua produk dalam pesanan ini sedang habis stok.");
+        Alert.alert(
+          "Gagal",
+          "Semua produk dalam pesanan ini sedang habis stok.",
+        );
       }
     } catch (err) {
       console.error("Reorder failed", err);
@@ -232,7 +243,7 @@ export default function CitizenPortal() {
 
   // Filter products
   const filteredProducts = products
-    .filter(p => p.cooperative_id === activeCooperativeId)
+    .filter((p) => p.cooperative_id === activeCooperativeId)
     .filter((p) => {
       const matchesSearch = p.name
         .toLowerCase()
@@ -244,7 +255,9 @@ export default function CitizenPortal() {
         return p.name.toLowerCase().includes("paket") && matchesSearch;
       if (selectedCategory === "Sembako")
         return (
-          !p.is_local && !p.name.toLowerCase().includes("paket") && matchesSearch
+          !p.is_local &&
+          !p.name.toLowerCase().includes("paket") &&
+          matchesSearch
         );
       return matchesSearch;
     });
@@ -259,17 +272,20 @@ export default function CitizenPortal() {
     ? Math.min(maxPointsToUse, activeUser?.points || 0)
     : 0;
   const discount = pointsToRedeem;
-  const isCrossCoop = activeCooperativeId !== (activeUser?.cooperative_id || 'tenant-1');
-  const logisticsSurcharge = activeCooperativeId === 'tenant-4'
-    ? 15000
-    : activeCooperativeId === 'tenant-5' || activeCooperativeId === 'tenant-6'
-      ? 25000
-      : isCrossCoop
-        ? 5000
-        : 0;
-  const deliveryFee = selectedFulfillment === "DELIVERY_TO_HOME"
-    ? Math.max(logisticsSurcharge, 7000)
-    : logisticsSurcharge;
+  const isCrossCoop =
+    activeCooperativeId !== (activeUser?.cooperative_id || "tenant-1");
+  const logisticsSurcharge =
+    activeCooperativeId === "tenant-4"
+      ? 15000
+      : activeCooperativeId === "tenant-5" || activeCooperativeId === "tenant-6"
+        ? 25000
+        : isCrossCoop
+          ? 5000
+          : 0;
+  const deliveryFee =
+    selectedFulfillment === "DELIVERY_TO_HOME"
+      ? Math.max(logisticsSurcharge, 7000)
+      : logisticsSurcharge;
   const total = subtotal - discount + deliveryFee;
 
   const handleCheckout = async () => {
@@ -322,7 +338,7 @@ export default function CitizenPortal() {
       case "READY_FOR_PICKUP":
         return "Siap Diambil";
       case "DELIVERED_TO_RT":
-        return "Tiba di Balai RT";
+        return "Tiba di Agen Transit";
       case "PICKED_UP":
         return "Sudah Diambil";
       case "COMPLETED":
@@ -348,30 +364,37 @@ export default function CitizenPortal() {
 
   const getCoopName = (id: string) => {
     switch (id) {
-      case 'tenant-1': return 'Koperasi Merah Putih Sukamaju';
-      case 'tenant-2': return 'Koperasi Sukasari (Tetangga)';
-      case 'tenant-3': return 'Koperasi Sukamukti (Tetangga)';
-      case 'tenant-4': return 'Koperasi Jaya Makmur (Jawa Timur)';
-      case 'tenant-5': return 'Koperasi Danau Toba (Sumatera Utara)';
-      case 'tenant-6': return 'Koperasi Bunaken Lestari (Sulawesi Utara)';
-      default: return 'Koperasi Desa';
+      case "tenant-1":
+        return "Koperasi Merah Putih Sukamaju";
+      case "tenant-2":
+        return "Koperasi Sukasari (Tetangga)";
+      case "tenant-3":
+        return "Koperasi Sukamukti (Tetangga)";
+      case "tenant-4":
+        return "Koperasi Jaya Makmur (Jawa Timur)";
+      case "tenant-5":
+        return "Koperasi Danau Toba (Sumatera Utara)";
+      case "tenant-6":
+        return "Koperasi Bunaken Lestari (Sulawesi Utara)";
+      default:
+        return "Koperasi Desa";
     }
   };
 
   const getCoopWarningText = (id: string) => {
     switch (id) {
-      case 'tenant-2':
-        return '⚠️ Anda sedang belanja di Koperasi Sukasari (Tetangga). Pengiriman +1 hari & biaya kurir tambahan Rp5.000 berlaku.';
-      case 'tenant-3':
-        return '⚠️ Anda sedang belanja di Koperasi Sukamukti (Tetangga). Pengiriman +1 hari & biaya kurir tambahan Rp5.000 berlaku.';
-      case 'tenant-4':
-        return '⚠️ Anda sedang belanja di Koperasi Jaya Makmur (Jawa Timur - Luar Pulau). Pengiriman +3 hari & biaya logistik tambahan Rp15.000 berlaku.';
-      case 'tenant-5':
-        return '⚠️ Anda sedang belanja di Koperasi Danau Toba (Sumatera Utara - Luar Pulau). Pengiriman +5 hari & biaya logistik tambahan Rp25.000 berlaku.';
-      case 'tenant-6':
-        return '⚠️ Anda sedang belanja di Koperasi Bunaken Lestari (Sulawesi Utara - Luar Pulau). Pengiriman +4 hari & biaya logistik tambahan Rp25.000 berlaku.';
+      case "tenant-2":
+        return "⚠️ Anda sedang belanja di Koperasi Sukasari (Tetangga). Pengiriman +1 hari & biaya kurir tambahan Rp5.000 berlaku.";
+      case "tenant-3":
+        return "⚠️ Anda sedang belanja di Koperasi Sukamukti (Tetangga). Pengiriman +1 hari & biaya kurir tambahan Rp5.000 berlaku.";
+      case "tenant-4":
+        return "⚠️ Anda sedang belanja di Koperasi Jaya Makmur (Jawa Timur - Luar Pulau). Pengiriman +3 hari & biaya logistik tambahan Rp15.000 berlaku.";
+      case "tenant-5":
+        return "⚠️ Anda sedang belanja di Koperasi Danau Toba (Sumatera Utara - Luar Pulau). Pengiriman +5 hari & biaya logistik tambahan Rp25.000 berlaku.";
+      case "tenant-6":
+        return "⚠️ Anda sedang belanja di Koperasi Bunaken Lestari (Sulawesi Utara - Luar Pulau). Pengiriman +4 hari & biaya logistik tambahan Rp25.000 berlaku.";
       default:
-        return '';
+        return "";
     }
   };
 
@@ -390,14 +413,20 @@ export default function CitizenPortal() {
           />
         </View>
         <Pressable
-          onPress={() => Alert.alert(
-            "Layanan Layanan Bantuan Koperasi",
-            "Butuh bantuan belanja, referral, atau pendaftaran?\n\nHubungi Petugas Layanan:\n• Pak RT Budi (RT Agent): 0812-3456-7890\n• Koperasi Sukamaju: (021) 555-0199\n• Jam Operasional: 08:00 - 17:00 WIB",
-            [{ text: "Tutup", style: "cancel" }]
-          )}
+          onPress={() =>
+            Alert.alert(
+              "Layanan Layanan Bantuan Koperasi",
+              "Butuh bantuan belanja, referral, atau pendaftaran?\n\nHubungi Petugas Layanan:\n• Pak Budi (Agen Transit): 0812-3456-7890\n• Koperasi Sukamaju: (021) 555-0199\n• Jam Operasional: 08:00 - 17:00 WIB",
+              [{ text: "Tutup", style: "cancel" }],
+            )
+          }
           className="bg-stone-50 w-9 h-9 rounded-full items-center justify-center border border-stone-200 active:bg-stone-100"
         >
-          <SymbolView name="questionmark.circle" size={16} tintColor="#0f5132" />
+          <SymbolView
+            name="questionmark.circle"
+            size={16}
+            tintColor="#0f5132"
+          />
         </Pressable>
         <Pressable
           onPress={() => setIsCartOpen(true)}
@@ -414,38 +443,83 @@ export default function CitizenPortal() {
         </Pressable>
       </View>
       {/* Cooperative Store Selector */}
-      <View style={{ backgroundColor: '#064e3b', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#047857' }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+      <View
+        style={{
+          backgroundColor: "#064e3b",
+          flexDirection: "row",
+          justifyContent: "space-between",
+          alignItems: "center",
+          paddingHorizontal: 12,
+          paddingVertical: 8,
+          borderBottomWidth: 1,
+          borderBottomColor: "#047857",
+        }}
+      >
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
           <SymbolView name="storefront.fill" size={14} tintColor="#a7f3d0" />
           <View>
-            <Text style={{ fontSize: 8, color: '#a7f3d0', fontWeight: 'bold', textTransform: 'uppercase' }}>Lokasi Belanja Koperasi</Text>
-            <Text style={{ fontSize: 11, color: '#fff', fontWeight: 'bold' }}>
+            <Text
+              style={{
+                fontSize: 8,
+                color: "#a7f3d0",
+                fontWeight: "bold",
+                textTransform: "uppercase",
+              }}
+            >
+              Lokasi Belanja Koperasi
+            </Text>
+            <Text style={{ fontSize: 11, color: "#fff", fontWeight: "bold" }}>
               {getCoopName(activeCooperativeId)}
             </Text>
           </View>
         </View>
-        
+
         {/* Switch button */}
         <Pressable
           onPress={() => setCoopSelectorVisible(true)}
           style={{
-            backgroundColor: '#047857',
+            backgroundColor: "#047857",
             paddingHorizontal: 10,
             paddingVertical: 5,
             borderRadius: 6,
             borderWidth: 0.5,
-            borderColor: '#a7f3d0'
+            borderColor: "#a7f3d0",
           }}
         >
-          <Text style={{ color: '#fff', fontSize: 9, fontWeight: 'bold' }}>Ganti Toko</Text>
+          <Text style={{ color: "#fff", fontSize: 9, fontWeight: "bold" }}>
+            Ganti Toko
+          </Text>
         </Pressable>
       </View>
 
       {/* Neighboring Cooperative Warning Banner */}
       {isCrossCoop && (
-        <View style={{ backgroundColor: '#fffbeb', paddingHorizontal: 12, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#fef3c7', flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-          <SymbolView name="exclamationmark.triangle.fill" size={12} tintColor="#d97706" />
-          <Text style={{ fontSize: 9, color: '#b45309', fontWeight: '600', flex: 1, lineHeight: 12 }}>
+        <View
+          style={{
+            backgroundColor: "#fffbeb",
+            paddingHorizontal: 12,
+            paddingVertical: 8,
+            borderBottomWidth: 1,
+            borderBottomColor: "#fef3c7",
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 6,
+          }}
+        >
+          <SymbolView
+            name="exclamationmark.triangle.fill"
+            size={12}
+            tintColor="#d97706"
+          />
+          <Text
+            style={{
+              fontSize: 9,
+              color: "#b45309",
+              fontWeight: "600",
+              flex: 1,
+              lineHeight: 12,
+            }}
+          >
             {getCoopWarningText(activeCooperativeId)}
           </Text>
         </View>
@@ -489,7 +563,7 @@ export default function CitizenPortal() {
         >
           {/* Decorative Background */}
           <View className="absolute right-0 top-0 bottom-0 w-24 bg-amber-400 opacity-[0.08] rounded-r-2xl transform rotate-12 translate-x-6" />
-          
+
           <View className="flex-row justify-between items-center">
             <View className="flex-1 mr-2">
               <View className="flex-row items-center gap-1.5 mb-1">
@@ -501,32 +575,47 @@ export default function CitizenPortal() {
               <Text className="text-white font-extrabold text-sm leading-tight">
                 Merdeka Belanja Lokal
               </Text>
-              <Text className="text-emerald-300 text-[9px] mt-0.5" numberOfLines={2}>
-                Selesaikan misi belanja produk lokal desa & referral untuk klaim bonus hingga 175 Poin!
+              <Text
+                className="text-emerald-300 text-[9px] mt-0.5"
+                numberOfLines={2}
+              >
+                Selesaikan misi belanja produk lokal desa & referral untuk klaim
+                bonus hingga 175 Poin!
               </Text>
             </View>
-            
+
             {/* Simple progress indicator */}
             <View className="items-center justify-center bg-emerald-900 border border-emerald-800 px-3 py-1.5 rounded-xl">
               <Text className="text-amber-400 font-black text-xs">
-                {missions.filter(m => m.isCompleted).length}/{missions.length}
+                {missions.filter((m) => m.isCompleted).length}/{missions.length}
               </Text>
-              <Text className="text-white text-[7px] font-bold uppercase tracking-wider mt-0.5">Misi</Text>
+              <Text className="text-white text-[7px] font-bold uppercase tracking-wider mt-0.5">
+                Misi
+              </Text>
             </View>
           </View>
-          
+
           {/* Progress Bar */}
           <View className="mt-3">
             <View className="flex-row justify-between items-center mb-1">
-              <Text className="text-emerald-400 text-[8px] font-bold">Progress Gotong Royong</Text>
               <Text className="text-emerald-400 text-[8px] font-bold">
-                {Math.round((missions.filter(m => m.isCompleted).length / (missions.length || 1)) * 100)}%
+                Progress Gotong Royong
+              </Text>
+              <Text className="text-emerald-400 text-[8px] font-bold">
+                {Math.round(
+                  (missions.filter((m) => m.isCompleted).length /
+                    (missions.length || 1)) *
+                    100,
+                )}
+                %
               </Text>
             </View>
             <View className="h-1.5 bg-emerald-900/60 rounded-full overflow-hidden">
-              <View 
-                style={{ width: `${(missions.filter(m => m.isCompleted).length / (missions.length || 1)) * 100}%` }}
-                className="h-full bg-amber-400 rounded-full" 
+              <View
+                style={{
+                  width: `${(missions.filter((m) => m.isCompleted).length / (missions.length || 1)) * 100}%`,
+                }}
+                className="h-full bg-amber-400 rounded-full"
               />
             </View>
           </View>
@@ -699,8 +788,6 @@ export default function CitizenPortal() {
                 </View>
               </View>
 
-
-
               {o.fulfillment === "DELIVERY_TO_HOME" && (
                 <Pressable
                   onPress={() => setActiveDeliveryOrderId(o.id)}
@@ -776,14 +863,20 @@ export default function CitizenPortal() {
                 {activeUser?.name}
               </Text>
               <Text className="text-emerald-200 text-[9px] mt-0.5">
-                MEMBER ID: {activeUser?.member_id || activeUser?.referral_code || "MEMBER-ID"}
+                MEMBER ID:{" "}
+                {activeUser?.member_id ||
+                  activeUser?.referral_code ||
+                  "MEMBER-ID"}
               </Text>
               <Text className="text-emerald-300 text-[8px]">
                 NIK: {activeUser?.nik_masked || "3275**********01"}{" "}
                 {activeUser?.rt_id ? `• ${activeUser.rt_id}` : ""}
               </Text>
               {activeUser?.card_token && (
-                <Text className="text-emerald-300 text-[7px] mt-0.5 max-w-[190px]" numberOfLines={1}>
+                <Text
+                  className="text-emerald-300 text-[7px] mt-0.5 max-w-[190px]"
+                  numberOfLines={1}
+                >
                   QR token: {activeUser.card_token}
                 </Text>
               )}
@@ -893,34 +986,53 @@ export default function CitizenPortal() {
               Misi Gotong Royong Aktif
             </Text>
           </View>
-          
+
           {missions.map((m) => (
-            <View key={m.id} className="mb-3.5 border-b border-stone-150 pb-3 last:border-b-0 last:pb-0">
+            <View
+              key={m.id}
+              className="mb-3.5 border-b border-stone-150 pb-3 last:border-b-0 last:pb-0"
+            >
               <View className="flex-row justify-between items-start mb-1.5">
                 <View className="flex-1 mr-2">
                   <Text className="text-stone-900 font-bold text-[11px] flex-row items-center gap-1.5">
-                    {m.title} {m.isCompleted && <SymbolView name="checkmark.seal.fill" size={10} tintColor="#0f5132" />}
+                    {m.title}{" "}
+                    {m.isCompleted && (
+                      <SymbolView
+                        name="checkmark.seal.fill"
+                        size={10}
+                        tintColor="#0f5132"
+                      />
+                    )}
                   </Text>
-                  <Text className="text-stone-500 text-[9px] mt-0.5 leading-tight">{m.description}</Text>
+                  <Text className="text-stone-500 text-[9px] mt-0.5 leading-tight">
+                    {m.description}
+                  </Text>
                 </View>
                 <View className="bg-amber-100 border border-amber-200 px-2 py-0.5 rounded-md">
-                  <Text className="text-amber-800 font-black text-[8px]">+{m.pointsReward} Poin</Text>
+                  <Text className="text-amber-800 font-black text-[8px]">
+                    +{m.pointsReward} Poin
+                  </Text>
                 </View>
               </View>
-              
+
               {/* Progress bar */}
               <View className="flex-row justify-between items-center mt-1 mb-1">
                 <Text className="text-stone-400 text-[8px]">
                   Progress: {m.currentValue} / {m.targetValue} {m.unit}
                 </Text>
                 <Text className="text-stone-600 font-bold text-[8px]">
-                  {Math.round(Math.min(100, (m.currentValue / m.targetValue) * 100))}%
+                  {Math.round(
+                    Math.min(100, (m.currentValue / m.targetValue) * 100),
+                  )}
+                  %
                 </Text>
               </View>
               <View className="h-1.5 bg-stone-100 rounded-full overflow-hidden">
-                <View 
-                  style={{ width: `${Math.min(100, (m.currentValue / m.targetValue) * 100)}%` }}
-                  className={`h-full rounded-full ${m.isCompleted ? "bg-emerald-600" : "bg-amber-500"}`} 
+                <View
+                  style={{
+                    width: `${Math.min(100, (m.currentValue / m.targetValue) * 100)}%`,
+                  }}
+                  className={`h-full rounded-full ${m.isCompleted ? "bg-emerald-600" : "bg-amber-500"}`}
                 />
               </View>
               {m.badgeReward && m.isCompleted && (
@@ -969,8 +1081,6 @@ export default function CitizenPortal() {
       </ScrollView>
     );
   };
-
-
 
   return (
     <View className="flex-1 bg-stone-100">
@@ -1028,8 +1138,6 @@ export default function CitizenPortal() {
             Kartu & Poin
           </Text>
         </Pressable>
-
-
       </View>
 
       {/* Cart Drawer Modal */}
@@ -1043,7 +1151,10 @@ export default function CitizenPortal() {
           onPress={() => setIsCartOpen(false)}
           className="flex-1 justify-end bg-black/60"
         >
-          <Pressable onPress={() => {}} className="bg-white rounded-t-3xl p-4 h-[70%]">
+          <Pressable
+            onPress={() => {}}
+            className="bg-white rounded-t-3xl p-4 h-[70%]"
+          >
             <View className="flex-row justify-between items-center border-b border-stone-200 pb-3 mb-3">
               <Text className="text-emerald-950 font-black text-lg">
                 Keranjang Belanja
@@ -1186,7 +1297,10 @@ export default function CitizenPortal() {
           onPress={() => setCheckoutModalOpen(false)}
           className="flex-1 justify-end bg-black/60"
         >
-          <Pressable onPress={() => {}} className="bg-white rounded-t-3xl p-5 h-[80%]">
+          <Pressable
+            onPress={() => {}}
+            className="bg-white rounded-t-3xl p-5 h-[80%]"
+          >
             <View className="flex-row justify-between items-center border-b border-stone-200 pb-3 mb-4">
               <Text className="text-emerald-950 font-black text-lg">
                 Metode & Alamat Pengiriman
@@ -1285,8 +1399,6 @@ export default function CitizenPortal() {
                     }
                   />
                 </Pressable>
-
-
               </View>
 
               {/* Point Loyalty Redeem Option */}
@@ -1359,7 +1471,9 @@ export default function CitizenPortal() {
                 {deliveryFee > 0 && (
                   <View className="flex-row justify-between py-1">
                     <Text className="text-amber-700 text-[10px]">
-                      {isCrossCoop ? "Biaya Logistik Lintas Koperasi" : "Biaya KopKurir Desa"}
+                      {isCrossCoop
+                        ? "Biaya Logistik Lintas Koperasi"
+                        : "Biaya KopKurir Desa"}
                     </Text>
                     <Text className="text-amber-700 text-xs font-bold">
                       +Rp{deliveryFee.toLocaleString("id-ID")}
@@ -1402,7 +1516,10 @@ export default function CitizenPortal() {
             onPress={() => setDetailOrder(null)}
             className="flex-1 justify-center items-center bg-black/60 p-4"
           >
-            <Pressable onPress={() => {}} className="bg-white rounded-2xl p-5 w-full max-w-[340px]">
+            <Pressable
+              onPress={() => {}}
+              className="bg-white rounded-2xl p-5 w-full max-w-[340px]"
+            >
               <View className="flex-row justify-between items-center border-b border-stone-200 pb-3 mb-4">
                 <Text className="text-emerald-950 font-black text-sm">
                   Rincian Transaksi
@@ -1448,12 +1565,23 @@ export default function CitizenPortal() {
               </Text>
               <View className="bg-stone-50 p-2.5 rounded-lg border border-stone-200 mb-3 max-h-[120px] overflow-scroll">
                 {detailOrderItems.length === 0 ? (
-                  <Text className="text-[10px] text-stone-400 italic">Memuat daftar produk...</Text>
+                  <Text className="text-[10px] text-stone-400 italic">
+                    Memuat daftar produk...
+                  </Text>
                 ) : (
                   detailOrderItems.map((item, idx) => (
-                    <View key={item.id || idx} className="flex-row justify-between py-1 border-b border-stone-100 last:border-b-0">
-                      <Text className="text-[10px] text-stone-700 flex-1" numberOfLines={1}>
-                        • {item.name} <Text className="text-stone-400 font-normal">x{item.quantity}</Text>
+                    <View
+                      key={item.id || idx}
+                      className="flex-row justify-between py-1 border-b border-stone-100 last:border-b-0"
+                    >
+                      <Text
+                        className="text-[10px] text-stone-700 flex-1"
+                        numberOfLines={1}
+                      >
+                        • {item.name}{" "}
+                        <Text className="text-stone-400 font-normal">
+                          x{item.quantity}
+                        </Text>
                       </Text>
                       <Text className="text-[10px] text-stone-900 font-bold">
                         Rp{(item.price * item.quantity).toLocaleString("id-ID")}
@@ -1501,19 +1629,20 @@ export default function CitizenPortal() {
                 <View className="mt-3 bg-amber-50 p-2.5 rounded-lg border border-amber-200">
                   <Text className="text-[9px] text-amber-850 font-bold leading-tight">
                     💡 Silakan lakukan pembayaran tunai (COD) sebesar Rp
-                    {detailOrder.total.toLocaleString("id-ID")} kepada RT Agent
-                    Anda (Pak Budi) saat mengambil barang di Pos RT.
+                    {detailOrder.total.toLocaleString("id-ID")} kepada Agen Transit
+                    Anda (Pak Budi) saat mengambil barang.
                   </Text>
                 </View>
               )}
 
-              {(detailOrder.order_status === "DELIVERED_TO_RT" || detailOrder.order_status === "READY_FOR_PICKUP") && (
+              {(detailOrder.order_status === "DELIVERED_TO_RT" ||
+                detailOrder.order_status === "READY_FOR_PICKUP") && (
                 <Pressable
                   onPress={async () => {
                     try {
                       await dbService.run(
                         "UPDATE orders SET order_status = 'COMPLETED', payment_status = 'PAID' WHERE id = ?",
-                        [detailOrder.id]
+                        [detailOrder.id],
                       );
                       await dbService.run(
                         "INSERT INTO audit_logs (id, actor, action, details, created_at) VALUES (?, ?, ?, ?, ?)",
@@ -1523,15 +1652,18 @@ export default function CitizenPortal() {
                           "ORDER_RECEIVED_BY_CITIZEN",
                           `Citizen confirmed receipt of order ${detailOrder.id}`,
                           new Date().toISOString(),
-                        ]
+                        ],
                       );
                       setDetailOrder({
                         ...detailOrder,
                         order_status: "COMPLETED",
-                        payment_status: "PAID"
+                        payment_status: "PAID",
                       });
                       await refreshData();
-                      Alert.alert("Berhasil", "Terima kasih! Pesanan Anda telah ditandai sebagai Selesai.");
+                      Alert.alert(
+                        "Berhasil",
+                        "Terima kasih! Pesanan Anda telah ditandai sebagai Selesai.",
+                      );
                     } catch (err) {
                       console.error("Failed to confirm receipt:", err);
                       Alert.alert("Error", "Gagal memperbarui status pesanan.");
@@ -1539,7 +1671,11 @@ export default function CitizenPortal() {
                   }}
                   className="mt-3 bg-emerald-600 border border-emerald-700 py-2.5 rounded-xl items-center justify-center active:bg-emerald-850 flex-row gap-2"
                 >
-                  <SymbolView name="checkmark.seal.fill" size={12} tintColor="#fff" />
+                  <SymbolView
+                    name="checkmark.seal.fill"
+                    size={12}
+                    tintColor="#fff"
+                  />
                   <Text className="text-white font-bold text-xs">
                     Pesanan Sudah Diterima
                   </Text>
@@ -1579,7 +1715,10 @@ export default function CitizenPortal() {
             onPress={() => setSelectedDetailProduct(null)}
             className="flex-1 justify-end bg-black/60"
           >
-            <Pressable onPress={() => {}} className="bg-white rounded-t-3xl p-5 w-full">
+            <Pressable
+              onPress={() => {}}
+              className="bg-white rounded-t-3xl p-5 w-full"
+            >
               <View className="flex-row justify-between items-center border-b border-stone-200 pb-3 mb-4">
                 <Text className="text-emerald-950 font-black text-sm">
                   Detail Produk Koperasi
@@ -1609,23 +1748,31 @@ export default function CitizenPortal() {
               <Text className="text-stone-900 font-extrabold text-base mb-1">
                 {selectedDetailProduct.name}
               </Text>
-              
+
               <Text className="text-emerald-800 font-black text-lg mb-2">
                 Rp{selectedDetailProduct.price.toLocaleString("id-ID")}
-                <Text className="text-stone-400 text-xs font-semibold"> / {selectedDetailProduct.unit}</Text>
+                <Text className="text-stone-400 text-xs font-semibold">
+                  {" "}
+                  / {selectedDetailProduct.unit}
+                </Text>
               </Text>
 
               <View className="bg-stone-50 p-3 rounded-xl border border-stone-200 mb-4">
                 <Text className="text-stone-600 text-[10px] leading-relaxed">
-                  Stok tersedia: <Text className="text-stone-900 font-bold">{selectedDetailProduct.stock} {selectedDetailProduct.unit}</Text>
+                  Stok tersedia:{" "}
+                  <Text className="text-stone-900 font-bold">
+                    {selectedDetailProduct.stock} {selectedDetailProduct.unit}
+                  </Text>
                 </Text>
                 {selectedDetailProduct.is_local === 1 ? (
                   <Text className="text-emerald-800 text-[9px] font-bold mt-1.5 flex-row items-center gap-1">
-                    💡 Produk Lokal Desa: Belanja produk ini membuat seluruh transaksi Anda mendapatkan 2x lipat Poin Gotong Royong!
+                    💡 Produk Lokal Desa: Belanja produk ini membuat seluruh
+                    transaksi Anda mendapatkan 2x lipat Poin Gotong Royong!
                   </Text>
                 ) : (
                   <Text className="text-stone-500 text-[9px] mt-1.5">
-                    💡 Setiap pembelanjaan kelipatan Rp10.000 akan mendapatkan 1 Poin Gotong Royong.
+                    💡 Setiap pembelanjaan kelipatan Rp10.000 akan mendapatkan 1
+                    Poin Gotong Royong.
                   </Text>
                 )}
               </View>
@@ -1633,10 +1780,14 @@ export default function CitizenPortal() {
               {/* Quantity Selector */}
               {selectedDetailProduct.stock > 0 ? (
                 <View className="flex-row justify-between items-center mb-5 bg-stone-100 p-2.5 rounded-xl border border-stone-200">
-                  <Text className="text-stone-700 text-xs font-bold pl-1">Jumlah</Text>
+                  <Text className="text-stone-700 text-xs font-bold pl-1">
+                    Jumlah
+                  </Text>
                   <View className="flex-row items-center gap-3">
                     <Pressable
-                      onPress={() => setDetailQuantity(q => Math.max(1, q - 1))}
+                      onPress={() =>
+                        setDetailQuantity((q) => Math.max(1, q - 1))
+                      }
                       className="bg-white border border-stone-300 w-8 h-8 rounded-lg items-center justify-center active:bg-stone-200"
                     >
                       <Text className="font-extrabold text-stone-850">-</Text>
@@ -1645,7 +1796,11 @@ export default function CitizenPortal() {
                       {detailQuantity}
                     </Text>
                     <Pressable
-                      onPress={() => setDetailQuantity(q => Math.min(selectedDetailProduct.stock, q + 1))}
+                      onPress={() =>
+                        setDetailQuantity((q) =>
+                          Math.min(selectedDetailProduct.stock, q + 1),
+                        )
+                      }
                       className="bg-white border border-stone-300 w-8 h-8 rounded-lg items-center justify-center active:bg-stone-200"
                     >
                       <Text className="font-extrabold text-stone-850">+</Text>
@@ -1654,7 +1809,9 @@ export default function CitizenPortal() {
                 </View>
               ) : (
                 <View className="bg-stone-100 p-3 rounded-xl border border-stone-200 mb-5 items-center justify-center">
-                  <Text className="text-stone-400 font-bold text-xs">Stok produk sedang habis</Text>
+                  <Text className="text-stone-400 font-bold text-xs">
+                    Stok produk sedang habis
+                  </Text>
                 </View>
               )}
 
@@ -1664,18 +1821,25 @@ export default function CitizenPortal() {
                   onPress={() => setSelectedDetailProduct(null)}
                   className="flex-1 bg-stone-100 border border-stone-300 py-3 rounded-xl items-center justify-center active:bg-stone-200"
                 >
-                  <Text className="text-stone-700 font-bold text-xs">Kembali</Text>
+                  <Text className="text-stone-700 font-bold text-xs">
+                    Kembali
+                  </Text>
                 </Pressable>
                 {selectedDetailProduct.stock > 0 && (
                   <Pressable
                     onPress={() => {
                       addToCart(selectedDetailProduct, detailQuantity);
                       setSelectedDetailProduct(null);
-                      Alert.alert("Sukses", `${detailQuantity} ${selectedDetailProduct.unit} berhasil dimasukkan ke keranjang.`);
+                      Alert.alert(
+                        "Sukses",
+                        `${detailQuantity} ${selectedDetailProduct.unit} berhasil dimasukkan ke keranjang.`,
+                      );
                     }}
                     className="flex-[2] bg-emerald-700 border border-emerald-800 py-3 rounded-xl items-center justify-center active:bg-emerald-950"
                   >
-                    <Text className="text-white font-black text-xs">Tambah ke Keranjang</Text>
+                    <Text className="text-white font-black text-xs">
+                      Tambah ke Keranjang
+                    </Text>
                   </Pressable>
                 )}
               </View>

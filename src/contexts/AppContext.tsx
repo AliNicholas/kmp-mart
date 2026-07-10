@@ -781,7 +781,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     const fullName = input.fullName.trim();
     const phone = normalizePhone(input.phone);
     const nik = input.nik.replace(/\D/g, '');
-    const rtNumber = input.rt.replace(/\D/g, '').padStart(2, '0').slice(-2);
+    const rtNumber = input.rt ? input.rt.replace(/\D/g, '').padStart(2, '0').slice(-2) : '00';
     const rwNumber = input.rw.replace(/\D/g, '').padStart(2, '0').slice(-2);
     const address = input.address.trim();
     const cooperativeId = input.cooperativeId || 'tenant-1';
@@ -800,8 +800,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       return { success: false, error: 'Nomor HP harus memakai format Indonesia yang valid.' };
     }
 
-    if (!address || !rtNumber || !rwNumber) {
-      return { success: false, error: 'Alamat, RT, dan RW wajib diisi.' };
+    if (!address || !rwNumber) {
+      return { success: false, error: 'Alamat dan RW wajib diisi.' };
     }
 
     if (input.otp.trim() !== REGISTRATION_DEMO_OTP) {
@@ -827,7 +827,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       if (cleanReferralCode) {
         const referrer = allUsers.find(u => u.referral_code === cleanReferralCode);
         if (!referrer) {
-          return { success: false, error: 'Kode KopAjak tidak ditemukan.' };
+          return { success: false, error: 'Kode referral tidak ditemukan.' };
         }
         referredBy = cleanReferralCode;
       }
