@@ -40,33 +40,41 @@ interface DeliveryTrackerModalProps {
   onClose: () => void;
 }
 
-// ─── REAL GEOGRAPHIC COORDINATES (Bali area, Sukamaju → rumah) ───
-// Route: Koperasi Sukamaju → jalan desa → gang kampung → rumah warga
-const ROUTE_COORDS = [
-  { latitude: -8.409512, longitude: 115.188912 }, // 0: Koperasi (start)
-  { latitude: -8.408200, longitude: 115.189800 }, // 1: keluar koperasi
-  { latitude: -8.407100, longitude: 115.190600 }, // 2: jalan utama
-  { latitude: -8.406500, longitude: 115.191200 }, // 3: belok kiri
-  { latitude: -8.406000, longitude: 115.192000 }, // 4: lurus
-  { latitude: -8.405400, longitude: 115.192700 }, // 5: gang kampung
-  { latitude: -8.405000, longitude: 115.193400 }, // 6: masuk perumahan
-  { latitude: -8.404500, longitude: 115.194100 }, // 7: mendekat
-  { latitude: -8.404000, longitude: 115.194800 }, // 8: rumah (destination)
-];
-
-const COOP_COORD = ROUTE_COORDS[0];
-const HOME_COORD = ROUTE_COORDS[ROUTE_COORDS.length - 1];
-
-// Center map between coop and home
-const MAP_CENTER = {
-  latitude: (COOP_COORD.latitude + HOME_COORD.latitude) / 2,
-  longitude: (COOP_COORD.longitude + HOME_COORD.longitude) / 2,
-  latitudeDelta: 0.012,
-  longitudeDelta: 0.012,
+// ─── GEOGRAPHIC COORDINATES & REAL ROAD ROUTING ───
+const COOP_COORDS_MAP: { [id: string]: { latitude: number; longitude: number } } = {
+  'tenant-1': { latitude: -8.409512, longitude: 115.188912 }, // Sukamaju
+  'tenant-2': { latitude: -8.405112, longitude: 115.192512 }, // Sukasari
+  'tenant-3': { latitude: -8.418912, longitude: 115.201212 }, // Sukamukti
+  'tenant-4': { latitude: -7.250445, longitude: 112.750831 }, // Jaya Makmur (Jawa Timur)
+  'tenant-5': { latitude: 2.445651, longitude: 98.991876 },   // Danau Toba (Sumatera)
+  'tenant-6': { latitude: 1.545831, longitude: 124.778841 },  // Bunaken (Sulawesi)
 };
 
-// Stage → which waypoint index the driver should be at
-const STAGE_WAYPOINTS = [0, 0, 4, 8];
+const USER_HOME_COORD = { latitude: -8.404000, longitude: 115.194800 };
+
+// Realistic fallback street-following route (local Sukamaju area)
+const DEFAULT_ROUTE_COORDS = [
+  { latitude: -8.409512, longitude: 115.188912 }, // 0: Koperasi Sukamaju (start)
+  { latitude: -8.409200, longitude: 115.189200 }, // 1: Keluar koperasi ke jalan lokal
+  { latitude: -8.407500, longitude: 115.189800 }, // 2: Jalan ke utara
+  { latitude: -8.407200, longitude: 115.191500 }, // 3: Belok kanan (timur) menyeberang sungai
+  { latitude: -8.407000, longitude: 115.193500 }, // 4: Lurus melewati perumahan
+  { latitude: -8.406800, longitude: 115.194800 }, // 5: Junction utama (belok kiri/utara)
+  { latitude: -8.405500, longitude: 115.194900 }, // 6: Menyusuri jalan utama ke utara
+  { latitude: -8.404500, longitude: 115.194800 }, // 7: Mendekati lokasi
+  { latitude: -8.404000, longitude: 115.194800 }, // 8: Rumah warga (destination)
+];
+
+const getWaypointForStage = (s: number, totalPoints: number) => {
+  if (totalPoints <= 0) return 0;
+  switch (s) {
+    case 0: return 0;
+    case 1: return 0;
+    case 2: return Math.floor(totalPoints / 2);
+    case 3: return totalPoints - 1;
+    default: return 0;
+  }
+};
 
 const STAGE_INFO: {
   label: string;
@@ -89,7 +97,7 @@ const STAGE_INFO: {
     sublabel: 'Mang Ujang mengambil paket di Kopdes',
     color: '#3b82f6',
     icon: 'storefront.fill',
-    chat: 'Halo! Saya Mang Ujang, sedang jalan ke Koperasi Sukamaju ambil sembako Anda ya 🛵',
+    chat: 'Halo! Saya Mang Ujang, sedang jalan ke Koperasi KMP ambil sembako Anda ya 🛵',
     eta: '~12 menit',
   },
   {
@@ -120,7 +128,8 @@ export default function DeliveryTrackerModal({
   const [stage, setStage] = useState(0);
   const [loading, setLoading] = useState(true);
   const [currentOrder, setCurrentOrder] = useState<any | null>(null);
-  const [driverCoord, setDriverCoord] = useState(ROUTE_COORDS[0]);
+  const [routeCoords, setRouteCoords] = useState<any[]>(DEFAULT_ROUTE_COORDS);
+  const [driverCoord, setDriverCoord] = useState(DEFAULT_ROUTE_COORDS[0]);
   const [chatVisible, setChatVisible] = useState(false);
 
   const mapRef = useRef<any>(null);
@@ -138,7 +147,7 @@ export default function DeliveryTrackerModal({
     return () => pulse.stop();
   }, []);
 
-  // Load order on open
+  // Load order and fetch real route from OSRM
   useEffect(() => {
     if (!visible || !orderId) return;
     const load = async () => {
@@ -146,12 +155,34 @@ export default function DeliveryTrackerModal({
       try {
         const orderData = await dbService.getFirst('SELECT * FROM orders WHERE id = ?', [orderId]);
         setCurrentOrder(orderData);
+        
+        const start = COOP_COORDS_MAP[orderData?.cooperative_id] || COOP_COORDS_MAP['tenant-1'];
+        const end = USER_HOME_COORD;
+
+        let fetchedCoords = null;
+        try {
+          const url = `https://router.project-osrm.org/route/v1/driving/${start.longitude},${start.latitude};${end.longitude},${end.latitude}?overview=full&geometries=geojson`;
+          const response = await fetch(url);
+          const data = await response.json();
+          if (data.routes && data.routes[0]) {
+            fetchedCoords = data.routes[0].geometry.coordinates.map((c: any) => ({
+              latitude: c[1],
+              longitude: c[0]
+            }));
+          }
+        } catch (fetchErr) {
+          console.warn('Failed to fetch real route, using fallback:', fetchErr);
+        }
+
+        const activeCoords = fetchedCoords || DEFAULT_ROUTE_COORDS;
+        setRouteCoords(activeCoords);
+
         if (orderData?.order_status === 'COMPLETED') {
           setStage(3);
-          setDriverCoord(HOME_COORD);
+          setDriverCoord(activeCoords[activeCoords.length - 1]);
         } else {
           setStage(0);
-          setDriverCoord(ROUTE_COORDS[0]);
+          setDriverCoord(activeCoords[0]);
         }
       } catch (err) {
         console.error('Failed to load delivery order:', err);
@@ -172,30 +203,33 @@ export default function DeliveryTrackerModal({
 
   // Animate driver along route when stage changes
   useEffect(() => {
-    if (!visible) return;
-    const targetWpIdx = STAGE_WAYPOINTS[stage];
-    animateDriverAlongRoute(targetWpIdx);
-    // Show chat bubble after short delay
+    if (!visible || loading || routeCoords.length === 0) return;
+    const targetWpIdx = getWaypointForStage(stage, routeCoords.length);
+    animateDriverAlongRoute(targetWpIdx, routeCoords);
     setChatVisible(false);
     const t = setTimeout(() => setChatVisible(true), 1200);
     return () => clearTimeout(t);
-  }, [stage, visible]);
+  }, [stage, visible, loading, routeCoords]);
 
   // Smoothly move driver through each waypoint
-  const animateDriverAlongRoute = (targetIdx: number) => {
-    const currentIdx = ROUTE_COORDS.findIndex(
+  const animateDriverAlongRoute = (targetIdx: number, coordsList: any[]) => {
+    if (coordsList.length === 0) return;
+    const currentIdx = coordsList.findIndex(
       (c) => c.latitude === driverCoord.latitude && c.longitude === driverCoord.longitude
     );
     const from = Math.max(currentIdx, 0);
     if (targetIdx <= from) return;
 
     let delay = 0;
-    for (let i = from + 1; i <= targetIdx; i++) {
-      const coord = ROUTE_COORDS[i];
+    const step = Math.max(Math.floor((targetIdx - from) / 15), 1); // Limit animation speed if there are too many OSRM points
+
+    for (let i = from + 1; i <= targetIdx; i += step) {
+      const idx = Math.min(i, targetIdx);
+      const coord = coordsList[idx];
       setTimeout(() => {
         setDriverCoord(coord);
         // Pan map to follow driver
-        if (mapRef.current && i === targetIdx) {
+        if (mapRef.current && idx === targetIdx) {
           mapRef.current.animateToRegion({
             latitude: coord.latitude,
             longitude: coord.longitude,
@@ -204,7 +238,7 @@ export default function DeliveryTrackerModal({
           }, 800);
         }
       }, delay);
-      delay += 950;
+      delay += Math.max(1000 / ((targetIdx - from) / step), 100);
     }
   };
 
@@ -243,16 +277,31 @@ export default function DeliveryTrackerModal({
   if (!visible) return null;
 
   const stageInfo = STAGE_INFO[stage];
-  const MAP_HEIGHT = SCREEN_HEIGHT * 0.50;
-  const travelledRoute = ROUTE_COORDS.slice(0, STAGE_WAYPOINTS[stage] + 1);
-  const remainingRoute = ROUTE_COORDS.slice(STAGE_WAYPOINTS[stage]);
+  const travelledRoute = routeCoords.slice(0, getWaypointForStage(stage, routeCoords.length) + 1);
+  const remainingRoute = routeCoords.slice(getWaypointForStage(stage, routeCoords.length));
+
+  const COOP_COORD = routeCoords[0] || USER_HOME_COORD;
+  const HOME_COORD = routeCoords[routeCoords.length - 1] || USER_HOME_COORD;
+
+  const MAP_CENTER = {
+    latitude: (COOP_COORD.latitude + HOME_COORD.latitude) / 2,
+    longitude: (COOP_COORD.longitude + HOME_COORD.longitude) / 2,
+    latitudeDelta: Math.max(Math.abs(COOP_COORD.latitude - HOME_COORD.latitude) * 1.5, 0.012),
+    longitudeDelta: Math.max(Math.abs(COOP_COORD.longitude - HOME_COORD.longitude) * 1.5, 0.012),
+  };
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+    <Modal
+      visible={visible}
+      transparent
+      animationType="slide"
+      onRequestClose={onClose}
+      statusBarTranslucent={true}
+    >
       <View style={styles.root}>
 
-        {/* ── REAL GOOGLE MAP ── */}
-        <View style={{ height: MAP_HEIGHT, overflow: 'hidden' }}>
+        {/* ── REAL GOOGLE MAP (Full Screen Background) ── */}
+        <View style={StyleSheet.absoluteFill}>
           {Platform.OS === 'web' ? (
             /* Web fallback: embed via iframe */
             <iframe
@@ -262,7 +311,7 @@ export default function DeliveryTrackerModal({
           ) : MapView ? (
             <MapView
               ref={mapRef}
-              style={{ flex: 1 }}
+              style={StyleSheet.absoluteFill}
               initialRegion={MAP_CENTER}
               showsUserLocation={false}
               showsTraffic={false}
@@ -351,22 +400,6 @@ export default function DeliveryTrackerModal({
               <SymbolView name="xmark" size={13} tintColor="#333" />
             </Pressable>
           </View>
-
-          {/* Stage progress dots */}
-          <View style={styles.stageDotsRow}>
-            {STAGE_INFO.map((_, i) => (
-              <View
-                key={i}
-                style={[
-                  styles.stageDot,
-                  {
-                    backgroundColor: i <= stage ? stageInfo.color : '#d4d4d4',
-                    width: i === stage ? 20 : 7,
-                  },
-                ]}
-              />
-            ))}
-          </View>
         </View>
 
         {/* ── BOTTOM PANEL (Gojek/Grab style) ── */}
@@ -394,6 +427,22 @@ export default function DeliveryTrackerModal({
                     <Text style={[styles.etaText, { color: stageInfo.color }]}>{stageInfo.eta}</Text>
                   </View>
                 )}
+              </View>
+
+              {/* Stage progress dots (moved inside bottom panel) */}
+              <View style={styles.stageDotsRow}>
+                {STAGE_INFO.map((_, i) => (
+                  <View
+                    key={i}
+                    style={[
+                      styles.stageDot,
+                      {
+                        backgroundColor: i <= stage ? stageInfo.color : '#d4d4d4',
+                        width: i === stage ? 20 : 7,
+                      },
+                    ]}
+                  />
+                ))}
               </View>
 
               <View style={styles.divider} />
@@ -474,6 +523,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#000',
     justifyContent: 'flex-end',
+    position: 'relative',
   },
   mapFallback: {
     flex: 1,
@@ -517,7 +567,7 @@ const styles = StyleSheet.create({
   // Map overlays
   mapTopOverlay: {
     position: 'absolute',
-    top: 16,
+    top: Platform.OS === 'ios' ? 60 : 24,
     left: 16,
     right: 16,
     flexDirection: 'row',
@@ -557,12 +607,11 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   stageDotsRow: {
-    position: 'absolute',
-    bottom: 12,
-    alignSelf: 'center',
     flexDirection: 'row',
     gap: 4,
-    zIndex: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12,
   },
   stageDot: {
     height: 6,
