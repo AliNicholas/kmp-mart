@@ -64,6 +64,7 @@ export default function RegistrationModal({ visible, onClose }: RegistrationModa
     if (cleanPhone.length < 10 || cleanPhone.length > 13) return 'Nomor HP belum valid.';
     if (!address.trim()) return 'Alamat KTP wajib diisi.';
     if (!rw.replace(/\D/g, '')) return 'RW wajib diisi.';
+    if (!referralCode.trim()) return 'Kode KopAjak wajib diisi.';
     return '';
   };
 
@@ -210,13 +211,13 @@ export default function RegistrationModal({ visible, onClose }: RegistrationModa
       </View>
 
       <View className="mb-2">
-        <Text className={labelClass}>Kode KopAjak opsional</Text>
+        <Text className={labelClass}>Kode KopAjak (Wajib)</Text>
         <TextInput
           value={referralCode}
           onChangeText={setReferralCode}
           autoCapitalize="characters"
           className={fieldClass}
-          placeholder="cth: DINDAJAK"
+          placeholder="Masukkan kode KopAjak"
         />
       </View>
 

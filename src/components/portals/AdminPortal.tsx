@@ -30,6 +30,7 @@ export default function AdminPortal() {
     createDeliveryTaskFromOrder,
     assignDeliveryTask,
     assignManualProvider,
+    completeOrder,
   } = useApp();
 
   const [subTab, setSubTab] = useState(0); // 0: Inventory, 1: Fulfillment, 2: Finance, 3: Dispatch
@@ -130,24 +131,26 @@ export default function AdminPortal() {
   ) => {
     try {
       const isCompleted = status === "COMPLETED";
-      const sql = isCompleted
-        ? `UPDATE orders SET order_status = 'COMPLETED', payment_status = 'PAID' WHERE id = ?`
-        : `UPDATE orders SET order_status = ? WHERE id = ?`;
-      const args = isCompleted ? [orderId] : [status, orderId];
+      if (isCompleted) {
+        await completeOrder(orderId);
+      } else {
+        await dbService.run(
+          `UPDATE orders SET order_status = ? WHERE id = ?`,
+          [status, orderId],
+        );
 
-      await dbService.run(sql, args);
-
-      const logId = `log-self-${orderId}-${status}`;
-      await dbService.run(
-        "INSERT INTO audit_logs (id, actor, action, details, created_at) VALUES (?, ?, ?, ?, ?)",
-        [
-          logId,
-          "Pegawai Koperasi",
-          isCompleted ? "SELF_PICKUP_COMPLETE" : "SELF_PICKUP_READY",
-          `Order ${orderId} updated to ${status}`,
-          new Date().toISOString(),
-        ],
-      );
+        const logId = `log-self-${orderId}-${status}`;
+        await dbService.run(
+          "INSERT INTO audit_logs (id, actor, action, details, created_at) VALUES (?, ?, ?, ?, ?)",
+          [
+            logId,
+            "Pegawai Koperasi",
+            "SELF_PICKUP_READY",
+            `Order ${orderId} updated to ${status}`,
+            new Date().toISOString(),
+          ],
+        );
+      }
 
       if (activeSelfOrder && activeSelfOrder.id === orderId) {
         setActiveSelfOrder((prev) =>
@@ -178,24 +181,26 @@ export default function AdminPortal() {
   ) => {
     try {
       const isCompleted = status === "COMPLETED";
-      const sql = isCompleted
-        ? `UPDATE orders SET order_status = 'COMPLETED', payment_status = 'PAID' WHERE id = ?`
-        : `UPDATE orders SET order_status = ? WHERE id = ?`;
-      const args = isCompleted ? [orderId] : [status, orderId];
+      if (isCompleted) {
+        await completeOrder(orderId);
+      } else {
+        await dbService.run(
+          `UPDATE orders SET order_status = ? WHERE id = ?`,
+          [status, orderId],
+        );
 
-      await dbService.run(sql, args);
-
-      const logId = `log-delivery-${orderId}-${status}`;
-      await dbService.run(
-        "INSERT INTO audit_logs (id, actor, action, details, created_at) VALUES (?, ?, ?, ?, ?)",
-        [
-          logId,
-          "Pegawai Koperasi",
-          isCompleted ? "DELIVERY_COMPLETE" : "DELIVERY_STATUS_UPDATE",
-          `Order ${orderId} updated to ${status}`,
-          new Date().toISOString(),
-        ],
-      );
+        const logId = `log-delivery-${orderId}-${status}`;
+        await dbService.run(
+          "INSERT INTO audit_logs (id, actor, action, details, created_at) VALUES (?, ?, ?, ?, ?)",
+          [
+            logId,
+            "Pegawai Koperasi",
+            "DELIVERY_STATUS_UPDATE",
+            `Order ${orderId} updated to ${status}`,
+            new Date().toISOString(),
+          ],
+        );
+      }
 
       if (activeSelfOrder && activeSelfOrder.id === orderId) {
         setActiveSelfOrder((prev) =>

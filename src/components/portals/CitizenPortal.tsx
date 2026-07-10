@@ -40,7 +40,7 @@ export default function CitizenPortal() {
     clearCart,
     checkout,
     applyReferralCode,
-    refreshData,
+    completeOrder,
   } = useApp();
 
   const [subTab, setSubTab] = useState(0); // 0: Belanja, 1: Pesanan, 2: Kartu & Poin, 3: Pos RT
@@ -1640,26 +1640,12 @@ export default function CitizenPortal() {
                 <Pressable
                   onPress={async () => {
                     try {
-                      await dbService.run(
-                        "UPDATE orders SET order_status = 'COMPLETED', payment_status = 'PAID' WHERE id = ?",
-                        [detailOrder.id],
-                      );
-                      await dbService.run(
-                        "INSERT INTO audit_logs (id, actor, action, details, created_at) VALUES (?, ?, ?, ?, ?)",
-                        [
-                          `log-${Date.now()}`,
-                          activeUser?.name || "Warga",
-                          "ORDER_RECEIVED_BY_CITIZEN",
-                          `Citizen confirmed receipt of order ${detailOrder.id}`,
-                          new Date().toISOString(),
-                        ],
-                      );
+                      await completeOrder(detailOrder.id);
                       setDetailOrder({
                         ...detailOrder,
                         order_status: "COMPLETED",
                         payment_status: "PAID",
                       });
-                      await refreshData();
                       Alert.alert(
                         "Berhasil",
                         "Terima kasih! Pesanan Anda telah ditandai sebagai Selesai.",
