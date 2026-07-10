@@ -1,4 +1,5 @@
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   Popover,
@@ -39,22 +40,7 @@ export function UserMenu() {
     popoverTriggerRef.current?.close();
   };
 
-  const getRoleBadgeStyle = (role: string) => {
-    switch (role) {
-      case 'ADMIN': 
-        return {
-          bg: '#fef3c7', // amber-100
-          text: '#92400e', // amber-800
-          border: '#fde68a', // amber-200
-        };
-      default: 
-        return {
-          bg: '#d1fae5', // emerald-100
-          text: '#065f46', // emerald-800
-          border: '#a7f3d0', // emerald-200
-        };
-    }
-  };
+
 
   return (
     <Popover>
@@ -108,7 +94,6 @@ export function UserMenu() {
             <ScrollView className="max-h-60" showsVerticalScrollIndicator={true}>
               {allUsers.filter(u => u.role !== 'RT_AGENT').map((user) => {
                 const isSelected = activeUser?.id === user.id;
-                const badgeStyle = getRoleBadgeStyle(user.role);
                 return (
                   <Pressable
                     key={user.id}
@@ -135,18 +120,11 @@ export function UserMenu() {
                           <Text className={cn("font-bold text-xs", isSelected ? "text-emerald-950" : "text-stone-900")}>
                             {user.name}
                           </Text>
-                          <View style={{
-                            backgroundColor: badgeStyle.bg,
-                            borderColor: badgeStyle.border,
-                            borderWidth: 0.5,
-                            paddingHorizontal: 5,
-                            paddingVertical: 1,
-                            borderRadius: 4
-                          }}>
-                            <Text style={{ fontSize: 7, fontWeight: 'bold', color: badgeStyle.text }}>
+                          <Badge variant={user.role === 'ADMIN' ? 'secondary' : 'default'} className="px-1.5 py-0 rounded-md">
+                            <Text className="text-[8px] font-bold">
                               {getRoleLabel(user.role)}
                             </Text>
-                          </View>
+                          </Badge>
                         </View>
                         <Text className="text-[9px] text-stone-500">
                           {user.phone} {user.rt_id ? `• ${user.rt_id}` : ''}
