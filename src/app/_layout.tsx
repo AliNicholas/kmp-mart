@@ -8,6 +8,8 @@ import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import { AppProvider } from '@/contexts/AppContext';
 
 
+import { PortalHost } from '@rn-primitives/portal';
+
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
@@ -20,6 +22,7 @@ export default function RootLayout() {
           <Stack.Screen name="index" />
           <Stack.Screen name="explore" />
         </Stack>
+        <PortalHost />
       </AppProvider>
     </ThemeProvider>
   );
