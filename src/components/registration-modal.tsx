@@ -1,5 +1,5 @@
 import { REGISTRATION_DEMO_OTP, RegisterCitizenInput, useApp } from '@/contexts/AppContext';
-import { SymbolView } from 'expo-symbols';
+import { SymbolView } from '@/components/app-symbol';
 import React from 'react';
 import {
   ActivityIndicator,
@@ -41,6 +41,7 @@ export default function RegistrationModal({ visible, onClose }: RegistrationModa
   const [confirmPin, setConfirmPin] = React.useState('');
   const [error, setError] = React.useState('');
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const isReferralError = error === 'Kode KopAjak wajib diisi.' || error === 'Kode KopAjak tidak ditemukan.';
 
   const resetFlow = () => {
     setStep(0);
@@ -222,9 +223,14 @@ export default function RegistrationModal({ visible, onClose }: RegistrationModa
           value={referralCode}
           onChangeText={setReferralCode}
           autoCapitalize="characters"
-          className={fieldClass}
+          className={`${fieldClass} ${isReferralError ? 'border-rose-500 bg-rose-50/10 text-rose-900' : ''}`}
           placeholder="Masukkan kode KopAjak"
         />
+        {isReferralError ? (
+          <Text className="text-rose-600 text-[10px] font-bold mt-1 pl-1">
+            ⚠️ {error}
+          </Text>
+        ) : null}
       </View>
 
       <Pressable onPress={handleSendOtp} className="bg-emerald-700 border border-emerald-800 py-3 rounded-xl items-center active:bg-emerald-950 mt-2">
@@ -359,7 +365,7 @@ export default function RegistrationModal({ visible, onClose }: RegistrationModa
 
           <ScrollView contentContainerClassName="p-5 pb-8" keyboardShouldPersistTaps="handled">
             {renderProgress()}
-            {error ? (
+            {error && !isReferralError ? (
               <View className="bg-rose-50 border border-rose-200 rounded-xl p-3 mb-3">
                 <Text className="text-rose-700 text-[10px] font-bold">{error}</Text>
               </View>

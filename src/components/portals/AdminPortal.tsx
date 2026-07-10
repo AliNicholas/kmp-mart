@@ -1,6 +1,6 @@
 import { useApp } from "@/contexts/AppContext";
 import { dbService, DeliveryTask, Order, OrderItem, Product, User } from "@/utils/db";
-import { SymbolView } from "expo-symbols";
+import { SymbolView } from "@/components/app-symbol";
 import React, { useState } from "react";
 import {
   Alert,

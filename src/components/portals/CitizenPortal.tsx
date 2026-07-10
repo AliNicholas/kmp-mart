@@ -1,6 +1,6 @@
 import { useApp } from "@/contexts/AppContext";
 import { dbService } from "@/utils/db";
-import { SymbolView } from "expo-symbols";
+import { SymbolView } from "@/components/app-symbol";
 import React, { useState } from "react";
 import {
   Alert,
@@ -189,56 +189,68 @@ export default function CitizenPortal() {
 
   // Handle reorder (buying previous basket items)
   const handleReorder = async (orderId: string) => {
-    try {
-      const items = await dbService.getAll<any>(
-        "SELECT * FROM order_items WHERE order_id = ?",
-        [orderId],
-      );
+    Alert.alert(
+      "Konfirmasi Beli Lagi",
+      "Apakah Anda yakin ingin memasukkan kembali semua barang dari pesanan ini ke dalam keranjang?",
+      [
+        { text: "Batal", style: "cancel" },
+        {
+          text: "Ya, Beli Lagi",
+          onPress: async () => {
+            try {
+              const items = await dbService.getAll<any>(
+                "SELECT * FROM order_items WHERE order_id = ?",
+                [orderId],
+              );
 
-      if (!items || items.length === 0) {
-        Alert.alert("Gagal", "Tidak ada item dalam pesanan ini.");
-        return;
-      }
+              if (!items || items.length === 0) {
+                Alert.alert("Gagal", "Tidak ada item dalam pesanan ini.");
+                return;
+              }
 
-      let addedCount = 0;
-      let outOfStockCount = 0;
+              let addedCount = 0;
+              let outOfStockCount = 0;
 
-      for (const item of items) {
-        const prod = products.find((p) => p.id === item.product_id);
-        if (prod && prod.stock > 0) {
-          const qty = Math.min(prod.stock, item.quantity);
-          addToCart(prod, qty);
-          addedCount++;
-        } else {
-          outOfStockCount++;
-        }
-      }
+              for (const item of items) {
+                const prod = products.find((p) => p.id === item.product_id);
+                if (prod && prod.stock > 0) {
+                  const qty = Math.min(prod.stock, item.quantity);
+                  addToCart(prod, qty);
+                  addedCount++;
+                } else {
+                  outOfStockCount++;
+                }
+              }
 
-      if (addedCount > 0) {
-        if (outOfStockCount > 0) {
-          Alert.alert(
-            "Berhasil Reorder",
-            `${addedCount} produk dimasukkan ke keranjang. ${outOfStockCount} produk tidak ditambahkan karena stok habis.`,
-          );
-        } else {
-          Alert.alert(
-            "Berhasil Reorder",
-            "Semua produk berhasil dimasukkan ke keranjang.",
-          );
-        }
-        setDetailOrder(null);
-        setIsCartOpen(true);
-        setSubTab(0);
-      } else {
-        Alert.alert(
-          "Gagal",
-          "Semua produk dalam pesanan ini sedang habis stok.",
-        );
-      }
-    } catch (err) {
-      console.error("Reorder failed", err);
-      Alert.alert("Gagal", "Gagal mengulang pesanan ini.");
-    }
+              if (addedCount > 0) {
+                if (outOfStockCount > 0) {
+                  Alert.alert(
+                    "Berhasil Reorder",
+                    `${addedCount} produk dimasukkan ke keranjang. ${outOfStockCount} produk tidak ditambahkan karena stok habis.`,
+                  );
+                } else {
+                  Alert.alert(
+                    "Berhasil Reorder",
+                    "Semua produk berhasil dimasukkan ke keranjang.",
+                  );
+                }
+                setDetailOrder(null);
+                setIsCartOpen(true);
+                setSubTab(0);
+              } else {
+                Alert.alert(
+                  "Gagal",
+                  "Semua produk dalam pesanan ini sedang habis stok.",
+                );
+              }
+            } catch (err) {
+              console.error("Reorder failed", err);
+              Alert.alert("Gagal", "Gagal mengulang pesanan ini.");
+            }
+          },
+        },
+      ],
+    );
   };
 
   // Filter products
@@ -827,6 +839,9 @@ export default function CitizenPortal() {
   const renderKartuPoin = () => {
     // Get point history
     // Since points are inside SQLite/mock, let's fetch point transactions or mock. We will query it or mock
+    const referredUsers = allUsers.filter(
+      (u) => u.referred_by === activeUser?.referral_code
+    );
     return (
       <ScrollView
         className="flex-1 bg-stone-50"
@@ -976,6 +991,53 @@ export default function CitizenPortal() {
               </Pressable>
             </View>
           )}
+
+          {/* Riwayat Ajak Section */}
+          <View className="mt-4 pt-3 border-t border-stone-100">
+            <Text className="text-stone-700 font-extrabold text-[9px] uppercase mb-2">
+              Daftar Tetangga yang Diajak ({referredUsers.length})
+            </Text>
+            {referredUsers.length === 0 ? (
+              <Text className="text-stone-400 text-[9px] italic">
+                Belum ada tetangga yang menggunakan kode referral Anda.
+              </Text>
+            ) : (
+              referredUsers.map((refUser) => {
+                const refUserOrders = orders.filter((o) => o.user_id === refUser.id);
+                const hasOrdered = refUserOrders.length > 0;
+                return (
+                  <View
+                    key={refUser.id}
+                    className="flex-row justify-between items-center py-2 border-b border-stone-100 last:border-b-0"
+                  >
+                    <View>
+                      <Text className="text-stone-900 font-bold text-[10px]">
+                        {refUser.name}
+                      </Text>
+                      <Text className="text-stone-400 text-[8px]">
+                        NIK: {refUser.nik_masked || "327501********"}
+                      </Text>
+                    </View>
+                    <View
+                      className={`px-2 py-0.5 rounded-full border ${
+                        hasOrdered
+                          ? "bg-emerald-50 border-emerald-100"
+                          : "bg-amber-50 border-amber-100"
+                      }`}
+                    >
+                      <Text
+                        className={`text-[8px] font-black ${
+                          hasOrdered ? "text-emerald-700" : "text-amber-700"
+                        }`}
+                      >
+                        {hasOrdered ? "Bonus Poin Cair" : "Menunggu Belanja"}
+                      </Text>
+                    </View>
+                  </View>
+                );
+              })
+            )}
+          </View>
         </View>
 
         {/* Misi Gotong Royong Section */}

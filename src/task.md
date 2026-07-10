@@ -15,8 +15,12 @@
     - [x] Dynamically populate the RFQ product choice selector from the unique items in `supplierProducts`
     - [x] Apply strict separation of Superadmin vs Operasional: hide all operational tabs for Superadmin (ADMIN) leaving Keuangan and Pengadaan, and hide Keuangan and Pengadaan for Operasional (OPERASIONAL)
     - [x] Default Superadmin view tab to Keuangan, and Operasional view tab to Stok Barang
+- [x] Citizen Portal Component (`CitizenPortal.tsx`)
+    - [x] Add dynamic "Riwayat Ajak" (Referred Users list) directly inside the referral card under the card-poin tab, showing name, NIK, and points status (cair vs waiting)
+    - [x] Wrap the "Beli Lagi (Reorder)" button logic in a confirmation Alert Dialog to verify user intent before adding products back to the shopping cart
 - [x] Registration Modal Component (`registration-modal.tsx`)
     - [x] Update first tab validation check to verify referral code existence in allUsers immediately when clicking "Kirim OTP" instead of verifying it at the end of the flow
+    - [x] Render referral code validation error directly underneath the KopAjak input field in red, changing the input border to red, and hiding it from the main general error banner
 - [x] Database Seeding (`db.ts`)
     - [x] Seed supplier user Pak Slamet in web & native SQLite DB
 - [x] User Menu Labels Update (`user-menu.tsx`)

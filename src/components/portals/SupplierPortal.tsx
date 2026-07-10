@@ -1,6 +1,6 @@
 import { useApp } from "@/contexts/AppContext";
 import { dbService } from "@/utils/db";
-import { SymbolView } from "expo-symbols";
+import { SymbolView } from "@/components/app-symbol";
 import React, { useState } from "react";
 import { Alert, Pressable, ScrollView, Text, View, Modal, TextInput } from "react-native";
 

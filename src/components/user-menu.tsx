@@ -10,7 +10,7 @@ import type { TriggerRef } from '@rn-primitives/popover';
 import * as React from 'react';
 import { Alert, View } from 'react-native';
 import { useApp } from '@/contexts/AppContext';
-import { SymbolView } from 'expo-symbols';
+import { SymbolView } from '@/components/app-symbol';
 import RegistrationModal from '@/components/registration-modal';
 
 export function UserMenu() {

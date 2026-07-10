@@ -1,6 +1,6 @@
 import { useApp } from "@/contexts/AppContext";
 import { DeliveryStatus, DeliveryTask } from "@/utils/db";
-import { SymbolView } from "expo-symbols";
+import { SymbolView } from "@/components/app-symbol";
 import React from "react";
 import { Alert, Pressable, ScrollView, Text, TextInput, View, Modal, Platform, Linking } from "react-native";
 import OpenStreetMapView from "../open-street-map";

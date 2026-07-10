@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { View, Text, Pressable, Modal, ScrollView, Alert, Linking, Platform } from 'react-native';
-import { SymbolView } from 'expo-symbols';
+import { SymbolView } from '@/components/app-symbol';
 import { cn } from '@/lib/utils';
 import OpenStreetMapView from '@/components/open-street-map';
 

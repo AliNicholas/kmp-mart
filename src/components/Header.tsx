@@ -1,6 +1,6 @@
 import { View, Text } from 'react-native';
 import { useApp } from '@/contexts/AppContext';
-import { SymbolView } from 'expo-symbols';
+import { SymbolView } from '@/components/app-symbol';
 import { UserMenu } from '@/components/user-menu';
 
 export default function Header() {
