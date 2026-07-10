@@ -1,5 +1,5 @@
 import { useApp } from "@/contexts/AppContext";
-import { dbService, DeliveryTask, Order, OrderItem, Product } from "@/utils/db";
+import { dbService, DeliveryTask, Order, OrderItem, Product, User } from "@/utils/db";
 import { SymbolView } from "expo-symbols";
 import React, { useState } from "react";
 import {
@@ -17,6 +17,7 @@ import { Text } from "@/components/ui/text";
 
 export default function AdminPortal() {
   const {
+    activeRole,
     products,
     orders,
     auditLogs,
@@ -31,9 +32,27 @@ export default function AdminPortal() {
     assignDeliveryTask,
     assignManualProvider,
     completeOrder,
+    suppliers,
+    supplierProducts,
+    purchaseOrders,
+    kopRequests,
+    submitRFQ,
+    receiveGoods,
+    createKopRequest,
+    resolveKopRequest,
+    addToCart,
+    cart,
+    clearCart,
+    checkout,
   } = useApp();
 
-  const [subTab, setSubTab] = useState(0); // 0: Inventory, 1: Fulfillment, 2: Finance, 3: Dispatch
+  const [subTab, setSubTab] = useState(0);
+  const [prevRole, setPrevRole] = useState(activeRole);
+
+  if (activeRole !== prevRole) {
+    setPrevRole(activeRole);
+    setSubTab(0);
+  }
 
   // Tab 0: Inventory states
   const [productModalOpen, setProductModalOpen] = useState(false);
@@ -48,9 +67,19 @@ export default function AdminPortal() {
   const [prodUnit, setProdUnit] = useState("pcs");
   const [prodLocal, setProdLocal] = useState(false);
 
-  // Tab 1: Self-pickup order details state
   const [activeSelfOrder, setActiveSelfOrder] = useState<Order | null>(null);
   const [selfOrderItems, setSelfOrderItems] = useState<OrderItem[]>([]);
+
+  // Tab 4 (Procurement) states
+  const [selectedRfqProduct, setSelectedRfqProduct] = useState("Beras Premium 5kg");
+  const [rfqQty, setRfqQty] = useState("50");
+
+  // Tab 5 (Layanan Warga) states
+  const [searchMemberQuery, setSearchMemberQuery] = useState("");
+  const [selectedMember, setSelectedMember] = useState<User | null>(null);
+  const [pointsToRedeem, setPointsToRedeem] = useState("0");
+  const [newRequestProductName, setNewRequestProductName] = useState("");
+  const [newRequestQty, setNewRequestQty] = useState("1");
 
   // Calculation helpers
   const lowStockProducts = products.filter((p) => p.stock < 15);
@@ -1111,6 +1140,507 @@ export default function AdminPortal() {
     </ScrollView>
   );
 
+  const renderProcurement = () => {
+    const matchingQuotes = supplierProducts.filter(
+      (sp) => sp.name.toLowerCase() === selectedRfqProduct.toLowerCase()
+    );
+
+    const qty = parseInt(rfqQty) || 1;
+
+    const quotesWithLandedCost = matchingQuotes.map((q) => {
+      const supplier = suppliers.find((s) => s.id === q.supplier_id);
+      const isLocal = supplier?.type === "Producer" || supplier?.type === "UMKM";
+      const shipping = isLocal ? 10000 : 20000;
+      const subtotal = q.price * qty;
+      const landedCost = subtotal + shipping;
+      return { ...q, supplier, shipping, subtotal, landedCost };
+    });
+
+    let bestQuoteId = "";
+    if (quotesWithLandedCost.length > 0) {
+      const sorted = [...quotesWithLandedCost].sort((a, b) => a.landedCost - b.landedCost);
+      bestQuoteId = sorted[0].id;
+    }
+
+    return (
+      <ScrollView className="flex-1 px-4 pt-3 mb-16">
+        <View className="flex-row items-center gap-2 mb-4 bg-emerald-50 border border-emerald-100 p-3 rounded-2xl">
+          <SymbolView name="cart.fill" size={16} tintColor="#0f5132" />
+          <Text className="text-emerald-800 text-[11px] font-black uppercase tracking-wider">
+            Pengadaan & Rantai Pasok (PRD 13)
+          </Text>
+        </View>
+
+        <View className="bg-white border border-stone-200 rounded-3xl p-4 mb-4 shadow-sm">
+          <Text className="text-stone-900 font-extrabold text-xs mb-3">Buat RFQ Baru (Sourcing)</Text>
+          
+          <Text className="text-stone-500 text-[9px] font-bold uppercase mb-1">Pilih Produk Kebutuhan:</Text>
+          <View className="flex-row gap-2 mb-3">
+            {["Beras Premium 5kg", "Minyak Goreng 1L"].map((p) => (
+              <Pressable
+                key={p}
+                onPress={() => setSelectedRfqProduct(p)}
+                className={`px-3 py-2 rounded-xl border flex-1 items-center ${
+                  selectedRfqProduct === p
+                    ? "bg-emerald-50 border-emerald-600"
+                    : "bg-stone-50 border-stone-200"
+                }`}
+              >
+                <Text
+                  className={`text-[10px] font-black ${
+                    selectedRfqProduct === p ? "text-emerald-800" : "text-stone-600"
+                  }`}
+                >
+                  {p}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+
+          <View className="mb-4">
+            <Text className="text-stone-500 text-[9px] font-bold uppercase mb-1">Jumlah Kebutuhan (Quantity):</Text>
+            <TextInput
+              value={rfqQty}
+              onChangeText={setRfqQty}
+              keyboardType="numeric"
+              className="bg-stone-50 border border-stone-200 rounded-xl px-3 py-2 text-xs text-stone-950 font-bold"
+              placeholder="Masukkan jumlah..."
+            />
+          </View>
+
+          <Text className="text-stone-900 font-extrabold text-xs mb-2">Perbandingan Penawaran Supplier</Text>
+          
+          {quotesWithLandedCost.length === 0 ? (
+            <Text className="text-stone-400 text-[10px] italic py-2">Tidak ada penawaran untuk produk ini.</Text>
+          ) : (
+            quotesWithLandedCost.map((q) => {
+              const isBest = q.id === bestQuoteId;
+              const isLocal = q.supplier?.type === "Producer" || q.supplier?.type === "UMKM";
+              
+              return (
+                <View
+                  key={q.id}
+                  className={`p-3 rounded-2xl border mb-3 ${
+                    isBest ? "bg-emerald-50/50 border-emerald-600" : "bg-stone-50 border-stone-200"
+                  }`}
+                >
+                  <View className="flex-row justify-between items-start mb-2">
+                    <View>
+                      <Text className="text-stone-950 font-extrabold text-xs">{q.supplier?.name}</Text>
+                      <Text className="text-stone-400 text-[9px] font-bold">
+                        Tipe: {q.supplier?.type} • Lead Time: {q.lead_time} {isLocal && "• (Lokal)"}
+                      </Text>
+                    </View>
+                    {isBest && (
+                      <View className="bg-emerald-700 px-2 py-0.5 rounded-full">
+                        <Text className="text-white text-[8px] font-black">Rekomendasi</Text>
+                      </View>
+                    )}
+                  </View>
+
+                  <View className="flex-row justify-between border-t border-b border-stone-100 py-2 mb-2">
+                    <View>
+                      <Text className="text-stone-400 text-[8px] uppercase font-bold">Harga Unit</Text>
+                      <Text className="text-stone-950 font-black text-xs">Rp{q.price.toLocaleString("id-ID")}</Text>
+                    </View>
+                    <View className="items-end">
+                      <Text className="text-stone-400 text-[8px] uppercase font-bold">MOQ</Text>
+                      <Text className="text-stone-950 font-black text-xs">{q.moq} {q.unit}</Text>
+                    </View>
+                  </View>
+
+                  <View className="flex-row justify-between items-center">
+                    <View>
+                      <Text className="text-stone-400 text-[8px] uppercase font-bold">Total Landed Cost</Text>
+                      <Text className="text-emerald-800 font-extrabold text-xs">
+                        Rp{q.landedCost.toLocaleString("id-ID")}{" "}
+                        <Text className="text-stone-400 text-[9px] font-normal">(Ongkir Rp{q.shipping.toLocaleString("id-ID")})</Text>
+                      </Text>
+                    </View>
+
+                    <Pressable
+                      onPress={async () => {
+                        if (qty < q.moq) {
+                          Alert.alert("Error", `Jumlah order minimal untuk supplier ini adalah ${q.moq}`);
+                          return;
+                        }
+                        await submitRFQ(q.supplier_id, q.name, q.price, qty, q.landedCost);
+                        Alert.alert("Success", "PO telah sukses diterbitkan dan dikirim ke supplier!");
+                      }}
+                      className="bg-emerald-700 active:bg-emerald-900 px-3 py-2 rounded-xl"
+                    >
+                      <Text className="text-white text-[9px] font-black">Terbitkan PO</Text>
+                    </Pressable>
+                  </View>
+                </View>
+              );
+            })
+          )}
+        </View>
+
+        <View className="bg-white border border-stone-200 rounded-3xl p-4 mb-8 shadow-sm">
+          <Text className="text-stone-900 font-extrabold text-xs mb-3">Daftar PO & Penerimaan Barang</Text>
+          
+          {purchaseOrders.length === 0 ? (
+            <Text className="text-stone-400 text-[10px] italic py-3 text-center">Belum ada Purchase Order (PO) yang diterbitkan.</Text>
+          ) : (
+            purchaseOrders.map((po) => {
+              const supplier = suppliers.find((s) => s.id === po.supplier_id);
+              
+              return (
+                <View key={po.id} className="p-3 rounded-2xl border border-stone-200 mb-2 bg-stone-50">
+                  <View className="flex-row justify-between items-center mb-1">
+                    <Text className="text-[10px] text-stone-500 font-bold">PO ID: {po.id}</Text>
+                    <View className={`px-2 py-0.5 rounded-full ${
+                      po.status === "RECEIVED" ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"
+                    }`}>
+                      <Text className="text-[8px] font-black">
+                        {po.status === "RECEIVED" ? "SUDAH DITERIMA" : "DALAM PENGIRIMAN"}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <Text className="text-stone-950 font-black text-xs mb-1">{po.product_name}</Text>
+                  <Text className="text-stone-600 text-[10px] mb-2">
+                    Supplier: {supplier?.name} • Qty: {po.quantity} • Total: Rp{po.total.toLocaleString("id-ID")}
+                  </Text>
+
+                  {po.status === "PENDING" && (
+                    <Pressable
+                      onPress={async () => {
+                        await receiveGoods(po.id, po.quantity);
+                        Alert.alert("Success", "Barang berhasil diterima! Stok gudang telah bertambah.");
+                      }}
+                      className="bg-emerald-700 active:bg-emerald-950 py-2 rounded-xl items-center"
+                    >
+                      <Text className="text-white text-[9px] font-black">Terima & Update Stok</Text>
+                    </Pressable>
+                  )}
+                </View>
+              );
+            })
+          )}
+        </View>
+      </ScrollView>
+    );
+  };
+
+  const renderAssistedLayanan = () => {
+    const members = allUsers.filter((u) => u.role === "USER");
+    
+    const matchedMember = selectedMember || (searchMemberQuery 
+      ? members.find(m => 
+          m.name.toLowerCase().includes(searchMemberQuery.toLowerCase()) || 
+          m.phone.includes(searchMemberQuery) ||
+          m.card_token === searchMemberQuery
+        )
+      : null);
+
+    return (
+      <ScrollView className="flex-1 px-4 pt-3 mb-16">
+        <View className="flex-row items-center gap-2 mb-4 bg-emerald-50 border border-emerald-100 p-3 rounded-2xl">
+          <SymbolView name="person.crop.circle.badge.checkmark" size={16} tintColor="#0f5132" />
+          <Text className="text-emerald-800 text-[11px] font-black uppercase tracking-wider">
+            Layanan Warga - Assisted Checkout (PRD 14)
+          </Text>
+        </View>
+
+        <View className="bg-white border border-stone-200 rounded-3xl p-4 mb-4 shadow-sm">
+          <Text className="text-stone-900 font-extrabold text-xs mb-2">Cari Anggota (Scan QR / Cari ID)</Text>
+          
+          <View className="flex-row gap-2 mb-3">
+            <TextInput
+              value={searchMemberQuery}
+              onChangeText={(text) => {
+                setSearchMemberQuery(text);
+                setSelectedMember(null);
+              }}
+              className="flex-1 bg-stone-50 border border-stone-200 rounded-xl px-3 py-2 text-xs text-stone-950 font-bold"
+              placeholder="Masukkan nomor HP, nama, atau scan QR..."
+            />
+            {searchMemberQuery ? (
+              <Pressable
+                onPress={() => {
+                  setSearchMemberQuery("");
+                  setSelectedMember(null);
+                }}
+                className="bg-stone-200 px-3 justify-center rounded-xl"
+              >
+                <Text className="text-stone-700 text-[10px] font-bold">Reset</Text>
+              </Pressable>
+            ) : null}
+          </View>
+
+          <Text className="text-stone-400 text-[9px] font-bold uppercase mb-2">Pilih Anggota Demo:</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row gap-2 mb-4">
+            {members.map((m) => (
+              <Pressable
+                key={m.id}
+                onPress={() => {
+                  setSelectedMember(m);
+                  setSearchMemberQuery(m.card_token || m.name);
+                }}
+                className={`mr-2 px-3 py-1.5 rounded-full border ${
+                  matchedMember?.id === m.id
+                    ? "bg-emerald-900 border-emerald-950"
+                    : "bg-stone-50 border-stone-200"
+                }`}
+              >
+                <Text className={`text-[10px] font-bold ${matchedMember?.id === m.id ? "text-white" : "text-stone-600"}`}>
+                  {m.name}
+                </Text>
+              </Pressable>
+            ))}
+          </ScrollView>
+
+          {matchedMember ? (
+            <View className="bg-emerald-50/30 border border-emerald-600/30 p-3 rounded-2xl">
+              <View className="flex-row justify-between items-center mb-1">
+                <Text className="text-stone-950 font-extrabold text-xs">{matchedMember.name}</Text>
+                <Text className="text-emerald-800 text-[9px] font-black uppercase">TERIDENTIFIKASI</Text>
+              </View>
+              <Text className="text-stone-500 text-[10px]">ID Anggota: {matchedMember.member_id || "KOPDES-01"}</Text>
+              <Text className="text-stone-500 text-[10px]">Alamat: {matchedMember.address || "-"}</Text>
+              <Text className="text-emerald-800 text-[10px] font-black mt-1">Poin Gotong Royong: {matchedMember.points} Poin</Text>
+            </View>
+          ) : (
+            <View className="bg-stone-50 border border-stone-200 border-dashed p-4 rounded-2xl items-center">
+              <Text className="text-stone-400 text-[10px] italic">Warga belum teridentifikasi. Cari nama warga atau scan kartu.</Text>
+            </View>
+          )}
+        </View>
+
+        {matchedMember && (
+          <>
+            <View className="bg-white border border-stone-200 rounded-3xl p-4 mb-4 shadow-sm">
+              <Text className="text-stone-900 font-extrabold text-xs mb-3">KopPaket Hemat (Predefined Bundles)</Text>
+              
+              <View className="border border-stone-200 rounded-2xl p-3 bg-stone-50 mb-2">
+                <View className="flex-row justify-between items-center mb-1">
+                  <Text className="text-stone-950 font-extrabold text-xs">Paket Dapur Mingguan</Text>
+                  <Text className="text-emerald-800 font-black text-xs">Rp75.000</Text>
+                </View>
+                <Text className="text-stone-500 text-[10px] mb-3">Isi: Beras Premium 5kg + Minyak Goreng 1L</Text>
+                
+                <Pressable
+                  onPress={() => {
+                    const prodBeras = products.find(p => p.id === "prod-beras");
+                    const prodMinyak = products.find(p => p.id === "prod-minyak");
+                    if (prodBeras) addToCart(prodBeras, 1);
+                    if (prodMinyak) addToCart(prodMinyak, 1);
+                    Alert.alert("Success", "Isi Paket Dapur Mingguan dimasukkan ke dalam keranjang warga!");
+                  }}
+                  className="bg-emerald-700 active:bg-emerald-900 py-2 rounded-xl items-center"
+                >
+                  <Text className="text-white text-[9px] font-black">Tambahkan Paket</Text>
+                </Pressable>
+              </View>
+            </View>
+
+            <View className="bg-white border border-stone-200 rounded-3xl p-4 mb-4 shadow-sm">
+              <Text className="text-stone-900 font-extrabold text-xs mb-3">Assisted Cart & Checkout</Text>
+
+              <Text className="text-stone-400 text-[9px] font-bold uppercase mb-2">Daftar Produk Koperasi:</Text>
+              <View className="flex-row flex-wrap gap-2 mb-4">
+                {products.map((p) => {
+                  const memberPrice = Math.round(p.price * 0.9);
+                  return (
+                    <View key={p.id} className="w-[48%] border border-stone-200 rounded-2xl p-2.5 bg-stone-50/50 justify-between mb-2">
+                      <View className="mb-2">
+                        <Text className="text-stone-950 font-extrabold text-[10px]" numberOfLines={1}>{p.name}</Text>
+                        <Text className="text-stone-400 text-[9px]">Stok: {p.stock} {p.unit}</Text>
+                        <Text className="text-stone-400 text-[9px] line-through mt-1">Reg: Rp{p.price.toLocaleString("id-ID")}</Text>
+                        <Text className="text-emerald-800 text-[10px] font-black">Mem: Rp{memberPrice.toLocaleString("id-ID")}</Text>
+                      </View>
+
+                      <Pressable
+                        onPress={() => {
+                          const memberProduct = { ...p, price: memberPrice };
+                          addToCart(memberProduct, 1);
+                        }}
+                        className="bg-emerald-700 active:bg-emerald-900 py-1.5 rounded-lg items-center"
+                      >
+                        <Text className="text-white text-[8px] font-black">+ Keranjang</Text>
+                      </Pressable>
+                    </View>
+                  );
+                })}
+              </View>
+
+              <Text className="text-stone-400 text-[9px] font-bold uppercase border-t border-stone-100 pt-3 mb-2">Keranjang Saat Ini (Assisted):</Text>
+              {cart.length === 0 ? (
+                <Text className="text-stone-400 text-[10px] italic py-2 text-center">Keranjang kosong. Tambahkan item di atas.</Text>
+              ) : (
+                <>
+                  {cart.map((item) => (
+                    <View key={item.product.id} className="flex-row justify-between items-center mb-2 bg-stone-50 p-2 rounded-xl">
+                      <View className="flex-1">
+                        <Text className="text-stone-950 font-bold text-xs">{item.product.name}</Text>
+                        <Text className="text-emerald-800 text-[10px] font-black">
+                          {item.quantity}x Rp{item.product.price.toLocaleString("id-ID")}
+                        </Text>
+                      </View>
+                    </View>
+                  ))}
+
+                  <View className="border-t border-stone-100 pt-3 mt-2">
+                    <View className="flex-row justify-between mb-1">
+                      <Text className="text-stone-600 text-xs">Subtotal:</Text>
+                      <Text className="text-stone-950 font-bold text-xs">
+                        Rp{cart.reduce((sum, item) => sum + item.product.price * item.quantity, 0).toLocaleString("id-ID")}
+                      </Text>
+                    </View>
+
+                    <View className="mb-3">
+                      <Text className="text-stone-500 text-[9px] font-bold uppercase mb-1">Redeem Poin (Rp1,000/poin):</Text>
+                      <TextInput
+                        value={pointsToRedeem}
+                        onChangeText={setPointsToRedeem}
+                        keyboardType="numeric"
+                        className="bg-stone-50 border border-stone-200 rounded-xl px-3 py-1.5 text-xs font-bold text-stone-950"
+                        placeholder="Redeem points..."
+                      />
+                    </View>
+
+                    <View className="flex-row gap-2">
+                      <Pressable
+                        onPress={async () => {
+                          const pts = parseInt(pointsToRedeem) || 0;
+                          const res = await checkout("PICKUP_AT_COOP", "CARD_PURCHASE", pts, null, matchedMember.id);
+                          if (res.success) {
+                            Alert.alert(
+                              "Transaksi Berhasil!",
+                              `Struk Transparan (PRD 14):\n\n` +
+                              `• Member: ${matchedMember.name}\n` +
+                              `• Tipe: Ambil Di Koperasi\n` +
+                              `• Poin Terpakai: ${pts}\n` +
+                              `• Kode Transaksi: ${res.orderId}\n\n` +
+                              `Sebut. Scan. Selesai!`
+                            );
+                            clearCart();
+                            setPointsToRedeem("0");
+                          } else {
+                            Alert.alert("Checkout Gagal", res.error);
+                          }
+                        }}
+                        className="bg-emerald-700 active:bg-emerald-900 py-3 rounded-xl flex-1 items-center"
+                      >
+                        <Text className="text-white text-xs font-black">Ambil Sendiri (Rp0)</Text>
+                      </Pressable>
+
+                      <Pressable
+                        onPress={async () => {
+                          const pts = parseInt(pointsToRedeem) || 0;
+                          const res = await checkout("DELIVERY_TO_HOME", "CARD_PURCHASE", pts, null, matchedMember.id);
+                          if (res.success) {
+                            Alert.alert(
+                              "Transaksi & Pengiriman Dibuat!",
+                              `Struk Transparan (PRD 14):\n\n` +
+                              `• Member: ${matchedMember.name}\n` +
+                              `• Tipe: Antar Kurir (KopKurir)\n` +
+                              `• Poin Terpakai: ${pts}\n` +
+                              `• Kode Transaksi: ${res.orderId}\n\n` +
+                              `Selesai! Barang akan segera dikirim.`
+                            );
+                            clearCart();
+                            setPointsToRedeem("0");
+                          } else {
+                            Alert.alert("Checkout Gagal", res.error);
+                          }
+                        }}
+                        className="bg-emerald-900 active:bg-emerald-950 py-3 rounded-xl flex-1 items-center"
+                      >
+                        <Text className="text-white text-xs font-black">Antar ke Rumah</Text>
+                      </Pressable>
+                    </View>
+                  </View>
+                </>
+              )}
+            </View>
+
+            <View className="bg-white border border-stone-200 rounded-3xl p-4 mb-8 shadow-sm">
+              <Text className="text-stone-900 font-extrabold text-xs mb-3">KopRequest (Catat Permintaan Warga)</Text>
+              
+              <View className="mb-2">
+                <Text className="text-stone-500 text-[9px] font-bold uppercase mb-1">Nama Produk yang Kosong/Unik:</Text>
+                <TextInput
+                  value={newRequestProductName}
+                  onChangeText={setNewRequestProductName}
+                  className="bg-stone-50 border border-stone-200 rounded-xl px-3 py-2 text-xs font-bold text-stone-950"
+                  placeholder="cth: Garam Beryodium"
+                />
+              </View>
+
+              <View className="mb-3">
+                <Text className="text-stone-500 text-[9px] font-bold uppercase mb-1">Jumlah Kebutuhan:</Text>
+                <TextInput
+                  value={newRequestQty}
+                  onChangeText={setNewRequestQty}
+                  keyboardType="numeric"
+                  className="bg-stone-50 border border-stone-200 rounded-xl px-3 py-2 text-xs font-bold text-stone-950"
+                  placeholder="cth: 2"
+                />
+              </View>
+
+              <Pressable
+                onPress={async () => {
+                  if (!newRequestProductName.trim()) {
+                    Alert.alert("Error", "Nama produk wajib diisi.");
+                    return;
+                  }
+                  const reqQty = parseInt(newRequestQty) || 1;
+                  await createKopRequest(matchedMember.id, newRequestProductName, reqQty);
+                  Alert.alert("Success", `KopRequest untuk ${matchedMember.name} berhasil disimpan!`);
+                  setNewRequestProductName("");
+                  setNewRequestQty("1");
+                }}
+                className="bg-emerald-700 active:bg-emerald-950 py-3 rounded-xl items-center mb-4"
+              >
+                <Text className="text-white text-xs font-black">Simpan Request Warga</Text>
+              </Pressable>
+
+              <Text className="text-stone-400 text-[9px] font-bold uppercase border-t border-stone-100 pt-3 mb-2">Daftar Permintaan Warga:</Text>
+              {kopRequests.length === 0 ? (
+                <Text className="text-stone-400 text-[10px] italic py-2 text-center">Belum ada request tercatat.</Text>
+              ) : (
+                kopRequests.map((req) => {
+                  const reqUser = allUsers.find(u => u.id === req.user_id);
+                  return (
+                    <View key={req.id} className="p-3 rounded-2xl border border-stone-200 mb-2 bg-stone-50">
+                      <View className="flex-row justify-between items-center mb-1">
+                        <Text className="text-[10px] text-stone-900 font-extrabold">{reqUser?.name || "Warga"}</Text>
+                        <View className={`px-2 py-0.5 rounded-full ${
+                          req.status === "NOTIFIED" ? "bg-stone-200 text-stone-700" : "bg-emerald-100 text-emerald-800"
+                        }`}>
+                          <Text className="text-[8px] font-black">
+                            {req.status === "NOTIFIED" ? "SELESAI (NOTIFIED)" : "MENUNGGU STOK"}
+                          </Text>
+                        </View>
+                      </View>
+                      <Text className="text-stone-950 font-black text-xs">{req.quantity}x {req.product_name}</Text>
+                      
+                      {req.status === "PENDING" && (
+                        <Pressable
+                          onPress={async () => {
+                            await resolveKopRequest(req.id);
+                            Alert.alert("Success", "Request selesai dan warga telah diberikan notifikasi.");
+                          }}
+                          className="bg-emerald-700 active:bg-emerald-950 py-1.5 rounded-xl items-center mt-2"
+                        >
+                          <Text className="text-white text-[8px] font-black">Kabari Warga & Selesaikan</Text>
+                        </Pressable>
+                      )}
+                    </View>
+                  );
+                })
+              )}
+            </View>
+          </>
+        )}
+      </ScrollView>
+    );
+  };
+
   return (
     <View className="flex-1 bg-stone-100">
       {/* Sub tabs render */}
@@ -1118,72 +1648,118 @@ export default function AdminPortal() {
       {subTab === 1 && renderFulfillment()}
       {subTab === 2 && renderFinanceAudit()}
       {subTab === 3 && renderDispatch()}
+      {subTab === 4 && renderProcurement()}
+      {subTab === 5 && renderAssistedLayanan()}
 
       {/* Sub Tabs Bottom Bar */}
       <View className="absolute bottom-0 left-0 right-0 bg-white border-t border-stone-200 h-16 flex-row justify-around items-center">
-        <Pressable
-          onPress={() => setSubTab(0)}
-          className="items-center justify-center flex-1 h-full active:bg-stone-50"
-        >
-          <SymbolView
-            name="cart.badge.plus"
-            size={18}
-            tintColor={subTab === 0 ? "#0f5132" : "#888"}
-          />
-          <Text
-            className={`text-[10px] mt-1 font-bold ${subTab === 0 ? "text-emerald-800 font-extrabold" : "text-stone-400"}`}
+        {(activeRole === "ADMIN" || activeRole === "OPERASIONAL") && (
+          <Pressable
+            onPress={() => setSubTab(0)}
+            className="items-center justify-center flex-1 h-full active:bg-stone-50"
           >
-            Stok Barang
-          </Text>
-        </Pressable>
+            <SymbolView
+              name="cart.badge.plus"
+              size={16}
+              tintColor={subTab === 0 ? "#0f5132" : "#888"}
+            />
+            <Text
+              className={`text-[8px] mt-0.5 font-bold ${subTab === 0 ? "text-emerald-800 font-extrabold" : "text-stone-400"}`}
+            >
+              Stok Barang
+            </Text>
+          </Pressable>
+        )}
 
-        <Pressable
-          onPress={() => setSubTab(1)}
-          className="items-center justify-center flex-1 h-full active:bg-stone-50"
-        >
-          <SymbolView
-            name="tray.and.arrow.down.fill"
-            size={18}
-            tintColor={subTab === 1 ? "#0f5132" : "#888"}
-          />
-          <Text
-            className={`text-[10px] mt-1 font-bold ${subTab === 1 ? "text-emerald-800 font-extrabold" : "text-stone-400"}`}
+        {(activeRole === "ADMIN" || activeRole === "OPERASIONAL") && (
+          <Pressable
+            onPress={() => setSubTab(1)}
+            className="items-center justify-center flex-1 h-full active:bg-stone-50"
           >
-            Fulfillment
-          </Text>
-        </Pressable>
+            <SymbolView
+              name="tray.and.arrow.down.fill"
+              size={16}
+              tintColor={subTab === 1 ? "#0f5132" : "#888"}
+            />
+            <Text
+              className={`text-[8px] mt-0.5 font-bold ${subTab === 1 ? "text-emerald-800 font-extrabold" : "text-stone-400"}`}
+            >
+              Fulfillment
+            </Text>
+          </Pressable>
+        )}
 
-        <Pressable
-          onPress={() => setSubTab(2)}
-          className="items-center justify-center flex-1 h-full active:bg-stone-50"
-        >
-          <SymbolView
-            name="chart.bar.xaxis"
-            size={18}
-            tintColor={subTab === 2 ? "#0f5132" : "#888"}
-          />
-          <Text
-            className={`text-[10px] mt-1 font-bold ${subTab === 2 ? "text-emerald-800 font-extrabold" : "text-stone-400"}`}
+        {activeRole === "ADMIN" && (
+          <Pressable
+            onPress={() => setSubTab(2)}
+            className="items-center justify-center flex-1 h-full active:bg-stone-50"
           >
-            Keuangan & Audit
-          </Text>
-        </Pressable>
+            <SymbolView
+              name="chart.bar.xaxis"
+              size={16}
+              tintColor={subTab === 2 ? "#0f5132" : "#888"}
+            />
+            <Text
+              className={`text-[8px] mt-0.5 font-bold ${subTab === 2 ? "text-emerald-800 font-extrabold" : "text-stone-400"}`}
+            >
+              Keuangan
+            </Text>
+          </Pressable>
+        )}
 
-        <Pressable
-          onPress={() => setSubTab(3)}
-          className="items-center justify-center flex-1 h-full active:bg-stone-50"
-        >
-          <SymbolView
-            name="shippingbox.fill"
-            size={18}
-            tintColor={subTab === 3 ? "#0f5132" : "#888"}
-          />
-          <Text
-            className={`text-[10px] mt-1 font-bold ${subTab === 3 ? "text-emerald-800 font-extrabold" : "text-stone-400"}`}
+        {(activeRole === "ADMIN" || activeRole === "OPERASIONAL") && (
+          <Pressable
+            onPress={() => setSubTab(3)}
+            className="items-center justify-center flex-1 h-full active:bg-stone-50"
           >
-            Dispatch
-          </Text>
-        </Pressable>
+            <SymbolView
+              name="shippingbox.fill"
+              size={16}
+              tintColor={subTab === 3 ? "#0f5132" : "#888"}
+            />
+            <Text
+              className={`text-[8px] mt-0.5 font-bold ${subTab === 3 ? "text-emerald-800 font-extrabold" : "text-stone-400"}`}
+            >
+              Dispatch
+            </Text>
+          </Pressable>
+        )}
+
+        {activeRole === "ADMIN" && (
+          <Pressable
+            onPress={() => setSubTab(4)}
+            className="items-center justify-center flex-1 h-full active:bg-stone-50"
+          >
+            <SymbolView
+              name="bag.fill"
+              size={16}
+              tintColor={subTab === 4 ? "#0f5132" : "#888"}
+            />
+            <Text
+              className={`text-[8px] mt-0.5 font-bold ${subTab === 4 ? "text-emerald-800 font-extrabold" : "text-stone-400"}`}
+            >
+              Pengadaan
+            </Text>
+          </Pressable>
+        )}
+
+        {(activeRole === "ADMIN" || activeRole === "OPERASIONAL") && (
+          <Pressable
+            onPress={() => setSubTab(5)}
+            className="items-center justify-center flex-1 h-full active:bg-stone-50"
+          >
+            <SymbolView
+              name="person.2.fill"
+              size={16}
+              tintColor={subTab === 5 ? "#0f5132" : "#888"}
+            />
+            <Text
+              className={`text-[8px] mt-0.5 font-bold ${subTab === 5 ? "text-emerald-800 font-extrabold" : "text-stone-400"}`}
+            >
+              Layanan Warga
+            </Text>
+          </Pressable>
+        )}
       </View>
 
       {/* Add / Edit Product Modal */}

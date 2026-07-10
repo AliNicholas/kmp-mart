@@ -1096,184 +1096,133 @@ Each assisted action must record:
 
 ---
 
-<!-- Source: 05_Mitra_Warung_KopMart_PRD.md -->
+<!-- Source: 05_Mitra_Agen_Warung_PRD_v4.md -->
 
-# PRD — Mitra Warung KopMart
+# PRD — Mitra Agen & Warung KopMart v4.0
 
 ## 1. Objective
 
-Turn local warung kelontong into cooperative commerce partners instead of competitors, so cooperative business volume increases while existing village retail networks remain alive.
+Turn existing warungs, local agents, KDKMP outlets, and approved community retailers into a distributed sales network rather than competitors of KDKMP.
 
-## 2. Product positioning
-
-> **Koperasi menjadi supplier/grosir lokal, warung menjadi hub transaksi dan pickup point, warga tetap bisa belanja offline seperti biasa.**
-
-## 3. Target users
-
-- Warung kelontong owners.
-- Cooperative admin.
-- Citizens who still prefer offline warung shopping.
-- Local drivers.
-- UMKM/product suppliers.
-
-## 4. Scope
-
-### In scope
-
-- Register warung as partner.
-- Warung product catalog with partner price.
-- B2B stock ordering.
-- Minimum order and wholesale pricing.
-- Warung points/loyalty.
-- Warung as pickup point.
-- Delivery to warung.
-- Warung settlement and invoice.
-
-### Out of scope for MVP
-
-- Real-time POS for all retail sales to citizens.
-- Credit/loan for warung.
-- Complex consignment accounting.
-
-## 5. Core flows
-
-### 5.1 Warung stock order
+## 2. Agent Types
 
 ```text
-Warung login
-→ Browse cooperative wholesale catalog
-→ Add stock to cart
-→ Checkout B2B order
-→ Choose delivery/pickup
-→ Cooperative prepares stock
-→ Driver delivers to warung
-→ Warung pays/settles
-→ Cooperative GMV increases
+WARUNG_RESELLER
+KDKMP_OUTLET
+COMMUNITY_AGENT
+BUMDES_OUTLET
+INSTITUTIONAL_AGENT
 ```
 
-### 5.2 Warung pickup point
+## 3. Core Value Proposition
+
+| Stakeholder | Value |
+|---|---|
+| KDKMP | Higher B2B volume and wider distribution |
+| Agent/warung | Access to partner prices, reliable stock, delivery, and reorder history |
+| Citizen | Familiar purchase location near home, no app required |
+| Supplier | Consolidated route to local retail network |
+
+## 4. Main B2B Flow
 
 ```text
-Citizen orders in app/assisted channel
-→ Select warung pickup point
-→ Cooperative packs order
-→ Driver delivers packages to warung
-→ Citizen picks up at warung
-→ Warung confirms pickup and may receive small fee
+Agent approved
+→ Views partner catalog and price
+→ Creates order or reorders history
+→ KDKMP confirms/reserves stock
+→ Invoice generated
+→ Pickup or delivery
+→ Agent confirms goods receipt
+→ Payment/receivable settles
+→ Sales and requests inform reorder planning
 ```
 
-## 6. Key features
+## 5. Key Features
 
 | Feature | Description | Priority |
 |---|---|---|
-| Warung Registration | Create partner profile | P0 |
-| Partner Catalog | Product list with warung price | P0 |
-| B2B Cart/Checkout | Warung buys cooperative stock | P0 |
-| Minimum Order Rule | Min amount/quantity | P0 |
-| Wholesale Price Tier | Special price for warung | P1 |
-| Warung Points | Reward for repeat B2B order | P1 |
-| Pickup Point Mode | Warung receives citizen packages | P1 |
-| Warung Settlement | Invoice/payment tracking | P0 |
-| Delivery to Warung | Assign driver/provider | P0 |
-| Warung Performance | Order frequency and GMV | P1 |
+| Agent Onboarding | Identity, location, type, approval | P0 |
+| Partner Price List | Price tier, MOQ, effective dates | P0 |
+| B2B Order | New order and reorder | P0 |
+| Inventory Reservation | Prevent overselling | P0 |
+| Invoice & Payment | Cash/transfer/QRIS/term | P0 |
+| Pickup/Delivery | KDKMP pickup or courier | P0 |
+| Goods Receipt | Quantity/condition acceptance | P0 |
+| Discrepancy/Return | Short/damaged/wrong item | P1 |
+| Receivable Control | Limit, aging, suspension | P1 |
+| Product Request | Agent reports citizen demand | P0 |
+| Optional Member Scan | Member benefit at agent | P1 |
+| Agent Incentive | Margin, points, target bonus | P1 |
+| Agent Analytics | Reorder, sell-through proxy, requests | P1 |
 
-## 7. User stories
+## 6. Agent Purchase User Story
 
-### US-WARUNG-001 — Warung orders stock
+**As a local warung, I want to reorder essential stock from KDKMP at partner prices so I can serve citizens and maintain my margin.**
 
-As a warung owner, I want to order stock from the cooperative at partner price so I can resell to citizens and keep my warung alive.
+Acceptance criteria:
 
-**Acceptance criteria**
+- Agent sees only active products and valid partner prices.
+- MOQ and available stock are visible.
+- Current price is revalidated at submit.
+- Order creates inventory reservation.
+- Invoice and fulfillment method are generated.
+- Agent can confirm receipt and report discrepancy.
+- Receivable is tracked when terms are allowed.
 
-- Warung can view partner catalog.
-- Warung price may differ from retail price.
-- Warung can checkout B2B order.
-- Order appears in admin dashboard as `WARUNG_B2B`.
-- Payment and settlement are tracked.
+## 7. Citizen Purchase at Agent
 
-### US-WARUNG-002 — Warung as pickup point
+Citizen interaction remains familiar:
 
-As a citizen, I want to pick up my KopMart order at a nearby warung so receiving goods is easier.
+1. Citizen verbally requests products.
+2. Agent selects/scans products in a lightweight sale screen only if digital recording is enabled.
+3. Agent can optionally scan Kartu Kopdes for member benefits.
+4. Citizen pays and receives goods.
+5. Agent can record unavailable-item request.
 
-**Acceptance criteria**
+The platform does **not** require the citizen to join a batch or wait for a group-order deadline.
 
-- User can select eligible warung pickup point.
-- Warung can see incoming packages.
-- Warung can confirm pickup using QR/PIN.
-- Pickup confirmation updates order status.
-- Warung pickup fee can be calculated.
+## 8. Financial Rules
 
-## 8. Functional requirements
+- Wholesale revenue and COGS stored separately.
+- Price/cost snapshot stored per order item.
+- Credit limit is rule-based in MVP.
+- Overdue receivable can suspend new term orders.
+- Return or shortage creates credit note or invoice adjustment.
+- Agent incentive must be margin-aware and budget-capped.
 
-| ID | Requirement | Priority |
-|---|---|---|
-| WAR-001 | Admin can register warung partner | P0 |
-| WAR-002 | Warung can login with partner role | P0 |
-| WAR-003 | Warung can access B2B catalog | P0 |
-| WAR-004 | Warung order uses partner price | P0 |
-| WAR-005 | System enforces minimum order | P0 |
-| WAR-006 | Warung can track order status | P0 |
-| WAR-007 | Admin can manage warung settlement | P0 |
-| WAR-008 | Warung can be configured as pickup point | P1 |
-| WAR-009 | Warung can confirm citizen pickup | P1 |
-| WAR-010 | Warung points/reward can be issued | P1 |
-
-## 9. API draft
+## 9. API Draft
 
 ```http
-POST /admin/warungs
-GET /admin/warungs
-PATCH /admin/warungs/{warungId}
-POST /warung/login
-GET /warung/catalog
-POST /warung/orders/preview
-POST /warung/orders
-GET /warung/orders
-GET /warung/orders/{orderId}
-GET /pickup-points/warungs
-POST /warung/pickups/{packageId}/confirm
-GET /admin/warungs/{warungId}/settlements
+POST /admin/agents
+PATCH /admin/agents/{id}/approve
+PATCH /admin/agents/{id}/suspend
+GET  /agent/catalog
+POST /agent/orders
+POST /agent/orders/{id}/submit
+POST /agent/orders/{id}/reorder
+POST /agent/orders/{id}/goods-receipts
+POST /agent/orders/{id}/discrepancies
+GET  /agent/invoices
+GET  /agent/receivables
+POST /agent/product-requests
+POST /agent/member-sales
 ```
 
-## 10. Data model
+## 10. KPIs
 
-```text
-WarungPartner
-WarungPriceList
-WarungOrder
-WarungOrderItem
-WarungSettlement
-PickupPoint
-WarungPickupPackage
-```
+- Active agents.
+- B2B GMV.
+- Average B2B order value.
+- Reorder rate.
+- Fill rate.
+- Agent retention.
+- Receivable aging/default.
+- Product request volume.
+- Local-product share.
 
-## 11. Edge cases
+## 11. Definition of Done
 
-| Case | Expected behavior |
-|---|---|
-| Warung fails payment | Apply credit limit/block new orders |
-| Warung out of storage capacity | Admin can disable pickup point mode |
-| Package not picked up | Return to cooperative or retry notification |
-| Price mismatch | Invoice uses price snapshot at order time |
-| Warung inactive | Hide from pickup point list |
-
-## 12. KPI
-
-- Active warung partners.
-- Warung GMV.
-- Repeat B2B order rate.
-- Average order value per warung.
-- Warung pickup packages completed.
-- Warung settlement timeliness.
-- Local job/retail preservation impact.
-
-## 13. MVP acceptance checklist
-
-- Admin can create warung partner.
-- Warung can order stock from cooperative.
-- Admin can fulfill warung order.
-- Settlement can be tracked.
-- Warung channel contributes to GMV dashboard.
+An approved agent can order stock through receipt and settlement, while KDKMP inventory, revenue, margin, receivable, shipment, and audit records remain consistent.
 
 
 ---
@@ -2726,6 +2675,393 @@ PRICE_CHANGED
 
 ---
 
+
+---
+
+<!-- Source: 13_Supplier_Procurement_Network_PRD.md -->
+
+# PRD — Supplier & Procurement Network
+
+## 1. Objective
+
+Enable KDKMP to source goods transparently and efficiently from suppliers that may be companies, organizations, cooperatives, UMKM, producers, distributors, or individuals.
+
+## 2. Problem
+
+Without structured procurement, KDKMP may face:
+
+- inconsistent supplier discovery,
+- unclear price and MOQ comparison,
+- unreliable lead time,
+- undocumented purchase decisions,
+- receiving discrepancies,
+- uncontrolled supplier payable,
+- inability to measure supplier performance,
+- overstock/stockout because procurement is not linked to demand.
+
+## 3. Product Scope
+
+### P0
+
+- Supplier registration and verification.
+- Supplier product catalog.
+- Direct purchase order.
+- Basic RFQ to multiple suppliers.
+- Quotation submission and comparison.
+- Approval and PO issuance.
+- Shipment notice and goods receipt.
+- Discrepancy, return, invoice, payable.
+- Basic supplier scorecard.
+
+### P1
+
+- Landed-cost comparison.
+- Contract and price validity.
+- Demand/reorder recommendation.
+- Supplier capacity and service-area matching.
+- Local supplier preference policy.
+
+### P2
+
+- Cross-KDKMP joint procurement.
+- Reverse auction/bidding.
+- AI-assisted supplier recommendation.
+- Institutional buyers purchasing KDKMP/local products.
+
+## 4. Supplier Types
+
+| Type | Example |
+|---|---|
+| Company | FMCG manufacturer, distributor, wholesaler |
+| Organization | Foundation, association, social enterprise |
+| Cooperative | Producer or secondary cooperative |
+| UMKM | Packaged food or household-product supplier |
+| Producer | Farmer group, fisher group, artisan |
+| Individual | Approved local producer or trader |
+
+Verification requirements may differ by type and applicable policy.
+
+## 5. Core Flows
+
+### 5.1 Supplier onboarding
+
+```text
+Supplier application
+→ Identity/legal/bank/document review
+→ Service area and product capability
+→ Approval/rejection
+→ Catalog activation
+```
+
+### 5.2 RFQ and quotation
+
+```text
+KDKMP creates RFQ lines
+→ Selects supplier pool
+→ Suppliers submit price, MOQ, lead time, terms
+→ System normalizes unit and landed cost
+→ Procurement compares and records rationale
+→ Approval
+→ PO issued
+```
+
+### 5.3 Receiving
+
+```text
+Supplier sends shipment notice
+→ Warehouse receives
+→ Counts and inspects
+→ Accepts / records discrepancy
+→ Inventory batch created
+→ Supplier invoice matched
+→ Payable created
+```
+
+## 6. Functional Requirements
+
+| ID | Requirement | Priority |
+|---|---|---|
+| SUP-001 | Register supplier by type | P0 |
+| SUP-002 | Verify documents and bank account | P0 |
+| SUP-003 | Supplier manages product catalog | P0 |
+| SUP-004 | Product unit/MOQ/lead time/service area | P0 |
+| RFQ-001 | Create multi-line RFQ | P0 |
+| RFQ-002 | Invite eligible suppliers | P0 |
+| RFQ-003 | Supplier submits quotation | P0 |
+| RFQ-004 | Normalize unit and compare price | P0 |
+| RFQ-005 | Record award rationale and approval | P0 |
+| PO-001 | Issue PO with immutable snapshot | P0 |
+| PO-002 | Supplier acknowledges PO | P0 |
+| GRN-001 | Record goods receipt by line | P0 |
+| GRN-002 | Record short/damaged/expired item | P0 |
+| FIN-001 | Match supplier invoice and payable | P0 |
+| SCORE-001 | Calculate supplier performance | P1 |
+| REC-001 | Suggest reorder from demand/stock | P1 |
+
+## 7. Quotation Comparison
+
+Comparison fields:
+
+- unit price,
+- normalized price per base unit,
+- MOQ,
+- available quantity,
+- lead time,
+- shipping cost,
+- tax/discount,
+- payment term,
+- expiry/shelf-life requirement,
+- supplier rating,
+- local supplier indicator,
+- total landed cost.
+
+The system recommends but does not automatically award in MVP. Procurement officer remains accountable.
+
+## 8. Supplier Scorecard
+
+```text
+On-Time Delivery Rate
+Fill Rate
+Discrepancy Rate
+Return/Defect Rate
+Price Competitiveness Index
+Response Time
+Invoice Accuracy
+Local Supplier Contribution
+```
+
+Scores must be transparent, explainable, and reviewable.
+
+## 9. APIs
+
+```http
+POST /suppliers/applications
+PATCH /admin/suppliers/{id}/verify
+GET  /suppliers/me/products
+POST /suppliers/me/products
+POST /procurement/rfqs
+POST /procurement/rfqs/{id}/publish
+POST /supplier/rfqs/{id}/quotations
+GET  /procurement/rfqs/{id}/comparison
+POST /procurement/rfqs/{id}/award
+POST /procurement/purchase-orders
+POST /supplier/purchase-orders/{id}/acknowledge
+POST /purchase-orders/{id}/shipment-notices
+POST /warehouse/goods-receipts
+POST /goods-receipts/{id}/discrepancies
+GET  /finance/supplier-payables
+GET  /suppliers/{id}/scorecard
+```
+
+## 10. Risks and Controls
+
+| Risk | Control |
+|---|---|
+| Collusion/favoritism | Multi-quote comparison, approval trail, award rationale |
+| Fake supplier | Verification and bank/account checks |
+| Price manipulation | Versioned quotations and immutable PO snapshot |
+| Quantity/quality mismatch | Receiving inspection and evidence |
+| Late delivery | SLA and scorecard |
+| Overstock | Reorder based on stock and demand, approval required |
+| Local supplier exclusion | Configurable local-supplier visibility/preference, not automatic award |
+
+## 11. KPIs
+
+- Active verified suppliers.
+- RFQ response rate.
+- Procurement cycle time.
+- Price/landed-cost savings.
+- Fill rate.
+- On-time delivery.
+- Discrepancy rate.
+- Local supplier procurement share.
+- Payable aging.
+
+## 12. Definition of Done
+
+A KDKMP can create a sourcing request, compare suppliers, issue an approved PO, receive goods, update inventory, create payable, and evaluate performance with a complete audit trail.
+
+
+---
+
+<!-- Source: 14_Buyer_Access_Convenience_Engagement_PRD.md -->
+
+# PRD — Buyer Access, Convenience & Engagement
+
+## 1. Objective
+
+Make KDKMP easy and attractive for village citizens without requiring a self-order app or group-order coordination.
+
+## 2. Experience Promise
+
+# **Sebut. Scan. Selesai.**
+
+1. **Sebut** kebutuhan kepada Petugas Layanan or nearest Agent/Warung.
+2. **Scan** Kartu Kopdes or search phone/member ID to access member benefit.
+3. **Selesai** after payment: take goods immediately or select local delivery.
+
+## 3. Target Frictions
+
+| Friction | Product response |
+|---|---|
+| Citizen does not understand app navigation | Operator handles product search and checkout |
+| Citizen has no smartphone/data | Card/member ID works without citizen device |
+| Group order requires waiting | Immediate purchase from available stock |
+| Desired product is unavailable | KopRequest captures demand and notifies when available |
+| Too many product choices | KopPaket Hemat offers clear bundles |
+| Repeat staples are tedious | Optional KopPaket Rutin |
+| Citizen does not see membership benefit | Member price, savings, points shown on receipt |
+| Distance to KDKMP | Buy at agent or choose KopKurir delivery |
+
+## 4. Core Buyer Hooks
+
+### 4.1 Harga Anggota
+
+- Clearly displayed member and regular price where policy allows.
+- Savings printed on receipt.
+- Must remain financially sustainable and compliant with cooperative policy.
+
+### 4.2 KopPoin
+
+- Issued after completed valid transaction.
+- Redeemed with maximum transaction percentage and budget limit.
+- Not cash and not transferable unless policy explicitly allows.
+
+### 4.3 KopPaket Hemat
+
+Predefined bundles such as:
+
+- Paket Dapur Mingguan,
+- Paket Anak Sekolah,
+- Paket Lansia,
+- Paket Produk Lokal,
+- Paket Hari Besar.
+
+Bundles reduce decision complexity and can improve inventory rotation.
+
+### 4.4 KopPaket Rutin
+
+Optional recurring essentials enrollment assisted by staff/agent:
+
+- weekly/monthly schedule,
+- reminder before preparation,
+- citizen confirms, skips, or changes through staff/agent/approved message link,
+- no automatic charge in MVP,
+- inventory is reserved only after confirmation.
+
+### 4.5 KopRequest
+
+When item is unavailable, citizen can request it verbally. Staff/agent records request quickly. Aggregated demand informs procurement.
+
+### 4.6 Ambil atau Antar
+
+- Immediate pickup when stock is available.
+- Pickup at KDKMP or agent.
+- Local KopKurir delivery.
+- External courier fallback where serviceable.
+
+### 4.7 Struk Transparan
+
+Receipt includes:
+
+- item and quantity,
+- regular/member price,
+- discount,
+- points earned/redeemed,
+- delivery fee,
+- total,
+- operator/service point,
+- transaction reference.
+
+## 5. Buyer User Stories
+
+### US-BUY-001 — Simple assisted purchase
+
+**As a citizen, I want to tell the operator what I need and complete the purchase without navigating an app.**
+
+Acceptance criteria:
+
+- Common products can be found in under three interactions.
+- Stock and price are clear.
+- Member benefit is applied after card/member lookup.
+- Final amount is confirmed before payment.
+- Citizen receives goods or delivery reference and receipt.
+
+### US-BUY-002 — Request unavailable product
+
+- Staff/agent records request in under 30 seconds.
+- Request can use existing SKU or free-text category.
+- Contact/notification consent is optional.
+- Procurement sees aggregated demand.
+- Status can become available/notified/closed.
+
+### US-BUY-003 — Repeat essential package
+
+- Staff can enroll member into a package schedule.
+- Member receives reminder.
+- No order/payment occurs without confirmation.
+- Member can skip or cancel.
+- System records repeat and churn metrics.
+
+## 6. Functional Requirements
+
+| ID | Requirement | Priority |
+|---|---|---|
+| BUY-001 | Assisted verbal-to-cart flow | P0 |
+| BUY-002 | Card/member lookup | P0 |
+| BUY-003 | Member price and savings | P0 |
+| BUY-004 | Immediate stock validation | P0 |
+| BUY-005 | Product request capture | P0 |
+| BUY-006 | Pickup/delivery selection | P0 |
+| BUY-007 | Print/digital receipt | P0 |
+| BUY-008 | Basic points earn/redeem | P0/P1 |
+| BUY-009 | Bundle catalog | P1 |
+| BUY-010 | Recurring package enrollment | P1 |
+| BUY-011 | Notification when available | P1 |
+| BUY-012 | Mission eligibility | P1 |
+
+## 7. Analytics Events
+
+```text
+MEMBER_IDENTIFIED
+ASSISTED_CHECKOUT_STARTED
+MEMBER_PRICE_APPLIED
+PRODUCT_REQUEST_RECORDED
+BUNDLE_PURCHASED
+RECURRING_PACKAGE_ENROLLED
+RECURRING_PACKAGE_CONFIRMED
+RECURRING_PACKAGE_SKIPPED
+PICKUP_SELECTED
+DELIVERY_SELECTED
+SALE_COMPLETED
+```
+
+## 8. KPIs
+
+- Median transaction time.
+- Member identification rate.
+- Repeat purchase rate.
+- Member price usage.
+- Bundle conversion.
+- Recurring package confirmation/skip/churn.
+- Product request-to-stock conversion.
+- Pickup vs delivery mix.
+- Citizen complaint/refund rate.
+
+## 9. Why This Is Easier Than Group Order
+
+- No need to understand batch, deadline, minimum participants, or shared distribution.
+- Citizen can buy when needed.
+- Existing agents/warungs remain the interaction point.
+- KDKMP still captures demand digitally through sales and product requests.
+- Procurement can aggregate demand internally without exposing complexity to citizens.
+
+## 10. Definition of Done
+
+A citizen can purchase or request a product through a familiar local operator with transparent benefits, minimal steps, immediate confirmation, and consistent digital records behind the scenes.
+
+
+
 <!-- Source: README_INDEX.md -->
 
 # KopMart RT — Updated PRD Package v2.0
@@ -2779,7 +3115,7 @@ This means warga can access cooperative commerce through multiple channels:
 | `02_Kartu_Kopdes_QR_PRD.md` | PRD for QR card identity and purchase assistance |
 | `03_RT_Group_Order_PRD.md` | PRD for RT/community batch order |
 | `04_Petugas_Layanan_KopMart_PRD.md` | PRD for official assisted-commerce staff role |
-| `05_Mitra_Warung_KopMart_PRD.md` | PRD for local warung as B2B2C hub |
+| `05_Mitra_Agen_Warung_PRD_v4.md` | PRD for local warung as B2B2C hub |
 | `06_Paper_to_Digital_Catalog_PRD.md` | PRD for physical catalog and paper order forms |
 | `07_Voice_to_Digital_Order_PRD.md` | PRD for WhatsApp/voice order with operator validation |
 | `08_Kiosk_Mode_PRD.md` | PRD for cooperative/balai desa kiosk mode |

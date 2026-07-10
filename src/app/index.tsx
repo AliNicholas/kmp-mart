@@ -7,6 +7,9 @@ import AuthGateway from '@/components/auth-gateway';
 import CitizenPortal from '@/components/portals/CitizenPortal';
 import AdminPortal from '@/components/portals/AdminPortal';
 import DriverPortal from '@/components/portals/DriverPortal';
+import AgentPortal from '@/components/portals/AgentPortal';
+import SupplierPortal from '@/components/portals/SupplierPortal';
+import { dbService } from '@/utils/db';
 
 export default function HomeScreen() {
   const [devToolsOpen, setDevToolsOpen] = useState(false);
@@ -17,16 +20,52 @@ export default function HomeScreen() {
     allUsers, 
     setActiveUser, 
     setActiveRole, 
-    resetAllData 
+    resetAllData,
+    refreshData
   } = useApp();
 
-  const handleSwitchRole = (userId: string, role: 'USER' | 'ADMIN' | 'DRIVER', name: string) => {
-    const user = allUsers.find(u => u.id === userId);
+  const handleSwitchRole = async (userId: string, role: any, name: string) => {
+    let user = allUsers.find(u => u.id === userId);
+    if (!user) {
+      try {
+        await dbService.run(
+          `INSERT OR IGNORE INTO users (id, name, phone, role, rt_id, cooperative_id, points, referral_code, pin)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            userId,
+            name,
+            userId === 'user-slamet' ? '089988776655' : '081234567890',
+            role,
+            role === 'USER' ? 'RT 03' : null,
+            'tenant-1',
+            0,
+            `${userId.toUpperCase()}AJAK`,
+            '123456'
+          ]
+        );
+        await refreshData();
+        user = {
+          id: userId,
+          name: name,
+          phone: userId === 'user-slamet' ? '089988776655' : '081234567890',
+          role: role,
+          rt_id: role === 'USER' ? 'RT 03' : null,
+          cooperative_id: 'tenant-1',
+          points: 0,
+          referral_code: `${userId.toUpperCase()}AJAK`,
+          referred_by: null,
+          pin: '123456'
+        };
+      } catch (err) {
+        console.error("Failed to auto-insert switcher user:", err);
+      }
+    }
+
     if (user) {
       setActiveUser(user);
       setActiveRole(role);
       setDevToolsOpen(false);
-      Alert.alert("Identitas Berganti", `Masuk sebagai: ${name} (${role === 'USER' && userId === 'user-budi' ? 'Agen Transit' : role})`);
+      Alert.alert("Identitas Berganti", `Masuk sebagai: ${name} (${role})`);
     } else {
       Alert.alert("Gagal", `Identitas ${name} tidak ditemukan di database.`);
     }
@@ -71,8 +110,10 @@ export default function HomeScreen() {
           {/* Role specific portals */}
           <View className="flex-1">
             {activeRole === 'USER' && <CitizenPortal />}
-            {activeRole === 'ADMIN' && <AdminPortal />}
+            {(activeRole === 'ADMIN' || activeRole === 'OPERASIONAL') && <AdminPortal />}
             {activeRole === 'DRIVER' && <DriverPortal />}
+            {activeRole === 'AGENT' && <AgentPortal />}
+            {activeRole === 'SUPPLIER' && <SupplierPortal />}
           </View>
         </View>
       ) : (
@@ -156,8 +197,22 @@ export default function HomeScreen() {
                   <SymbolView name="lock.shield.fill" size={16} tintColor="#ef4444" />
                 </View>
                 <View className="flex-1">
-                  <Text className="text-white font-bold text-xs">Mas Arif (Admin Koperasi)</Text>
-                  <Text className="text-stone-400 text-[9px] mt-0.5">Role: ADMIN • Kelola stok, verifikasi kas, dispatch kurir, audit P&L.</Text>
+                  <Text className="text-white font-bold text-xs">Mas Arif (Superadmin)</Text>
+                  <Text className="text-stone-400 text-[9px] mt-0.5">Role: ADMIN • Semua menu: Gudang, Kas, Sourcing, Dispatch, Layanan.</Text>
+                </View>
+              </Pressable>
+
+              {/* Mbak Rina - OPERASIONAL */}
+              <Pressable
+                onPress={() => handleSwitchRole('user-rina', 'OPERASIONAL', 'Mbak Rina')}
+                className="flex-row items-center gap-3 p-3 rounded-xl bg-stone-800 border border-stone-700 mb-2 active:bg-stone-700"
+              >
+                <View className="bg-emerald-900/50 p-2 rounded-lg border border-emerald-800">
+                  <SymbolView name="shippingbox.fill" size={16} tintColor="#10b981" />
+                </View>
+                <View className="flex-1">
+                  <Text className="text-white font-bold text-xs">Mbak Rina (Operasional Koperasi)</Text>
+                  <Text className="text-stone-400 text-[9px] mt-0.5">Role: OPERASIONAL • Gudang, Fulfillment, Dispatch, Layanan Warga.</Text>
                 </View>
               </Pressable>
 
@@ -172,6 +227,34 @@ export default function HomeScreen() {
                 <View className="flex-1">
                   <Text className="text-white font-bold text-xs">Mang Ujang (KopKurir/Driver)</Text>
                   <Text className="text-stone-400 text-[9px] mt-0.5">Role: DRIVER • Ambil kiriman koperasi, antar ke warga, COD.</Text>
+                </View>
+              </Pressable>
+
+              {/* Bu Sari - AGENT */}
+              <Pressable
+                onPress={() => handleSwitchRole('user-sari', 'AGENT', 'Bu Sari')}
+                className="flex-row items-center gap-3 p-3 rounded-xl bg-stone-800 border border-stone-700 mb-2 active:bg-stone-700"
+              >
+                <View className="bg-amber-900/50 p-2 rounded-lg border border-amber-800">
+                  <SymbolView name="cart.fill" size={16} tintColor="#fbbf24" />
+                </View>
+                <View className="flex-1">
+                  <Text className="text-white font-bold text-xs">Bu Sari (Mitra Agen/Warung)</Text>
+                  <Text className="text-stone-400 text-[9px] mt-0.5">Role: AGENT • Belanja grosir B2B, terima pengiriman, catat demand warga.</Text>
+                </View>
+              </Pressable>
+
+              {/* Pak Slamet - SUPPLIER */}
+              <Pressable
+                onPress={() => handleSwitchRole('user-slamet', 'SUPPLIER', 'Pak Slamet')}
+                className="flex-row items-center gap-3 p-3 rounded-xl bg-stone-800 border border-stone-700 mb-2 active:bg-stone-700"
+              >
+                <View className="bg-cyan-900/50 p-2 rounded-lg border border-cyan-800">
+                  <SymbolView name="envelope.fill" size={16} tintColor="#22d3ee" />
+                </View>
+                <View className="flex-1">
+                  <Text className="text-white font-bold text-xs">Pak Slamet (Mitra Supplier)</Text>
+                  <Text className="text-stone-400 text-[9px] mt-0.5">Role: SUPPLIER • Lihat PO masuk dari koperasi, konfirmasi pengiriman barang.</Text>
                 </View>
               </Pressable>
             </ScrollView>

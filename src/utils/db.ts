@@ -64,7 +64,7 @@ export interface Order {
   id: string;
   user_id: string;
   rt_batch_id: string | null;
-  channel: "SELF_ORDER" | "RT_ASSISTED" | "CARD_PURCHASE";
+  channel: "SELF_ORDER" | "RT_ASSISTED" | "CARD_PURCHASE" | "B2B_AGENT";
   fulfillment: "PICKUP_AT_COOP" | "DELIVERY_TO_HOME" | "RT_PICKUP_POINT";
   subtotal: number;
   discount: number;
@@ -205,6 +205,44 @@ export interface CashCollection {
   settled_at: string | null;
 }
 
+export interface Supplier {
+  id: string;
+  name: string;
+  type: string;
+  contact: string;
+  status: "PENDING" | "ACTIVE" | "INACTIVE";
+}
+
+export interface SupplierProduct {
+  id: string;
+  supplier_id: string;
+  name: string;
+  price: number;
+  moq: number;
+  lead_time: string;
+  unit: string;
+}
+
+export interface PurchaseOrder {
+  id: string;
+  supplier_id: string;
+  product_name: string;
+  price: number;
+  quantity: number;
+  total: number;
+  status: "PENDING" | "ACKNOWLEDGED" | "SHIPPED" | "RECEIVED" | "CANCELLED";
+  created_at: string;
+}
+
+export interface KopRequest {
+  id: string;
+  user_id: string;
+  product_name: string;
+  quantity: number;
+  status: "PENDING" | "NOTIFIED" | "CLOSED";
+  created_at: string;
+}
+
 // ----------------------------------------------------
 // DATABASE WEB FALLBACK IMPLEMENTATION (localStorage)
 // ----------------------------------------------------
@@ -242,6 +280,10 @@ class WebDatabase {
       "delivery_tasks",
       "delivery_proofs",
       "cash_collections",
+      "suppliers",
+      "supplier_products",
+      "purchase_orders",
+      "kop_requests",
     ];
 
     tables.forEach((table) => {
@@ -836,6 +878,18 @@ class WebDatabase {
         referred_by: null,
         pin: "111111",
       },
+      {
+        id: "user-slamet",
+        name: "Pak Slamet",
+        phone: "089988776655",
+        role: "SUPPLIER",
+        rt_id: null,
+        cooperative_id: "tenant-1",
+        points: 0,
+        referral_code: "SLAMETAJAK",
+        referred_by: null,
+        pin: "999999",
+      },
     );
 
     // 3. Seed Products
@@ -1128,6 +1182,51 @@ class WebDatabase {
         ).toISOString(),
       },
     );
+
+    db["suppliers"] = [
+      { id: "sup-1", name: "PT Agro Pangan Nusantara", type: "Company", contact: "08119876543", status: "ACTIVE" },
+      { id: "sup-2", name: "UMKM Berkah Jaya Mandiri", type: "UMKM", contact: "08551234567", status: "ACTIVE" },
+      { id: "sup-3", name: "Kelompok Tani Harapan Jaya", type: "Producer", contact: "08778899002", status: "ACTIVE" }
+    ];
+
+    db["supplier_products"] = [
+      { id: "sp-beras-1", supplier_id: "sup-1", name: "Beras Premium 5kg", price: 62000, moq: 20, lead_time: "2 Hari", unit: "karung" },
+      { id: "sp-minyak-1", supplier_id: "sup-1", name: "Minyak Goreng 1L", price: 13500, moq: 50, lead_time: "1 Hari", unit: "pcs" },
+      { id: "sp-beras-2", supplier_id: "sup-2", name: "Beras Premium 5kg", price: 64000, moq: 5, lead_time: "1 Hari", unit: "karung" },
+      { id: "sp-kopi-2", supplier_id: "sup-2", name: "Kopi Bubuk Lokal Desa 100g", price: 8000, moq: 10, lead_time: "1 Hari", unit: "pcs" },
+      { id: "sp-beras-3", supplier_id: "sup-3", name: "Beras Premium 5kg", price: 60000, moq: 50, lead_time: "3 Hari", unit: "karung" }
+    ];
+
+    db["kop_requests"] = [
+      { id: "req-1", user_id: "user-rina", product_name: "Garam Premium 250g", quantity: 2, status: "PENDING", created_at: new Date().toISOString() },
+      { id: "req-2", user_id: "user-sari", product_name: "Beras Premium 5kg", quantity: 1, status: "PENDING", created_at: new Date().toISOString() }
+    ];
+
+    db["purchase_orders"] = [];
+
+    const b2bOrderId = "order-b2b-demo";
+    db["orders"].push({
+      id: b2bOrderId,
+      user_id: "user-sari",
+      rt_batch_id: null,
+      channel: "B2B_AGENT",
+      fulfillment: "DELIVERY_TO_HOME",
+      subtotal: 550000,
+      discount: 0,
+      points_redeemed: 0,
+      total: 560000,
+      payment_status: "UNPAID",
+      order_status: "READY_FOR_PICKUP",
+      created_at: new Date(Date.now() - 6 * 3600 * 1000).toISOString(),
+    });
+    db["order_items"].push({
+      id: "item-b2b-1",
+      order_id: b2bOrderId,
+      product_id: "prod-beras",
+      name: "Beras Premium 5kg",
+      price: 55000,
+      quantity: 10,
+    });
 
     this.setStorage(db);
   }
@@ -1836,6 +1935,40 @@ const initNativeSchema = (db: any) => {
       status TEXT,
       settled_at TEXT
     );
+    CREATE TABLE IF NOT EXISTS suppliers (
+      id TEXT PRIMARY KEY,
+      name TEXT,
+      type TEXT,
+      contact TEXT,
+      status TEXT
+    );
+    CREATE TABLE IF NOT EXISTS supplier_products (
+      id TEXT PRIMARY KEY,
+      supplier_id TEXT,
+      name TEXT,
+      price REAL,
+      moq INTEGER,
+      lead_time TEXT,
+      unit TEXT
+    );
+    CREATE TABLE IF NOT EXISTS purchase_orders (
+      id TEXT PRIMARY KEY,
+      supplier_id TEXT,
+      product_name TEXT,
+      price REAL,
+      quantity INTEGER,
+      total REAL,
+      status TEXT,
+      created_at TEXT
+    );
+    CREATE TABLE IF NOT EXISTS kop_requests (
+      id TEXT PRIMARY KEY,
+      user_id TEXT,
+      product_name TEXT,
+      quantity INTEGER,
+      status TEXT,
+      created_at TEXT
+    );
   `);
 
   ensureUserIdentityColumns(db);
@@ -2251,6 +2384,21 @@ const initNativeSchema = (db: any) => {
         "111111",
       ],
     );
+    db.runSync(
+      `INSERT OR IGNORE INTO users (id, name, phone, role, rt_id, cooperative_id, points, referral_code, referred_by, pin) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        "user-slamet",
+        "Pak Slamet",
+        "089988776655",
+        "SUPPLIER",
+        null,
+        "tenant-1",
+        0,
+        "SLAMETAJAK",
+        null,
+        "999999",
+      ],
+    );
 
     // Seed Products (Sukamaju - tenant-1)
     db.runSync(
@@ -2601,6 +2749,76 @@ const initNativeSchema = (db: any) => {
         new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
       ],
     );
+
+    // Seed Suppliers
+    db.runSync(
+      `INSERT OR IGNORE INTO suppliers (id, name, type, contact, status) VALUES (?, ?, ?, ?, ?)`,
+      ["sup-1", "PT Agro Pangan Nusantara", "Company", "08119876543", "ACTIVE"]
+    );
+    db.runSync(
+      `INSERT OR IGNORE INTO suppliers (id, name, type, contact, status) VALUES (?, ?, ?, ?, ?)`,
+      ["sup-2", "UMKM Berkah Jaya Mandiri", "UMKM", "08551234567", "ACTIVE"]
+    );
+    db.runSync(
+      `INSERT OR IGNORE INTO suppliers (id, name, type, contact, status) VALUES (?, ?, ?, ?, ?)`,
+      ["sup-3", "Kelompok Tani Harapan Jaya", "Producer", "08778899002", "ACTIVE"]
+    );
+
+    // Seed Supplier Products
+    db.runSync(
+      `INSERT OR IGNORE INTO supplier_products (id, supplier_id, name, price, moq, lead_time, unit) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      ["sp-beras-1", "sup-1", "Beras Premium 5kg", 62000, 20, "2 Hari", "karung"]
+    );
+    db.runSync(
+      `INSERT OR IGNORE INTO supplier_products (id, supplier_id, name, price, moq, lead_time, unit) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      ["sp-minyak-1", "sup-1", "Minyak Goreng 1L", 13500, 50, "1 Hari", "pcs"]
+    );
+    db.runSync(
+      `INSERT OR IGNORE INTO supplier_products (id, supplier_id, name, price, moq, lead_time, unit) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      ["sp-beras-2", "sup-2", "Beras Premium 5kg", 64000, 5, "1 Hari", "karung"]
+    );
+    db.runSync(
+      `INSERT OR IGNORE INTO supplier_products (id, supplier_id, name, price, moq, lead_time, unit) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      ["sp-kopi-2", "sup-2", "Kopi Bubuk Lokal Desa 100g", 8000, 10, "1 Hari", "pcs"]
+    );
+    db.runSync(
+      `INSERT OR IGNORE INTO supplier_products (id, supplier_id, name, price, moq, lead_time, unit) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      ["sp-beras-3", "sup-3", "Beras Premium 5kg", 60000, 50, "3 Hari", "karung"]
+    );
+
+    // Seed Kop Requests
+    db.runSync(
+      `INSERT OR IGNORE INTO kop_requests (id, user_id, product_name, quantity, status, created_at) VALUES (?, ?, ?, ?, ?, ?)`,
+      ["req-1", "user-rina", "Garam Premium 250g", 2, "PENDING", new Date().toISOString()]
+    );
+    db.runSync(
+      `INSERT OR IGNORE INTO kop_requests (id, user_id, product_name, quantity, status, created_at) VALUES (?, ?, ?, ?, ?, ?)`,
+      ["req-2", "user-sari", "Beras Premium 5kg", 1, "PENDING", new Date().toISOString()]
+    );
+
+    // Seed B2B Order for Agent Bu Sari
+    const b2bOrderId = "order-b2b-demo";
+    db.runSync(
+      `INSERT OR IGNORE INTO orders (id, user_id, rt_batch_id, channel, fulfillment, subtotal, discount, points_redeemed, total, payment_status, order_status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        b2bOrderId,
+        "user-sari",
+        null,
+        "B2B_AGENT",
+        "DELIVERY_TO_HOME",
+        550000,
+        0,
+        0,
+        560000,
+        "UNPAID",
+        "READY_FOR_PICKUP",
+        new Date(Date.now() - 6 * 3600 * 1000).toISOString(),
+      ],
+    );
+    db.runSync(
+      `INSERT OR IGNORE INTO order_items (id, order_id, product_id, name, price, quantity) VALUES (?, ?, ?, ?, ?, ?)`,
+      ["item-b2b-1", b2bOrderId, "prod-beras", "Beras Premium 5kg", 55000, 10]
+    );
   }
 
   ensureNativeSeedUserIdentity(db);
@@ -2700,6 +2918,10 @@ export const dbService = {
         DROP TABLE IF EXISTS delivery_tasks;
         DROP TABLE IF EXISTS delivery_proofs;
         DROP TABLE IF EXISTS cash_collections;
+        DROP TABLE IF EXISTS suppliers;
+        DROP TABLE IF EXISTS supplier_products;
+        DROP TABLE IF EXISTS purchase_orders;
+        DROP TABLE IF EXISTS kop_requests;
       `);
       initNativeSchema(db);
     }

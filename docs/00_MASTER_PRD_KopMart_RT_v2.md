@@ -120,6 +120,8 @@ Examples:
 | Paper-to-Digital Catalog | Offline physical order channel | P1 |
 | Misi Gotong Royong | Gamified national-value engagement | P1 |
 | Voice-to-Digital Order | Voice note ordering | P1 |
+| Supplier & Procurement Network | Supplier onboarding and RFQ comparison | P0 |
+| Buyer Access, Convenience & Engagement | Assisted verbal checkout and KopPaket/KopRequest | P0 |
 | Kiosk Mode | Assisted self-service kiosk | P2 |
 | AI Features | Forecast, bundles, fraud, voice support | P2 |
 

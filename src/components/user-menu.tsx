@@ -27,8 +27,11 @@ export function UserMenu() {
 
   const getRoleLabel = (role: string) => {
     switch (role) {
-      case 'ADMIN': return 'Admin Koperasi';
+      case 'ADMIN': return 'Superadmin';
+      case 'OPERASIONAL': return 'Operasional Koperasi';
       case 'DRIVER': return 'KopKurir';
+      case 'AGENT': return 'Mitra Agen/Warung';
+      case 'SUPPLIER': return 'Mitra Supplier';
       default: return 'Warga Digital';
     }
   };

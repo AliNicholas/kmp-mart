@@ -53,13 +53,15 @@ This means warga can access cooperative commerce through multiple channels:
 | `02_Kartu_Kopdes_QR_PRD.md` | PRD for QR card identity and purchase assistance |
 | `03_RT_Group_Order_PRD.md` | PRD for RT/community batch order |
 | `04_Petugas_Layanan_KopMart_PRD.md` | PRD for official assisted-commerce staff role |
-| `05_Mitra_Warung_KopMart_PRD.md` | PRD for local warung as B2B2C hub |
+| `05_Mitra_Agen_Warung_PRD_v4.md` | PRD for local warung as B2B2C hub |
 | `06_Paper_to_Digital_Catalog_PRD.md` | PRD for physical catalog and paper order forms |
 | `07_Voice_to_Digital_Order_PRD.md` | PRD for WhatsApp/voice order with operator validation |
 | `09_Driver_Local_Logistics_PRD.md` | PRD for KopKurir and logistics integration |
 | `10_Misi_Gotong_Royong_PRD.md` | PRD for gamified national-value missions |
 | `11_Financial_Audit_Impact_Dashboard_PRD.md` | PRD for financial, audit, and impact reporting |
 | `12_Shared_Data_Model_API_Contracts.md` | Shared entities, statuses, APIs, and permissions |
+| `13_Supplier_Procurement_Network_PRD.md` | PRD for supplier onboarding and RFQ comparison |
+| `14_Buyer_Access_Convenience_Engagement_PRD.md` | PRD for assisted verbal checkout and KopPaket/KopRequest |
 | `KopMart_RT_All_PRDs_Combined_v2.md` | Combined full Markdown document |
 
 ## Core product principle

@@ -6,11 +6,15 @@ import {
   DeliveryStatus,
   DeliveryTask,
   DriverProfile,
+  KopRequest,
   Order,
   OrderItem,
   Product,
+  PurchaseOrder,
   RTBatch,
   Settlement,
+  Supplier,
+  SupplierProduct,
   User,
 } from "@/utils/db";
 import {
@@ -26,7 +30,7 @@ export interface CartItem {
   quantity: number;
 }
 
-export type AppRole = "USER" | "ADMIN" | "DRIVER";
+export type AppRole = "USER" | "ADMIN" | "DRIVER" | "AGENT" | "OPERASIONAL" | "SUPPLIER";
 
 export interface RegisterCitizenInput {
   fullName: string;
@@ -100,6 +104,10 @@ interface AppContextType {
   cart: CartItem[];
   settlements: Settlement[];
   auditLogs: AuditLog[];
+  suppliers: Supplier[];
+  supplierProducts: SupplierProduct[];
+  purchaseOrders: PurchaseOrder[];
+  kopRequests: KopRequest[];
   isLoading: boolean;
 
   // Setters/Refreshers
@@ -122,7 +130,7 @@ interface AppContextType {
   // Checkout & Order Actions
   checkout: (
     fulfillment: "PICKUP_AT_COOP" | "DELIVERY_TO_HOME" | "RT_PICKUP_POINT",
-    channel: "SELF_ORDER" | "RT_ASSISTED" | "CARD_PURCHASE",
+    channel: "SELF_ORDER" | "RT_ASSISTED" | "CARD_PURCHASE" | "B2B_AGENT",
     pointsRedeemed: number,
     rtBatchId: string | null,
     overrideUserId?: string, // used for assisted checkout
@@ -155,6 +163,20 @@ interface AppContextType {
     isVerified: boolean,
   ) => Promise<void>;
   updateUserField: (userId: string, field: string, value: any) => Promise<void>;
+  submitRFQ: (
+    supplierId: string,
+    productName: string,
+    price: number,
+    qty: number,
+    total: number,
+  ) => Promise<void>;
+  receiveGoods: (poId: string, receivedQty: number) => Promise<void>;
+  createKopRequest: (
+    userId: string,
+    productName: string,
+    qty: number,
+  ) => Promise<void>;
+  resolveKopRequest: (requestId: string) => Promise<void>;
 
   // Driver & Dispatch Actions
   createDeliveryTaskFromOrder: (
@@ -223,6 +245,12 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [settlements, setSettlements] = useState<Settlement[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [supplierProducts, setSupplierProducts] = useState<SupplierProduct[]>(
+    [],
+  );
+  const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
+  const [kopRequests, setKopRequests] = useState<KopRequest[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
   // Initialize DB and load initial data
@@ -356,6 +384,59 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         "SELECT * FROM audit_logs ORDER BY created_at DESC LIMIT 50",
       );
       setAuditLogs(logsData);
+
+      // 8. Fetch Procurement & Sourcing records
+      let suppliersData = await dbService.getAll<Supplier>(
+        "SELECT * FROM suppliers",
+      );
+      if (suppliersData.length === 0) {
+        try {
+          await dbService.run(
+            `INSERT OR IGNORE INTO suppliers (id, name, type, contact, status) VALUES ('sup-1', 'PT Agro Pangan Nusantara', 'Company', '08119876543', 'ACTIVE')`
+          );
+          await dbService.run(
+            `INSERT OR IGNORE INTO suppliers (id, name, type, contact, status) VALUES ('sup-2', 'UMKM Berkah Jaya Mandiri', 'UMKM', '08551234567', 'ACTIVE')`
+          );
+          await dbService.run(
+            `INSERT OR IGNORE INTO suppliers (id, name, type, contact, status) VALUES ('sup-3', 'Kelompok Tani Harapan Jaya', 'Producer', '08778899002', 'ACTIVE')`
+          );
+
+          await dbService.run(
+            `INSERT OR IGNORE INTO supplier_products (id, supplier_id, name, price, moq, lead_time, unit) VALUES ('sp-beras-1', 'sup-1', 'Beras Premium 5kg', 62000, 20, '2 Hari', 'karung')`
+          );
+          await dbService.run(
+            `INSERT OR IGNORE INTO supplier_products (id, supplier_id, name, price, moq, lead_time, unit) VALUES ('sp-minyak-1', 'sup-1', 'Minyak Goreng 1L', 13500, 50, '1 Hari', 'pcs')`
+          );
+          await dbService.run(
+            `INSERT OR IGNORE INTO supplier_products (id, supplier_id, name, price, moq, lead_time, unit) VALUES ('sp-beras-2', 'sup-2', 'Beras Premium 5kg', 64000, 5, '1 Hari', 'karung')`
+          );
+          await dbService.run(
+            `INSERT OR IGNORE INTO supplier_products (id, supplier_id, name, price, moq, lead_time, unit) VALUES ('sp-kopi-2', 'sup-2', 'Kopi Bubuk Lokal Desa 100g', 8000, 10, '1 Hari', 'pcs')`
+          );
+          await dbService.run(
+            `INSERT OR IGNORE INTO supplier_products (id, supplier_id, name, price, moq, lead_time, unit) VALUES ('sp-beras-3', 'sup-3', 'Beras Premium 5kg', 60000, 50, '3 Hari', 'karung')`
+          );
+          suppliersData = await dbService.getAll<Supplier>("SELECT * FROM suppliers");
+        } catch (e) {
+          console.error("Auto-seed suppliers failed:", e);
+        }
+      }
+      setSuppliers(suppliersData);
+
+      const supplierProductsData = await dbService.getAll<SupplierProduct>(
+        "SELECT * FROM supplier_products",
+      );
+      setSupplierProducts(supplierProductsData);
+
+      const posData = await dbService.getAll<PurchaseOrder>(
+        "SELECT * FROM purchase_orders ORDER BY created_at DESC",
+      );
+      setPurchaseOrders(posData);
+
+      const requestsData = await dbService.getAll<KopRequest>(
+        "SELECT * FROM kop_requests ORDER BY created_at DESC",
+      );
+      setKopRequests(requestsData);
     } catch (err) {
       console.error("Failed to query database:", err);
     }
@@ -1298,7 +1379,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   // Checkout
   const checkout = async (
     fulfillment: "PICKUP_AT_COOP" | "DELIVERY_TO_HOME" | "RT_PICKUP_POINT",
-    channel: "SELF_ORDER" | "RT_ASSISTED" | "CARD_PURCHASE",
+    channel: "SELF_ORDER" | "RT_ASSISTED" | "CARD_PURCHASE" | "B2B_AGENT",
     pointsRedeemed: number,
     rtBatchId: string | null,
     overrideUserId?: string,
@@ -1478,7 +1559,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
       // Clear cart from database
       await dbService.run(`DELETE FROM cart_items WHERE user_id = ?`, [
-        targetUserId,
+        activeUser?.id || targetUserId,
       ]);
       setCart([]);
       await refreshData();
@@ -1868,6 +1949,149 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const submitRFQ = async (
+    supplierId: string,
+    productName: string,
+    price: number,
+    qty: number,
+    total: number,
+  ) => {
+    try {
+      const id = `po-${Date.now()}`;
+      await dbService.run(
+        `INSERT INTO purchase_orders (id, supplier_id, product_name, price, quantity, total, status, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          id,
+          supplierId,
+          productName,
+          price,
+          qty,
+          total,
+          "PENDING",
+          new Date().toISOString(),
+        ],
+      );
+
+      const supplier = suppliers.find((s) => s.id === supplierId);
+      await logAudit(
+        activeUser?.name || "Admin",
+        "RFQ_AWARDED",
+        `Issued PO ${id} to ${supplier?.name || "Supplier"} for ${qty}x ${productName} (Total: Rp${total.toLocaleString("id-ID")})`,
+      );
+      await refreshData();
+    } catch (err) {
+      console.error("Failed to submit RFQ:", err);
+    }
+  };
+
+  const receiveGoods = async (poId: string, receivedQty: number) => {
+    try {
+      const po =
+        purchaseOrders.find((p) => p.id === poId) ||
+        (await dbService.getFirst<PurchaseOrder>(
+          "SELECT * FROM purchase_orders WHERE id = ?",
+          [poId],
+        ));
+      if (!po) return;
+
+      await dbService.run(
+        `UPDATE purchase_orders SET status = 'RECEIVED' WHERE id = ?`,
+        [poId],
+      );
+
+      const coopId = activeUser?.cooperative_id || "tenant-1";
+      const prod = products.find(
+        (p) =>
+          p.name.toLowerCase() === po.product_name.toLowerCase() &&
+          p.cooperative_id === coopId,
+      );
+
+      if (prod) {
+        const newStock = prod.stock + receivedQty;
+        await dbService.run(`UPDATE products SET stock = ? WHERE id = ?`, [
+          newStock,
+          prod.id,
+        ]);
+        await logAudit(
+          activeUser?.name || "Admin",
+          "GOODS_RECEIVED",
+          `Received ${receivedQty} units for PO ${poId}. Stock for ${prod.name} updated to ${newStock}.`,
+        );
+      } else {
+        const prodId = `prod-${Date.now()}`;
+        await dbService.run(
+          `INSERT INTO products (id, cooperative_id, name, price, cost_price, stock, unit, is_local, image_url)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            prodId,
+            coopId,
+            po.product_name,
+            Math.round(po.price * 1.2),
+            po.price,
+            receivedQty,
+            "pcs",
+            0,
+            "https://images.unsplash.com/photo-1542838132-92c53300491e?w=400",
+          ],
+        );
+        await logAudit(
+          activeUser?.name || "Admin",
+          "GOODS_RECEIVED",
+          `Received ${receivedQty} units for PO ${poId}. Registered new product ${po.product_name} in catalog.`,
+        );
+      }
+      await refreshData();
+    } catch (err) {
+      console.error("Failed to receive goods:", err);
+    }
+  };
+
+  const createKopRequest = async (
+    userId: string,
+    productName: string,
+    qty: number,
+  ) => {
+    try {
+      const id = `req-${Date.now()}`;
+      await dbService.run(
+        `INSERT INTO kop_requests (id, user_id, product_name, quantity, status, created_at)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [id, userId, productName, qty, "PENDING", new Date().toISOString()],
+      );
+
+      const user = allUsers.find((u) => u.id === userId);
+      await logAudit(
+        activeUser?.name || "Admin",
+        "KOP_REQUEST_CREATED",
+        `Recorded demand request from ${user?.name || "Warga"} for ${qty}x ${productName}`,
+      );
+      await refreshData();
+    } catch (err) {
+      console.error("Failed to create KopRequest:", err);
+    }
+  };
+
+  const resolveKopRequest = async (requestId: string) => {
+    try {
+      await dbService.run(
+        `UPDATE kop_requests SET status = 'NOTIFIED' WHERE id = ?`,
+        [requestId],
+      );
+
+      const req = kopRequests.find((r) => r.id === requestId);
+      const user = allUsers.find((u) => u.id === req?.user_id);
+      await logAudit(
+        activeUser?.name || "Admin",
+        "KOP_REQUEST_RESOLVED",
+        `Notified ${user?.name || "Warga"} that requested product "${req?.product_name}" is now available.`,
+      );
+      await refreshData();
+    } catch (err) {
+      console.error("Failed to resolve KopRequest:", err);
+    }
+  };
+
   return (
     <AppContext.Provider
       value={{
@@ -1884,6 +2108,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         cart,
         settlements,
         auditLogs,
+        suppliers,
+        supplierProducts,
+        purchaseOrders,
+        kopRequests,
         isLoading,
 
         setActiveRole,
@@ -1923,6 +2151,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         registerCitizen,
         applyReferralCode,
         updateUserField,
+        submitRFQ,
+        receiveGoods,
+        createKopRequest,
+        resolveKopRequest,
       }}
     >
       {children}
