@@ -1,12 +1,13 @@
 import { View, ActivityIndicator, Text } from 'react-native';
 import { useApp } from '@/contexts/AppContext';
 import Header from '@/components/Header';
+import AuthGateway from '@/components/auth-gateway';
 import CitizenPortal from '@/components/portals/CitizenPortal';
 import AdminPortal from '@/components/portals/AdminPortal';
 import DriverPortal from '@/components/portals/DriverPortal';
 
 export default function HomeScreen() {
-  const { activeRole, isLoading } = useApp();
+  const { activeRole, activeUser, isLoading } = useApp();
 
   if (isLoading) {
     return (
@@ -16,6 +17,10 @@ export default function HomeScreen() {
         <Text className="text-emerald-300 text-[10px] mt-1 font-semibold">SIMKOPDES Koperasi Inklusif 2026</Text>
       </View>
     );
+  }
+
+  if (!activeUser) {
+    return <AuthGateway />;
   }
 
   return (

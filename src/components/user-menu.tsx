@@ -1,5 +1,4 @@
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   Popover,
@@ -7,11 +6,10 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { Text } from '@/components/ui/text';
-import { cn } from '@/lib/utils';
 import type { TriggerRef } from '@rn-primitives/popover';
 import * as React from 'react';
-import { View, Pressable, ScrollView } from 'react-native';
-import { useApp, type AppRole } from '@/contexts/AppContext';
+import { Alert, View } from 'react-native';
+import { useApp } from '@/contexts/AppContext';
 import { SymbolView } from 'expo-symbols';
 import RegistrationModal from '@/components/registration-modal';
 
@@ -19,9 +17,7 @@ export function UserMenu() {
   const {
     activeRole,
     activeUser,
-    allUsers,
-    setActiveRole,
-    setActiveUser,
+    logout,
     resetAllData,
     isLoading
   } = useApp();
@@ -37,13 +33,19 @@ export function UserMenu() {
     }
   };
 
-  const handleRoleSelect = (role: AppRole, user: any) => {
-    setActiveRole(role);
-    setActiveUser(user);
-    popoverTriggerRef.current?.close();
+  const handleLogout = () => {
+    Alert.alert('Keluar dari akun?', 'Anda perlu login lagi untuk mengakses KopMart RT.', [
+      { text: 'Batal', style: 'cancel' },
+      {
+        text: 'Keluar',
+        style: 'destructive',
+        onPress: () => {
+          popoverTriggerRef.current?.close();
+          logout();
+        },
+      },
+    ]);
   };
-
-
 
   return (
     <>
@@ -108,70 +110,16 @@ export function UserMenu() {
               <Text className="text-emerald-950 font-black text-xs">Daftar Warga Baru</Text>
             </Button>
 
-            <View className="gap-2">
-            <Text className="text-emerald-900 font-black text-xs uppercase tracking-wider mb-1">
-              Beralih Akun (Demo Hackathon)
-            </Text>
-            <ScrollView className="max-h-60" showsVerticalScrollIndicator={true}>
-              {allUsers.filter(u => u.role !== 'RT_AGENT').map((user) => {
-                const isSelected = activeUser?.id === user.id;
-                return (
-                  <Pressable
-                    key={user.id}
-                    onPress={() => {
-                      const nextRole: AppRole = user.role === 'ADMIN' || user.role === 'DRIVER' ? user.role : 'USER';
-                      handleRoleSelect(nextRole, user);
-                    }}
-                    className={cn(
-                      "flex-row justify-between items-center p-2.5 rounded-xl border mb-2 bg-white",
-                      isSelected ? "border-emerald-500 bg-emerald-50/50" : "border-stone-200"
-                    )}
-                  >
-                    <View className="flex-row items-center gap-2.5 flex-1">
-                      <View className={cn(
-                        "size-7 rounded-full items-center justify-center",
-                        isSelected ? "bg-emerald-600" : "bg-stone-200"
-                      )}>
-                        <Text className={cn("font-bold text-xs", isSelected ? "text-white" : "text-stone-700")}>
-                          {user.name.charAt(0)}
-                        </Text>
-                      </View>
-                      <View className="flex-1">
-                        <View className="flex-row items-center gap-1.5 flex-wrap">
-                          <Text className={cn("font-bold text-xs", isSelected ? "text-emerald-950" : "text-stone-900")}>
-                            {user.name}
-                          </Text>
-                          <Badge variant={user.role === 'ADMIN' ? 'secondary' : user.role === 'DRIVER' ? 'outline' : 'default'} className="px-1.5 py-0 rounded-md">
-                            <Text className="text-[8px] font-bold">
-                              {getRoleLabel(user.role)}
-                            </Text>
-                          </Badge>
-                        </View>
-                        <Text className="text-[9px] text-stone-500">
-                          {user.phone} {user.rt_id ? `• ${user.rt_id}` : ''}
-                        </Text>
-                        {user.member_id && (
-                          <Text className="text-[8px] text-emerald-700 font-bold">
-                            {user.member_id}
-                          </Text>
-                        )}
-                      </View>
-                    </View>
-
-                    <View className="justify-center items-center pr-1">
-                      {isSelected ? (
-                        <SymbolView name="checkmark.circle.fill" size={14} tintColor="#059669" />
-                      ) : (
-                        <SymbolView name="circle" size={14} tintColor="#d1d5db" />
-                      )}
-                    </View>
-                  </Pressable>
-                );
-              })}
-            </ScrollView>
-          </View>
-
-          <View className="border-t border-stone-200 pt-3 mt-1">
+          <View className="border-t border-stone-200 pt-3 mt-1 gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              className="flex-row gap-1.5 border-rose-200 bg-rose-50 w-full"
+              onPress={handleLogout}
+            >
+              <SymbolView name="rectangle.portrait.and.arrow.right" size={12} tintColor="#be123c" />
+              <Text className="text-rose-700 font-bold text-xs">Keluar Akun</Text>
+            </Button>
             <Button
               variant="outline"
               size="sm"

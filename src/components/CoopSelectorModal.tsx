@@ -2,19 +2,20 @@ import { useState } from 'react';
 import { View, Text, Pressable, Modal, ScrollView, Alert, Linking, Platform } from 'react-native';
 import { SymbolView } from 'expo-symbols';
 import { cn } from '@/lib/utils';
+import OpenStreetMapView from '@/components/open-street-map';
 
 // Conditional imports for native maps
 let MapView: any = null;
 let Marker: any = null;
 
-if (Platform.OS !== 'web') {
+if (Platform.OS === 'ios') {
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const MapModule = require('react-native-maps');
     MapView = MapModule.default || MapModule;
     Marker = MapModule.Marker;
   } catch {
-    console.warn("react-native-maps not available, using web/fallback");
+    console.warn("react-native-maps not available on iOS");
   }
 }
 
@@ -302,8 +303,44 @@ export default function CoopSelectorModal({ visible, onClose, activeCoopId, onSe
                     }
                     style={{ width: '100%', height: '100%', border: 0 }}
                   />
-                ) : (
-                  MapView && Marker ? (
+                ) : Platform.OS === 'android' ? (
+                  <OpenStreetMapView
+                    region={
+                      isNationalView
+                        ? {
+                            latitude: -2.548926,
+                            longitude: 118.014863,
+                            latitudeDelta: 16.0,
+                            longitudeDelta: 28.0,
+                          }
+                        : {
+                            latitude: selectedCoopForMap.latitude,
+                            longitude: selectedCoopForMap.longitude,
+                            latitudeDelta: 0.03,
+                            longitudeDelta: 0.03,
+                          }
+                    }
+                    markers={[
+                      ...(!isNationalView
+                        ? [{
+                            coordinate: { latitude: -8.409512, longitude: 115.188912 },
+                            title: 'Lokasi Anda',
+                            description: 'Rumah Anda di Desa Sukamaju',
+                            color: '#2563eb',
+                            type: 'user' as const,
+                          }]
+                        : []),
+                      ...cooperatives.map((coop) => ({
+                        coordinate: { latitude: coop.latitude, longitude: coop.longitude },
+                        title: coop.name,
+                        description: `${coop.address} (${coop.distance})`,
+                        color: coop.id === selectedCoopForMap.id ? '#dc2626' : '#d97706',
+                        type: 'cooperative' as const,
+                      })),
+                    ]}
+                    style={{ width: '100%', height: '100%' }}
+                  />
+                ) : MapView && Marker ? (
                     <MapView
                       initialRegion={
                         isNationalView
@@ -348,8 +385,7 @@ export default function CoopSelectorModal({ visible, onClose, activeCoopId, onSe
                     <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
                       <Text style={{ fontSize: 12, color: '#666' }}>Peta tidak dapat dimuat</Text>
                     </View>
-                  )
-                )}
+                  )}
               </View>
 
               {/* Map Footer Info */}

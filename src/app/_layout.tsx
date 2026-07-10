@@ -11,6 +11,7 @@ import { NAV_THEME } from '@/lib/theme';
 import { PortalHost } from '@rn-primitives/portal';
 import { cssInterop } from 'nativewind';
 import { Image } from 'expo-image';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 cssInterop(Image, { className: 'style' });
 
@@ -19,17 +20,18 @@ SplashScreen.preventAutoHideAsync();
 export default function RootLayout() {
   const colorScheme = useColorScheme();
   return (
-    <ThemeProvider value={NAV_THEME[colorScheme === 'dark' ? 'dark' : 'light']}>
-      <AppProvider>
-        <AnimatedSplashOverlay />
-        <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="index" />
-          <Stack.Screen name="explore" />
-        </Stack>
-        <PortalHost />
-      </AppProvider>
-    </ThemeProvider>
+    <SafeAreaProvider>
+      <ThemeProvider value={NAV_THEME[colorScheme === 'dark' ? 'dark' : 'light']}>
+        <AppProvider>
+          <AnimatedSplashOverlay />
+          <Stack screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="index" />
+            <Stack.Screen name="explore" />
+          </Stack>
+          <PortalHost />
+        </AppProvider>
+      </ThemeProvider>
+    </SafeAreaProvider>
   );
 }
-
 

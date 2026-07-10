@@ -96,6 +96,8 @@ interface AppContextType {
   // Setters/Refreshers
   setActiveRole: (role: AppRole) => void;
   setActiveUser: (user: User) => void;
+  login: (phone: string, pin: string) => Promise<{ success: boolean; error?: string }>;
+  logout: () => void;
   refreshData: () => Promise<void>;
   resetAllData: () => Promise<void>;
   
@@ -178,35 +180,20 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Update activeUser automatically when role changes
+  // Keep the authenticated user in sync with changes in the database. A user is
+  // deliberately not selected by default: the app should open at the login/register screen.
   useEffect(() => {
-    if (allUsers.length > 0) {
+    if (allUsers.length > 0 && activeUser) {
       const syncTask = setTimeout(() => {
         setActiveUserState(prev => {
-          const current = prev ? allUsers.find(u => u.id === prev.id) : null;
-
-          if (activeRole === 'USER') {
-            if (current && current.role !== 'ADMIN' && current.role !== 'DRIVER') return current;
-            return allUsers.find(u => u.id === 'user-dinda') || allUsers.find(u => u.role === 'USER') || null;
-          }
-
-          if (activeRole === 'ADMIN') {
-            if (current && current.role === 'ADMIN') return current;
-            return allUsers.find(u => u.id === 'user-arif') || allUsers.find(u => u.role === 'ADMIN') || null;
-          }
-
-          if (activeRole === 'DRIVER') {
-            if (current && current.role === 'DRIVER') return current;
-            return allUsers.find(u => u.id === 'user-ujang') || allUsers.find(u => u.role === 'DRIVER') || null;
-          }
-
-          return current || allUsers[0] || null;
+          if (!prev) return null;
+          return allUsers.find(user => user.id === prev.id) || null;
         });
       }, 0);
 
       return () => clearTimeout(syncTask);
     }
-  }, [activeRole, allUsers]);
+  }, [activeUser, allUsers]);
 
   // Load user's cart from SQLite when activeUser changes
   useEffect(() => {
@@ -311,6 +298,41 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const setActiveUser = (user: User) => {
     setActiveUserState(user);
+    setCart([]);
+  };
+
+  const login = async (phone: string, pin: string) => {
+    const normalizedPhone = normalizePhone(phone);
+    const normalizedPin = pin.replace(/\D/g, '');
+
+    if (!normalizedPhone || !normalizedPin) {
+      return { success: false, error: 'Masukkan nomor HP dan PIN terlebih dahulu.' };
+    }
+
+    try {
+      const user = await dbService.getFirst<User>('SELECT * FROM users WHERE phone = ?', [normalizedPhone]);
+      if (!user || user.pin !== normalizedPin) {
+        return { success: false, error: 'Nomor HP atau PIN belum sesuai.' };
+      }
+
+      if (user.account_status === 'SUSPENDED' || user.account_status === 'PENDING') {
+        return { success: false, error: 'Akun ini belum dapat digunakan. Hubungi koperasi.' };
+      }
+
+      const role: AppRole = user.role === 'ADMIN' || user.role === 'DRIVER' ? user.role : 'USER';
+      setActiveRoleState(role);
+      setActiveUserState(user);
+      setCart([]);
+      return { success: true };
+    } catch (err: any) {
+      console.error('Login failed:', err);
+      return { success: false, error: err.message || 'Login gagal. Coba lagi.' };
+    }
+  };
+
+  const logout = () => {
+    setActiveUserState(null);
+    setActiveRoleState('USER');
     setCart([]);
   };
 
@@ -1317,6 +1339,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       
       setActiveRole,
       setActiveUser,
+      login,
+      logout,
       refreshData,
       resetAllData,
       

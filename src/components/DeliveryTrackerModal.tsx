@@ -13,13 +13,14 @@ import { SymbolView } from 'expo-symbols';
 import type { SFSymbol } from 'expo-symbols';
 import { useApp } from '@/contexts/AppContext';
 import { dbService } from '@/utils/db';
+import OpenStreetMapView from '@/components/open-street-map';
 
-// Conditional react-native-maps import (not available on web)
+// Apple Maps is retained for iOS. Android uses the OpenStreetMap WebView branch below.
 let MapView: any = null;
 let Marker: any = null;
 let Polyline: any = null;
 
-if (Platform.OS !== 'web') {
+if (Platform.OS === 'ios') {
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const RNMaps = require('react-native-maps');
@@ -307,6 +308,40 @@ export default function DeliveryTrackerModal({
             <iframe
               src={`https://maps.google.com/maps?q=${driverCoord.latitude},${driverCoord.longitude}&t=&z=15&ie=UTF8&iwloc=&output=embed`}
               style={{ width: '100%', height: '100%', border: 0 }}
+            />
+          ) : Platform.OS === 'android' ? (
+            <OpenStreetMapView
+              region={MAP_CENTER}
+              markers={[
+                {
+                  coordinate: COOP_COORD,
+                  title: 'Koperasi Merah Putih Sukamaju',
+                  description: 'Titik pengambilan paket',
+                  color: '#059669',
+                  type: 'cooperative',
+                },
+                {
+                  coordinate: HOME_COORD,
+                  title: 'Rumah Anda',
+                  description: 'Titik pengiriman',
+                  color: '#dc2626',
+                  type: 'home',
+                },
+                ...(stage > 0
+                  ? [{
+                      coordinate: driverCoord,
+                      title: 'Mang Ujang (Kurir Desa)',
+                      description: 'Sedang mengantarkan sembako Anda',
+                      color: stageInfo.color,
+                      type: 'driver' as const,
+                    }]
+                  : []),
+              ]}
+              polylines={[
+                { coordinates: travelledRoute, color: '#059669', width: 6 },
+                { coordinates: remainingRoute, color: '#3b82f6', width: 5, dashArray: '10 8' },
+              ]}
+              style={{ flex: 1 }}
             />
           ) : MapView ? (
             <MapView
