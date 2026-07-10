@@ -32,6 +32,7 @@ interface OpenStreetMapProps {
   markers?: OpenStreetMapMarker[];
   polylines?: OpenStreetMapPolyline[];
   style?: StyleProp<ViewStyle>;
+  driverCoord?: MapCoordinate | null;
 }
 
 const escapeForScript = (value: unknown) =>
@@ -124,6 +125,8 @@ const buildMapHtml = (data: {
         });
 
         const markerSymbols = { cooperative: '⌂', home: '⌂', driver: '🛵', user: '●' };
+        let driverMarker = null;
+
         data.markers.forEach((item) => {
           const color = /^#[0-9a-fA-F]{3,8}$/.test(item.color || '') ? item.color : '#047857';
           const type = item.type || 'cooperative';
@@ -134,26 +137,80 @@ const buildMapHtml = (data: {
             iconAnchor: [16, 31],
           });
           const marker = window.L.marker([item.coordinate.latitude, item.coordinate.longitude], { icon }).addTo(map);
+          
+          if (type === 'driver') {
+            driverMarker = marker;
+          }
+
           marker.bindPopup(
             '<div class="popup-title">' + escapeHtml(item.title) + '</div>' +
             (item.description ? '<div class="popup-description">' + escapeHtml(item.description) + '</div>' : '')
           );
         });
+
+        // Add message listeners to update driver position smoothly without Webview reloads
+        const updateDriverLocation = function(event) {
+          try {
+            const msg = JSON.parse(event.data);
+            if (msg.type === 'updateDriver' && driverMarker) {
+              driverMarker.setLatLng([msg.latitude, msg.longitude]);
+              map.panTo([msg.latitude, msg.longitude], { animate: true, duration: 0.45 });
+            }
+          } catch(e) {}
+        };
+        window.addEventListener('message', updateDriverLocation);
+        document.addEventListener('message', updateDriverLocation);
       })();
     </script>
   </body>
 </html>`;
 
-export default function OpenStreetMapView({ region, markers = [], polylines = [], style }: OpenStreetMapProps) {
+export default function OpenStreetMapView({
+  region,
+  markers = [],
+  polylines = [],
+  style,
+  driverCoord,
+}: OpenStreetMapProps) {
   const [hasLoadError, setHasLoadError] = React.useState(false);
+  const webViewRef = React.useRef<WebView>(null);
+
+  // Memoize markers to exclude volatile driverCoord from rebuilding HTML and reloading WebView
+  const initialMarkers = React.useMemo(() => {
+    const list = [...markers];
+    if (driverCoord && !list.some((m) => m.type === 'driver')) {
+      list.push({
+        coordinate: driverCoord,
+        title: 'Mang Ujang (Kurir Desa)',
+        description: 'Sedang mengantarkan sembako Anda',
+        color: '#3b82f6',
+        type: 'driver',
+      });
+    }
+    return list;
+  }, [markers]);
+
   const html = React.useMemo(
-    () => buildMapHtml({ region, markers, polylines }),
-    [markers, polylines, region]
+    () => buildMapHtml({ region, markers: initialMarkers, polylines }),
+    [initialMarkers, polylines, region]
   );
 
   React.useEffect(() => {
     setHasLoadError(false);
   }, [html]);
+
+  // Post coordinate updates directly to Leaflet without reloading Webview
+  React.useEffect(() => {
+    if (driverCoord && webViewRef.current) {
+      webViewRef.current.postMessage(
+        JSON.stringify({
+          type: 'updateDriver',
+          latitude: driverCoord.latitude,
+          longitude: driverCoord.longitude,
+        })
+      );
+    }
+  }, [driverCoord]);
 
   if (hasLoadError) {
     return (
@@ -167,6 +224,7 @@ export default function OpenStreetMapView({ region, markers = [], polylines = []
 
   return (
     <WebView
+      ref={webViewRef}
       source={{ html }}
       originWhitelist={['*']}
       style={[{ flex: 1, backgroundColor: '#e2e8f0' }, style]}
