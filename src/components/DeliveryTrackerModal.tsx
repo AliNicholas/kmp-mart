@@ -318,23 +318,23 @@ export default function DeliveryTrackerModal({
               showsBuildings={true}
               showsPointsOfInterest={true}
             >
-              {/* Route already travelled (solid green) */}
+              {/* Route already travelled (solid green tebal) */}
               {Polyline && travelledRoute.length > 1 && (
                 <Polyline
                   coordinates={travelledRoute}
                   strokeColor="#059669"
-                  strokeWidth={5}
+                  strokeWidth={6}
                   lineDashPattern={undefined}
                 />
               )}
 
-              {/* Remaining route (dashed grey) */}
+              {/* Remaining route (soft blue path) */}
               {Polyline && remainingRoute.length > 1 && (
                 <Polyline
                   coordinates={remainingRoute}
-                  strokeColor="#94a3b8"
-                  strokeWidth={4}
-                  lineDashPattern={[8, 6]}
+                  strokeColor="#3b82f650"
+                  strokeWidth={5}
+                  lineDashPattern={undefined}
                 />
               )}
 
