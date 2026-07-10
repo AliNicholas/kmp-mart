@@ -1,9 +1,9 @@
-import React from 'react';
 import { View, ActivityIndicator, Text } from 'react-native';
 import { useApp } from '@/contexts/AppContext';
 import Header from '@/components/Header';
 import CitizenPortal from '@/components/portals/CitizenPortal';
 import AdminPortal from '@/components/portals/AdminPortal';
+import DriverPortal from '@/components/portals/DriverPortal';
 
 export default function HomeScreen() {
   const { activeRole, isLoading } = useApp();
@@ -27,6 +27,7 @@ export default function HomeScreen() {
       <View className="flex-1">
         {activeRole === 'USER' && <CitizenPortal />}
         {activeRole === 'ADMIN' && <AdminPortal />}
+        {activeRole === 'DRIVER' && <DriverPortal />}
       </View>
     </View>
   );

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -7,16 +7,12 @@ import {
   ActivityIndicator,
   Alert,
   Platform,
-  Dimensions,
   Animated,
 } from 'react-native';
 import { SymbolView } from 'expo-symbols';
-import { cn } from '@/lib/utils';
 import type { SFSymbol } from 'expo-symbols';
 import { useApp } from '@/contexts/AppContext';
 import { dbService } from '@/utils/db';
-
-const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 // Conditional react-native-maps import (not available on web)
 let MapView: any = null;
@@ -25,11 +21,12 @@ let Polyline: any = null;
 
 if (Platform.OS !== 'web') {
   try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const RNMaps = require('react-native-maps');
     MapView = RNMaps.default || RNMaps;
     Marker = RNMaps.Marker;
     Polyline = RNMaps.Polyline;
-  } catch (e) {
+  } catch {
     console.warn('react-native-maps not available');
   }
 }
@@ -133,7 +130,7 @@ export default function DeliveryTrackerModal({
   const [chatVisible, setChatVisible] = useState(false);
 
   const mapRef = useRef<any>(null);
-  const pulseAnim = useRef(new Animated.Value(1)).current;
+  const [pulseAnim] = useState(() => new Animated.Value(1));
 
   // Pulse ring animation
   useEffect(() => {
@@ -145,7 +142,7 @@ export default function DeliveryTrackerModal({
     );
     pulse.start();
     return () => pulse.stop();
-  }, []);
+  }, [pulseAnim]);
 
   // Load order and fetch real route from OSRM
   useEffect(() => {
@@ -193,26 +190,8 @@ export default function DeliveryTrackerModal({
     load();
   }, [orderId, visible]);
 
-  // Auto-progress stages every 7s
-  useEffect(() => {
-    if (!visible || !orderId || loading || !currentOrder) return;
-    if (currentOrder.order_status === 'COMPLETED' || stage === 3) return;
-    const timer = setTimeout(advanceStage, 7000);
-    return () => clearTimeout(timer);
-  }, [stage, visible, loading, currentOrder]);
-
-  // Animate driver along route when stage changes
-  useEffect(() => {
-    if (!visible || loading || routeCoords.length === 0) return;
-    const targetWpIdx = getWaypointForStage(stage, routeCoords.length);
-    animateDriverAlongRoute(targetWpIdx, routeCoords);
-    setChatVisible(false);
-    const t = setTimeout(() => setChatVisible(true), 1200);
-    return () => clearTimeout(t);
-  }, [stage, visible, loading, routeCoords]);
-
   // Smoothly move driver through each waypoint
-  const animateDriverAlongRoute = (targetIdx: number, coordsList: any[]) => {
+  const animateDriverAlongRoute = useCallback((targetIdx: number, coordsList: any[]) => {
     if (coordsList.length === 0) return;
     const currentIdx = coordsList.findIndex(
       (c) => c.latitude === driverCoord.latitude && c.longitude === driverCoord.longitude
@@ -240,9 +219,9 @@ export default function DeliveryTrackerModal({
       }, delay);
       delay += Math.max(1000 / ((targetIdx - from) / step), 100);
     }
-  };
+  }, [driverCoord]);
 
-  const advanceStage = async () => {
+  const advanceStage = useCallback(async () => {
     if (stage < 3) {
       const next = stage + 1;
       setStage(next);
@@ -272,7 +251,28 @@ export default function DeliveryTrackerModal({
         }
       }
     }
-  };
+  }, [allUsers, currentOrder, orderId, refreshData, stage]);
+
+  // Auto-progress stages every 7s
+  useEffect(() => {
+    if (!visible || !orderId || loading || !currentOrder) return;
+    if (currentOrder.order_status === 'COMPLETED' || stage === 3) return;
+    const timer = setTimeout(advanceStage, 7000);
+    return () => clearTimeout(timer);
+  }, [advanceStage, currentOrder, loading, orderId, stage, visible]);
+
+  // Animate driver along route when stage changes
+  useEffect(() => {
+    if (!visible || loading || routeCoords.length === 0) return;
+    const targetWpIdx = getWaypointForStage(stage, routeCoords.length);
+    animateDriverAlongRoute(targetWpIdx, routeCoords);
+    const resetChat = setTimeout(() => setChatVisible(false), 0);
+    const showChat = setTimeout(() => setChatVisible(true), 1200);
+    return () => {
+      clearTimeout(resetChat);
+      clearTimeout(showChat);
+    };
+  }, [animateDriverAlongRoute, stage, visible, loading, routeCoords]);
 
   if (!visible) return null;
 
@@ -474,7 +474,7 @@ export default function DeliveryTrackerModal({
                     <Text className={styles.chatAvatarText}>MU</Text>
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text className={styles.chatText}>"{stageInfo.chat}"</Text>
+                    <Text className={styles.chatText}>{`"${stageInfo.chat}"`}</Text>
                     <Text className={styles.chatTime}>Baru saja</Text>
                   </View>
                 </View>

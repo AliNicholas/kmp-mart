@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { View, Text, Pressable, Modal, ScrollView, Alert, Linking, Platform } from 'react-native';
 import { SymbolView } from 'expo-symbols';
 import { cn } from '@/lib/utils';
@@ -9,10 +9,11 @@ let Marker: any = null;
 
 if (Platform.OS !== 'web') {
   try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const MapModule = require('react-native-maps');
     MapView = MapModule.default || MapModule;
     Marker = MapModule.Marker;
-  } catch (e) {
+  } catch {
     console.warn("react-native-maps not available, using web/fallback");
   }
 }
@@ -103,17 +104,10 @@ export default function CoopSelectorModal({ visible, onClose, activeCoopId, onSe
   const [selectedCoopForMap, setSelectedCoopForMap] = useState<CooperativeItem | null>(null);
   const [isNationalView, setIsNationalView] = useState(false);
 
-  // Re-center when map selection changes
-  useEffect(() => {
-    if (selectedCoopForMap) {
-      // If it's a distant coop, default to national view first so they can see where it is
-      const isFar = selectedCoopForMap.id === 'tenant-4' || selectedCoopForMap.id === 'tenant-5' || selectedCoopForMap.id === 'tenant-6';
-      setIsNationalView(isFar);
-    }
-  }, [selectedCoopForMap]);
-
   const handleOpenMap = (coop: CooperativeItem) => {
+    const isFar = coop.id === 'tenant-4' || coop.id === 'tenant-5' || coop.id === 'tenant-6';
     setSelectedCoopForMap(coop);
+    setIsNationalView(isFar);
     setMapVisible(true);
   };
 

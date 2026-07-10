@@ -1,5 +1,5 @@
 import { useApp } from "@/contexts/AppContext";
-import { dbService, Order, OrderItem, Product, RTBatch } from "@/utils/db";
+import { dbService, DeliveryTask, Order, OrderItem, Product } from "@/utils/db";
 import { SymbolView } from "expo-symbols";
 import React, { useState } from "react";
 import {
@@ -18,19 +18,21 @@ import { Text } from "@/components/ui/text";
 export default function AdminPortal() {
   const {
     products,
-    batches,
     orders,
-    settlements,
     auditLogs,
     updateProductStock,
     createOrUpdateProduct,
-    processBatchFulfillment,
-    verifySettlement,
     refreshData,
     allUsers,
+    driverProfiles,
+    deliveryTasks,
+    cashCollections,
+    createDeliveryTaskFromOrder,
+    assignDeliveryTask,
+    assignManualProvider,
   } = useApp();
 
-  const [subTab, setSubTab] = useState(0); // 0: Inventory, 1: Process Batch, 2: Finance & Audit
+  const [subTab, setSubTab] = useState(0); // 0: Inventory, 1: Fulfillment, 2: Finance, 3: Dispatch
 
   // Tab 0: Inventory states
   const [productModalOpen, setProductModalOpen] = useState(false);
@@ -42,13 +44,6 @@ export default function AdminPortal() {
   const [prodStock, setProdStock] = useState("");
   const [prodUnit, setProdUnit] = useState("pcs");
   const [prodLocal, setProdLocal] = useState(false);
-
-  // Tab 1: Fulfillment details state
-  const [activeFulfillBatch, setActiveFulfillBatch] = useState<RTBatch | null>(
-    null,
-  );
-  const [batchItemsAggregate, setBatchItemsAggregate] = useState<any[]>([]);
-  const [batchOrdersList, setBatchOrdersList] = useState<any[]>([]);
 
   // Tab 1: Self-pickup order details state
   const [activeSelfOrder, setActiveSelfOrder] = useState<Order | null>(null);
@@ -99,7 +94,7 @@ export default function AdminPortal() {
       });
       setProductModalOpen(false);
       Alert.alert("Sukses", "Produk berhasil disimpan!");
-    } catch (err) {
+    } catch {
       Alert.alert("Gagal", "Gagal menyimpan produk.");
     }
   };
@@ -111,34 +106,6 @@ export default function AdminPortal() {
   ) => {
     const targetStock = Math.max(0, currentStock + change);
     await updateProductStock(productId, targetStock);
-  };
-
-  // Open Fulfillment Details
-  const handleOpenFulfillmentDetails = async (batch: RTBatch) => {
-    setActiveFulfillBatch(batch);
-
-    try {
-      // 1. Fetch all orders linked to this batch
-      const batchOrders = await dbService.getAll<Order>(
-        "SELECT * FROM orders WHERE rt_batch_id = ?",
-        [batch.id],
-      );
-      setBatchOrdersList(batchOrders);
-
-      // 2. Fetch aggregate items to package (sum of items)
-      const aggItems = await dbService.getAll(
-        `SELECT oi.product_id, oi.name, SUM(oi.quantity) as total_qty, p.unit
-         FROM order_items oi
-         JOIN orders o ON oi.order_id = o.id
-         LEFT JOIN products p ON oi.product_id = p.id
-         WHERE o.rt_batch_id = ?
-         GROUP BY oi.product_id, oi.name`,
-        [batch.id],
-      );
-      setBatchItemsAggregate(aggItems);
-    } catch (err) {
-      console.error(err);
-    }
   };
 
   const handleOpenSelfOrderDetails = async (order: Order) => {
@@ -167,7 +134,7 @@ export default function AdminPortal() {
 
       await dbService.run(sql, args);
 
-      const logId = `log-${Date.now()}`;
+      const logId = `log-self-${orderId}-${status}`;
       await dbService.run(
         "INSERT INTO audit_logs (id, actor, action, details, created_at) VALUES (?, ?, ?, ?, ?)",
         [
@@ -215,7 +182,7 @@ export default function AdminPortal() {
 
       await dbService.run(sql, args);
 
-      const logId = `log-${Date.now()}`;
+      const logId = `log-delivery-${orderId}-${status}`;
       await dbService.run(
         "INSERT INTO audit_logs (id, actor, action, details, created_at) VALUES (?, ?, ?, ?, ?)",
         [
@@ -257,7 +224,10 @@ export default function AdminPortal() {
   };
 
   // Calculate Financial dashboard values
-  const completedOrders = orders.filter((o) => o.order_status === "COMPLETED");
+  const completedOrders = React.useMemo(
+    () => orders.filter((o) => o.order_status === "COMPLETED"),
+    [orders],
+  );
   const gmv = completedOrders.reduce((sum, o) => sum + o.total, 0);
   const orderCount = completedOrders.length;
   const aov = orderCount > 0 ? Math.round(gmv / orderCount) : 0;
@@ -290,10 +260,96 @@ export default function AdminPortal() {
     };
 
     compute();
-  }, [orders, products]);
+  }, [completedOrders, products]);
 
   const grossProfit = gmv - cogsVal;
   const operatingProfit = grossProfit - totalRewardsUsed;
+  const activeMembers = allUsers.filter(
+    (user) => user.role === "USER" && (user.account_status || "ACTIVE") === "ACTIVE",
+  );
+  const latestMembers = [...activeMembers]
+    .sort((a, b) => String(b.created_at || "").localeCompare(String(a.created_at || "")))
+    .slice(0, 4);
+
+  const formatCurrency = (value: number) => `Rp${value.toLocaleString("id-ID")}`;
+  const terminalDeliveryStatuses = ["DELIVERED", "FAILED", "RETURNED", "CANCELLED", "REJECTED"];
+  const activeDrivers = driverProfiles.filter((driver) => driver.status === "ACTIVE");
+  const pendingDispatchTasks = deliveryTasks.filter((task) => task.status === "PENDING_DISPATCH");
+  const activeDeliveryTasks = deliveryTasks.filter((task) => !terminalDeliveryStatuses.includes(task.status));
+  const deliveredDeliveryTasks = deliveryTasks.filter((task) => task.status === "DELIVERED");
+  const driverPayable = deliveredDeliveryTasks.reduce((sum, task) => sum + task.driver_incentive, 0);
+  const codOutstanding = cashCollections
+    .filter((cash) => cash.status !== "SETTLED")
+    .reduce((sum, cash) => sum + (cash.collected_amount > 0 ? cash.collected_amount : cash.expected_amount), 0);
+  const readyHomeOrdersWithoutTask = orders.filter(
+    (order) =>
+      order.fulfillment === "DELIVERY_TO_HOME" &&
+      !["COMPLETED", "CANCELLED"].includes(order.order_status) &&
+      !deliveryTasks.some((task) => task.order_id === order.id),
+  );
+
+  const deliveryStatusLabels: Record<string, string> = {
+    PENDING_DISPATCH: "Menunggu Dispatch",
+    ASSIGNED: "Ditugaskan",
+    ACCEPTED: "Diterima",
+    REJECTED: "Ditolak",
+    PREPARING_PICKUP: "Disiapkan",
+    READY_FOR_PICKUP: "Siap Pickup",
+    PICKED_UP: "Sudah Pickup",
+    IN_TRANSIT: "Dalam Perjalanan",
+    ARRIVED_AT_RT: "Tiba di RT",
+    ARRIVED_AT_USER: "Tiba di Warga",
+    DELIVERED: "Selesai",
+    FAILED: "Gagal",
+    RETURNED: "Dikembalikan",
+    CANCELLED: "Dibatalkan",
+  };
+
+  const getDeliveryStatusClass = (status: string) => {
+    if (status === "DELIVERED") return "bg-emerald-100 border-emerald-200";
+    if (status === "FAILED" || status === "REJECTED") return "bg-rose-100 border-rose-200";
+    if (status === "PENDING_DISPATCH") return "bg-amber-100 border-amber-200";
+    if (status === "IN_TRANSIT" || status === "PICKED_UP") return "bg-blue-100 border-blue-200";
+    return "bg-stone-100 border-stone-200";
+  };
+
+  const getTaskAssignee = (task: DeliveryTask) => {
+    if (task.provider_type === "MANUAL") {
+      return task.manual_provider_name || "Kurir Manual";
+    }
+
+    const driver = driverProfiles.find((item) => item.id === task.driver_id);
+    return driver?.name || "Belum ada KopKurir";
+  };
+
+  const runDispatchAction = async (
+    successMessage: string,
+    action: () => Promise<{ success: boolean; error?: string }>,
+  ) => {
+    const result = await action();
+    if (!result.success) {
+      Alert.alert("Gagal", result.error || "Aksi dispatch gagal.");
+      return;
+    }
+    Alert.alert("Sukses", successMessage);
+  };
+
+  const handleCreateDeliveryTask = async (orderId: string) => {
+    const result = await createDeliveryTaskFromOrder(orderId);
+    if (!result.success) {
+      Alert.alert("Gagal", result.error || "Gagal membuat tugas pengiriman.");
+      return;
+    }
+    Alert.alert("Sukses", "Tugas KopKurir dibuat dan masuk antrean dispatch.");
+  };
+
+  const handleAssignManualProvider = (task: DeliveryTask) => {
+    const trackingNumber = `MAN-${task.id.slice(-6).toUpperCase()}`;
+    return runDispatchAction(
+      "Tugas dialihkan ke kurir manual.",
+      () => assignManualProvider(task.id, "Kurir Manual Desa", trackingNumber, "0811-8899-LOG", task.delivery_fee || 12000),
+    );
+  };
 
   // Render Inventory Tab
   const renderInventory = () => (
@@ -631,14 +687,6 @@ export default function AdminPortal() {
 
   // Render Finance Dashboard and Immutable Audit logs
   const renderFinanceAudit = () => {
-    // Filter submitted settlements requiring verification
-    const pendingSettlements = settlements.filter(
-      (s) => s.status === "SUBMITTED" || s.status === "PENDING",
-    );
-    const verifiedSettlements = settlements.filter(
-      (s) => s.status === "VERIFIED" || s.status === "DISPUTED",
-    );
-
     return (
       <ScrollView
         className="flex-1 bg-stone-50"
@@ -703,6 +751,48 @@ export default function AdminPortal() {
               Telah dipotong poin & insentif RT
             </Text>
           </View>
+        </View>
+
+        <Text className="text-stone-900 font-black text-xs mb-2.5">
+          Anggota Terdaftar & Kartu Kopdes
+        </Text>
+        <View className="bg-white p-4 border border-stone-200 rounded-xl mb-5 shadow-sm">
+          <View className="flex-row justify-between items-center pb-3 border-b border-stone-100 mb-2">
+            <View>
+              <Text className="text-stone-500 text-[9px] font-bold uppercase tracking-wider">
+                Anggota aktif
+              </Text>
+              <Text className="text-emerald-950 font-black text-xl">
+                {activeMembers.length}
+              </Text>
+            </View>
+            <View className="bg-emerald-50 border border-emerald-100 rounded-xl px-3 py-2">
+              <Text className="text-emerald-800 text-[9px] font-black">
+                NIK tersamarkan
+              </Text>
+            </View>
+          </View>
+
+          {latestMembers.map((member) => (
+            <View key={member.id} className="flex-row justify-between items-center py-2 border-b border-stone-100 last:border-0">
+              <View className="flex-1 pr-2">
+                <Text className="text-stone-900 font-bold text-xs" numberOfLines={1}>
+                  {member.name}
+                </Text>
+                <Text className="text-stone-500 text-[9px]">
+                  {member.member_id || member.referral_code} • {member.rt_id || "Tanpa RT"}
+                </Text>
+              </View>
+              <View className="items-end">
+                <Text className="text-emerald-700 text-[9px] font-black">
+                  {member.account_status || "ACTIVE"}
+                </Text>
+                <Text className="text-stone-400 text-[8px]">
+                  {member.nik_masked || "NIK masked"}
+                </Text>
+              </View>
+            </View>
+          ))}
         </View>
 
         {/* Detailed Profit/Loss Table */}
@@ -788,12 +878,236 @@ export default function AdminPortal() {
     );
   };
 
+  const renderDispatch = () => (
+    <ScrollView
+      className="flex-1 bg-stone-50"
+      contentContainerClassName="p-4 pb-28"
+    >
+      <View className="bg-emerald-950 rounded-2xl p-4 mb-4">
+        <View className="flex-row items-center justify-between gap-3">
+          <View className="flex-1">
+            <Text className="text-amber-300 text-[10px] font-black uppercase tracking-wider">
+              KopKurir Dispatch Center
+            </Text>
+            <Text className="text-white font-black text-lg mt-1">
+              Kendali pengiriman desa
+            </Text>
+            <Text className="text-emerald-100 text-[10px] mt-1 leading-4">
+              Assign manual KopKurir, pantau status pickup, bukti antar, dan COD dari satu antrean.
+            </Text>
+          </View>
+          <SymbolView name="shippingbox.fill" size={34} tintColor="#fbbf24" />
+        </View>
+      </View>
+
+      <View className="flex-row flex-wrap justify-between mb-4">
+        <View className="w-[48%] bg-white p-3.5 border border-stone-200 rounded-xl shadow-sm mb-3">
+          <Text className="text-stone-400 text-[9px] font-bold uppercase tracking-wider">
+            Menunggu Dispatch
+          </Text>
+          <Text className="text-amber-700 font-black text-xl mt-1">
+            {pendingDispatchTasks.length}
+          </Text>
+        </View>
+        <View className="w-[48%] bg-white p-3.5 border border-stone-200 rounded-xl shadow-sm mb-3">
+          <Text className="text-stone-400 text-[9px] font-bold uppercase tracking-wider">
+            Tugas Aktif
+          </Text>
+          <Text className="text-blue-700 font-black text-xl mt-1">
+            {activeDeliveryTasks.length}
+          </Text>
+        </View>
+        <View className="w-[48%] bg-white p-3.5 border border-stone-200 rounded-xl shadow-sm mb-3">
+          <Text className="text-stone-400 text-[9px] font-bold uppercase tracking-wider">
+            COD Belum Setor
+          </Text>
+          <Text className="text-rose-700 font-black text-base mt-1">
+            {formatCurrency(codOutstanding)}
+          </Text>
+        </View>
+        <View className="w-[48%] bg-white p-3.5 border border-stone-200 rounded-xl shadow-sm mb-3">
+          <Text className="text-stone-400 text-[9px] font-bold uppercase tracking-wider">
+            Insentif Driver
+          </Text>
+          <Text className="text-emerald-700 font-black text-base mt-1">
+            {formatCurrency(driverPayable)}
+          </Text>
+        </View>
+      </View>
+
+      {readyHomeOrdersWithoutTask.length > 0 && (
+        <View className="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-4">
+          <Text className="text-amber-900 text-xs font-black mb-2">
+            Order kirim rumah belum punya tugas KopKurir
+          </Text>
+          {readyHomeOrdersWithoutTask.map((order) => {
+            const buyer = allUsers.find((user) => user.id === order.user_id);
+            return (
+              <View key={order.id} className="bg-white border border-amber-100 rounded-xl p-3 mb-2">
+                <View className="flex-row justify-between gap-2">
+                  <View className="flex-1">
+                    <Text className="text-stone-900 text-xs font-black" numberOfLines={1}>
+                      {buyer?.name || "Warga"} • {formatCurrency(order.total)}
+                    </Text>
+                    <Text className="text-stone-500 text-[9px] mt-0.5">
+                      {buyer?.address || buyer?.rt_id || "Alamat warga"} • {order.payment_status === "UNPAID" ? "COD" : "Lunas"}
+                    </Text>
+                  </View>
+                  <Pressable
+                    onPress={() => handleCreateDeliveryTask(order.id)}
+                    className="bg-amber-400 border border-amber-500 rounded-lg px-3 py-2 active:bg-amber-500"
+                  >
+                    <Text className="text-emerald-950 text-[9px] font-black">
+                      Buat Task
+                    </Text>
+                  </Pressable>
+                </View>
+              </View>
+            );
+          })}
+        </View>
+      )}
+
+      <View className="flex-row justify-between items-center mb-2">
+        <Text className="text-stone-900 font-black text-lg">
+          Antrean Pengiriman
+        </Text>
+        <View className="bg-white border border-stone-200 rounded-full px-3 py-1">
+          <Text className="text-stone-500 text-[9px] font-bold">
+            {activeDrivers.length} KopKurir aktif
+          </Text>
+        </View>
+      </View>
+
+      {deliveryTasks.length === 0 ? (
+        <View className="bg-white p-8 rounded-xl border border-stone-200 items-center">
+          <SymbolView name="tray" size={32} tintColor="#a8a29e" />
+          <Text className="text-stone-500 text-xs mt-2 text-center">
+            Belum ada tugas pengiriman.
+          </Text>
+        </View>
+      ) : (
+        deliveryTasks.map((task) => {
+          const relatedOrder = task.order_id ? orders.find((order) => order.id === task.order_id) : null;
+          const buyer = relatedOrder ? allUsers.find((user) => user.id === relatedOrder.user_id) : null;
+          const cash = cashCollections.find((item) => item.delivery_task_id === task.id);
+          const canAssign = ["PENDING_DISPATCH", "REJECTED", "FAILED"].includes(task.status);
+
+          return (
+            <View key={task.id} className="bg-white border border-stone-200 rounded-2xl p-4 mb-3 shadow-sm">
+              <View className="flex-row justify-between gap-3">
+                <View className="flex-1">
+                  <View className="flex-row items-center gap-2 flex-wrap">
+                    <Text className="text-stone-900 font-black text-sm">
+                      {task.delivery_type === "RT_BATCH_DELIVERY" ? "RT Batch Delivery" : "Home Delivery"}
+                    </Text>
+                    <Badge variant="outline" className={getDeliveryStatusClass(task.status)}>
+                      <Text className="text-stone-700 text-[8px] font-black">
+                        {deliveryStatusLabels[task.status] || task.status}
+                      </Text>
+                    </Badge>
+                  </View>
+                  <Text className="text-stone-500 text-[10px] mt-1">
+                    {task.recipient_name} • {task.recipient_phone || buyer?.phone || "Kontak RT"}
+                  </Text>
+                </View>
+                <View className="items-end">
+                  <Text className="text-stone-400 text-[9px]">Fee / Insentif</Text>
+                  <Text className="text-emerald-800 font-black text-xs">
+                    {formatCurrency(task.delivery_fee)} / {formatCurrency(task.driver_incentive)}
+                  </Text>
+                </View>
+              </View>
+
+              <View className="mt-3 bg-stone-50 border border-stone-100 rounded-xl p-3 gap-1">
+                <Text className="text-stone-400 text-[9px] font-bold uppercase">
+                  Tujuan
+                </Text>
+                <Text className="text-stone-800 text-xs font-semibold">
+                  {task.destination_address}
+                </Text>
+                <View className="flex-row justify-between mt-2">
+                  <Text className="text-stone-500 text-[10px]">Penanggung jawab</Text>
+                  <Text className="text-stone-900 text-[10px] font-black">
+                    {getTaskAssignee(task)}
+                  </Text>
+                </View>
+                <View className="flex-row justify-between">
+                  <Text className="text-stone-500 text-[10px]">Pickup / Paket</Text>
+                  <Text className="text-stone-900 text-[10px] font-black">
+                    {task.pickup_code} • {task.package_count} paket
+                  </Text>
+                </View>
+                <View className="flex-row justify-between">
+                  <Text className="text-stone-500 text-[10px]">COD</Text>
+                  <Text className="text-stone-900 text-[10px] font-black">
+                    {task.cod_amount > 0 ? formatCurrency(task.cod_amount) : "Non-COD"}
+                    {cash ? ` • ${cash.status}` : ""}
+                  </Text>
+                </View>
+                {task.tracking_number && (
+                  <View className="flex-row justify-between">
+                    <Text className="text-stone-500 text-[10px]">AWB Manual</Text>
+                    <Text className="text-stone-900 text-[10px] font-black">
+                      {task.tracking_number}
+                    </Text>
+                  </View>
+                )}
+              </View>
+
+              {canAssign && (
+                <View className="mt-3">
+                  <Text className="text-stone-500 text-[9px] font-black uppercase mb-2">
+                    Assign KopKurir
+                  </Text>
+                  {activeDrivers.length === 0 ? (
+                    <Text className="text-rose-600 text-xs font-bold">
+                      Belum ada driver aktif.
+                    </Text>
+                  ) : (
+                    <View className="flex-row flex-wrap gap-2">
+                      {activeDrivers.map((driver) => (
+                        <Pressable
+                          key={driver.id}
+                          onPress={() =>
+                            runDispatchAction(
+                              `${driver.name} menerima penugasan dispatch.`,
+                              () => assignDeliveryTask(task.id, driver.id),
+                            )
+                          }
+                          className="bg-emerald-700 border border-emerald-800 rounded-xl px-3 py-2 active:bg-emerald-950"
+                        >
+                          <Text className="text-white text-[10px] font-black">
+                            {driver.name}
+                          </Text>
+                        </Pressable>
+                      ))}
+                      <Pressable
+                        onPress={() => handleAssignManualProvider(task)}
+                        className="bg-white border border-stone-300 rounded-xl px-3 py-2 active:bg-stone-100"
+                      >
+                        <Text className="text-stone-700 text-[10px] font-black">
+                          Kurir Manual
+                        </Text>
+                      </Pressable>
+                    </View>
+                  )}
+                </View>
+              )}
+            </View>
+          );
+        })
+      )}
+    </ScrollView>
+  );
+
   return (
     <View className="flex-1 bg-stone-100">
       {/* Sub tabs render */}
       {subTab === 0 && renderInventory()}
       {subTab === 1 && renderFulfillment()}
       {subTab === 2 && renderFinanceAudit()}
+      {subTab === 3 && renderDispatch()}
 
       {/* Sub Tabs Bottom Bar */}
       <View className="absolute bottom-0 left-0 right-0 bg-white border-t border-stone-200 h-16 flex-row justify-around items-center">
@@ -842,6 +1156,22 @@ export default function AdminPortal() {
             className={`text-[10px] mt-1 font-bold ${subTab === 2 ? "text-emerald-800 font-extrabold" : "text-stone-400"}`}
           >
             Keuangan & Audit
+          </Text>
+        </Pressable>
+
+        <Pressable
+          onPress={() => setSubTab(3)}
+          className="items-center justify-center flex-1 h-full active:bg-stone-50"
+        >
+          <SymbolView
+            name="shippingbox.fill"
+            size={18}
+            tintColor={subTab === 3 ? "#0f5132" : "#888"}
+          />
+          <Text
+            className={`text-[10px] mt-1 font-bold ${subTab === 3 ? "text-emerald-800 font-extrabold" : "text-stone-400"}`}
+          >
+            Dispatch
           </Text>
         </Pressable>
       </View>

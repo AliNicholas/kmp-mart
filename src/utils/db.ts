@@ -13,13 +13,19 @@ export interface User {
   id: string;
   name: string;
   phone: string;
-  role: 'USER' | 'RT_AGENT' | 'ADMIN';
+  role: 'USER' | 'RT_AGENT' | 'ADMIN' | 'DRIVER';
   rt_id: string | null;
   cooperative_id: string;
   points: number;
   referral_code: string;
   referred_by: string | null;
   pin: string;
+  nik_masked?: string | null;
+  address?: string | null;
+  member_id?: string | null;
+  card_token?: string | null;
+  account_status?: 'ACTIVE' | 'SUSPENDED' | 'PENDING' | null;
+  created_at?: string | null;
 }
 
 export interface Product {
@@ -97,6 +103,86 @@ export interface AuditLog {
   created_at: string;
 }
 
+export type DeliveryStatus =
+  | 'PENDING_DISPATCH'
+  | 'ASSIGNED'
+  | 'ACCEPTED'
+  | 'REJECTED'
+  | 'PREPARING_PICKUP'
+  | 'READY_FOR_PICKUP'
+  | 'PICKED_UP'
+  | 'IN_TRANSIT'
+  | 'ARRIVED_AT_RT'
+  | 'ARRIVED_AT_USER'
+  | 'DELIVERED'
+  | 'FAILED'
+  | 'RETURNED'
+  | 'CANCELLED';
+
+export interface DriverProfile {
+  id: string;
+  user_id: string;
+  cooperative_id: string;
+  name: string;
+  phone: string;
+  vehicle_type: 'BICYCLE' | 'MOTORCYCLE' | 'CART' | 'CAR' | 'PICKUP';
+  status: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED';
+  service_radius_km: number;
+  total_completed_deliveries: number;
+  rating: number;
+  cash_limit: number;
+}
+
+export interface DeliveryTask {
+  id: string;
+  cooperative_id: string;
+  order_id: string | null;
+  rt_batch_id: string | null;
+  driver_id: string | null;
+  provider_type: 'KOPKURIR' | 'EXTERNAL_ON_DEMAND' | 'EXTERNAL_PARCEL' | 'MANUAL';
+  delivery_type: 'HOME_DELIVERY' | 'RT_BATCH_DELIVERY' | 'PARCEL_DELIVERY';
+  origin_address: string;
+  destination_address: string;
+  status: DeliveryStatus;
+  delivery_fee: number;
+  driver_incentive: number;
+  cod_amount: number;
+  package_count: number;
+  pickup_code: string;
+  recipient_name: string;
+  recipient_phone: string;
+  manual_provider_name: string | null;
+  tracking_number: string | null;
+  courier_contact: string | null;
+  eta: string | null;
+  failed_reason: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DeliveryProof {
+  id: string;
+  delivery_task_id: string;
+  proof_type: 'PIN' | 'QR' | 'PHOTO' | 'SIGNATURE' | 'GPS' | 'RT_CONFIRMATION';
+  proof_value: string | null;
+  photo_url: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  confirmed_by_user_id: string | null;
+  created_at: string;
+}
+
+export interface CashCollection {
+  id: string;
+  delivery_task_id: string;
+  collector_type: 'DRIVER' | 'RT_AGENT';
+  collector_id: string;
+  expected_amount: number;
+  collected_amount: number;
+  status: 'PENDING' | 'COLLECTED' | 'SETTLED' | 'SHORT' | 'DISPUTED';
+  settled_at: string | null;
+}
+
 // ----------------------------------------------------
 // DATABASE WEB FALLBACK IMPLEMENTATION (localStorage)
 // ----------------------------------------------------
@@ -120,9 +206,10 @@ class WebDatabase {
     let updated = false;
 
     const tables = [
-      'tenants', 'users', 'products', 'rt_batches', 
-      'orders', 'order_items', 'point_transactions', 
-      'settlements', 'audit_logs', 'cart_items'
+      'tenants', 'users', 'products', 'rt_batches',
+      'orders', 'order_items', 'point_transactions',
+      'settlements', 'audit_logs', 'cart_items',
+      'driver_profiles', 'delivery_tasks', 'delivery_proofs', 'cash_collections'
     ];
 
     tables.forEach(table => {
@@ -132,7 +219,8 @@ class WebDatabase {
       }
     });
 
-    if (updated) {
+    const shouldSeedBaseData = (db['users']?.length || 0) === 0 && (db['products']?.length || 0) === 0;
+    if (shouldSeedBaseData) {
       this.seedData(db);
     }
 
@@ -151,6 +239,41 @@ class WebDatabase {
         beras.stock = 2;
         changed = true;
       }
+    }
+
+    if (db['users']) {
+      db['users'].forEach((u: any, index: number) => {
+        const suffix = String(index + 1).padStart(3, '0');
+        const nikSuffix = String(index + 1).padStart(2, '0');
+        if (!u.nik_masked) {
+          u.nik_masked = `327501********${nikSuffix}`;
+          changed = true;
+        }
+        if (!u.address) {
+          u.address = u.rt_id ? `Desa Sukamaju, ${u.rt_id}` : 'Kantor Koperasi Merah Putih Sukamaju';
+          changed = true;
+        }
+        if (!u.member_id) {
+          u.member_id = u.role === 'ADMIN' ? `ADM-KMP-${suffix}` : `KMP-RT03-${suffix}`;
+          changed = true;
+        }
+        if (!u.card_token) {
+          u.card_token = `KOPDES-${u.member_id}-${u.referral_code || suffix}`;
+          changed = true;
+        }
+        if (!u.account_status) {
+          u.account_status = 'ACTIVE';
+          changed = true;
+        }
+        if (!u.created_at) {
+          u.created_at = new Date(Date.now() - (index + 1) * 86400000).toISOString();
+          changed = true;
+        }
+      });
+    }
+
+    if (this.ensureDemoLogistics(db)) {
+      changed = true;
     }
 
     // Ensure Sukasari (tenant-2) exists
@@ -217,6 +340,201 @@ class WebDatabase {
     if (updated || changed) {
       this.setStorage(db);
     }
+  }
+
+  private ensureDemoLogistics(db: { [table: string]: any[] }) {
+    let changed = false;
+    const now = new Date().toISOString();
+    const userUjang = db['users']?.find((u: any) => u.id === 'user-ujang');
+    const userDewi = db['users']?.find((u: any) => u.id === 'user-dewi');
+
+    if (db['users'] && !userUjang) {
+      db['users'].push({
+        id: 'user-ujang',
+        name: 'Mang Ujang',
+        phone: '081300112233',
+        role: 'DRIVER',
+        rt_id: 'RT 03',
+        cooperative_id: 'tenant-1',
+        points: 0,
+        referral_code: 'UJANGKURIR',
+        referred_by: null,
+        pin: '333333',
+        nik_masked: '327501********21',
+        address: 'Kampung Sukamaju, RT 03/RW 02',
+        member_id: 'DRV-KMP-001',
+        card_token: 'KOPKURIR-DRV-KMP-001',
+        account_status: 'ACTIVE',
+        created_at: now,
+      });
+      changed = true;
+    }
+
+    if (db['users'] && !userDewi) {
+      db['users'].push({
+        id: 'user-dewi',
+        name: 'Dewi Lestari',
+        phone: '081344556677',
+        role: 'DRIVER',
+        rt_id: 'RT 04',
+        cooperative_id: 'tenant-1',
+        points: 0,
+        referral_code: 'DEWIKURIR',
+        referred_by: null,
+        pin: '444444',
+        nik_masked: '327501********22',
+        address: 'Dusun Sukamaju Barat, RT 04/RW 02',
+        member_id: 'DRV-KMP-002',
+        card_token: 'KOPKURIR-DRV-KMP-002',
+        account_status: 'ACTIVE',
+        created_at: now,
+      });
+      changed = true;
+    }
+
+    if (db['driver_profiles']) {
+      if (!db['driver_profiles'].some((d: any) => d.id === 'driver-ujang')) {
+        db['driver_profiles'].push({
+          id: 'driver-ujang',
+          user_id: 'user-ujang',
+          cooperative_id: 'tenant-1',
+          name: 'Mang Ujang',
+          phone: '081300112233',
+          vehicle_type: 'MOTORCYCLE',
+          status: 'ACTIVE',
+          service_radius_km: 5,
+          total_completed_deliveries: 18,
+          rating: 4.8,
+          cash_limit: 500000,
+        });
+        changed = true;
+      }
+
+      if (!db['driver_profiles'].some((d: any) => d.id === 'driver-dewi')) {
+        db['driver_profiles'].push({
+          id: 'driver-dewi',
+          user_id: 'user-dewi',
+          cooperative_id: 'tenant-1',
+          name: 'Dewi Lestari',
+          phone: '081344556677',
+          vehicle_type: 'MOTORCYCLE',
+          status: 'ACTIVE',
+          service_radius_km: 4,
+          total_completed_deliveries: 12,
+          rating: 4.7,
+          cash_limit: 400000,
+        });
+        changed = true;
+      }
+    }
+
+    if (db['orders'] && !db['orders'].some((o: any) => o.id === 'order-home-1')) {
+      db['orders'].push({
+        id: 'order-home-1',
+        user_id: 'user-rina',
+        rt_batch_id: null,
+        channel: 'SELF_ORDER',
+        fulfillment: 'DELIVERY_TO_HOME',
+        subtotal: 72000,
+        discount: 0,
+        points_redeemed: 0,
+        total: 79000,
+        payment_status: 'UNPAID',
+        order_status: 'PENDING_PAYMENT',
+        created_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+      });
+      db['order_items']?.push(
+        { id: 'item-home-1a', order_id: 'order-home-1', product_id: 'prod-telur', name: 'Telur Ayam 1kg', price: 28000, quantity: 1 },
+        { id: 'item-home-1b', order_id: 'order-home-1', product_id: 'prod-minyak', name: 'Minyak Goreng 1L', price: 18000, quantity: 2 },
+        { id: 'item-home-1c', order_id: 'order-home-1', product_id: 'prod-sabun', name: 'Sabun Cuci Wangi', price: 14000, quantity: 1 },
+      );
+      changed = true;
+    }
+
+    if (db['delivery_tasks']) {
+      if (!db['delivery_tasks'].some((task: any) => task.id === 'task-home-1')) {
+        db['delivery_tasks'].push({
+          id: 'task-home-1',
+          cooperative_id: 'tenant-1',
+          order_id: 'order-home-1',
+          rt_batch_id: null,
+          driver_id: null,
+          provider_type: 'KOPKURIR',
+          delivery_type: 'HOME_DELIVERY',
+          origin_address: 'Koperasi Merah Putih Sukamaju, Jl. Merdeka No. 12',
+          destination_address: 'Rumah Ibu Rina, RT 03/RW 02 Desa Sukamaju',
+          status: 'PENDING_DISPATCH',
+          delivery_fee: 7000,
+          driver_incentive: 6000,
+          cod_amount: 79000,
+          package_count: 4,
+          pickup_code: 'PU-HOME-001',
+          recipient_name: 'Ibu Rina',
+          recipient_phone: '087788990011',
+          manual_provider_name: null,
+          tracking_number: null,
+          courier_contact: null,
+          eta: 'Hari ini 15:30',
+          failed_reason: null,
+          created_at: now,
+          updated_at: now,
+        });
+        changed = true;
+      }
+
+      if (!db['delivery_tasks'].some((task: any) => task.id === 'task-batch-demo-1')) {
+        db['delivery_tasks'].push({
+          id: 'task-batch-demo-1',
+          cooperative_id: 'tenant-1',
+          order_id: null,
+          rt_batch_id: 'batch-demo-1',
+          driver_id: 'driver-ujang',
+          provider_type: 'KOPKURIR',
+          delivery_type: 'RT_BATCH_DELIVERY',
+          origin_address: 'Koperasi Merah Putih Sukamaju, Jl. Merdeka No. 12',
+          destination_address: 'Balai RT 03 / Pos Hansip',
+          status: 'ASSIGNED',
+          delivery_fee: 0,
+          driver_incentive: 7000,
+          cod_amount: 0,
+          package_count: 2,
+          pickup_code: 'PU-RT03-001',
+          recipient_name: 'Pak Budi',
+          recipient_phone: '089876543210',
+          manual_provider_name: null,
+          tracking_number: null,
+          courier_contact: null,
+          eta: 'Hari ini 16:00',
+          failed_reason: null,
+          created_at: now,
+          updated_at: now,
+        });
+        changed = true;
+      }
+    }
+
+    if (db['cash_collections'] && !db['cash_collections'].some((cash: any) => cash.id === 'cash-home-1')) {
+      db['cash_collections'].push({
+        id: 'cash-home-1',
+        delivery_task_id: 'task-home-1',
+        collector_type: 'DRIVER',
+        collector_id: '',
+        expected_amount: 79000,
+        collected_amount: 0,
+        status: 'PENDING',
+        settled_at: null,
+      });
+      changed = true;
+    }
+
+    const homeCash = db['cash_collections']?.find((cash: any) => cash.id === 'cash-home-1');
+    const homeTask = db['delivery_tasks']?.find((task: any) => task.id === 'task-home-1');
+    if (homeCash && homeTask && !homeTask.driver_id && homeCash.collector_id) {
+      homeCash.collector_id = '';
+      changed = true;
+    }
+
+    return changed;
   }
 
   private seedData(db: { [table: string]: any[] }) {
@@ -468,19 +786,24 @@ class WebDatabase {
 
       let rows = db[tableName] || [];
       let affectedCount = 0;
+      const whereParamStart = paramIdx;
 
       if (whereClause) {
-        const parts = whereClause.split('=');
-        const whereCol = parts[0].trim();
-        let whereVal = parts[1].trim();
-        if (whereVal === '?') {
-          whereVal = params[paramIdx++];
-        } else if (whereVal.startsWith("'") && whereVal.endsWith("'")) {
-          whereVal = whereVal.substring(1, whereVal.length - 1);
-        }
-
         db[tableName] = rows.map(row => {
-          if (String(row[whereCol]) === String(whereVal)) {
+          let whereParamIdx = whereParamStart;
+          const matchesWhere = whereClause.split(/\s+AND\s+/i).every(condition => {
+            const parts = condition.split('=');
+            const whereCol = parts[0].trim();
+            let whereVal = parts[1].trim();
+            if (whereVal === '?') {
+              whereVal = params[whereParamIdx++];
+            } else if (whereVal.startsWith("'") && whereVal.endsWith("'")) {
+              whereVal = whereVal.substring(1, whereVal.length - 1);
+            }
+            return String(row[whereCol]) === String(whereVal);
+          });
+
+          if (matchesWhere) {
             affectedCount++;
             return { ...row, ...updates };
           }
@@ -504,17 +827,24 @@ class WebDatabase {
 
       const tableName = deleteMatch[1].toLowerCase();
       const whereClause = deleteMatch[2];
-      const parts = whereClause.split('=');
-      const whereCol = parts[0].trim();
-      let whereVal = parts[1].trim();
-      if (whereVal === '?') {
-        whereVal = params[0];
-      } else if (whereVal.startsWith("'") && whereVal.endsWith("'")) {
-        whereVal = whereVal.substring(1, whereVal.length - 1);
-      }
+      const conditions = whereClause.split(/\s+AND\s+/i);
 
       const beforeCount = db[tableName]?.length || 0;
-      db[tableName] = (db[tableName] || []).filter(row => String(row[whereCol]) !== String(whereVal));
+      db[tableName] = (db[tableName] || []).filter(row => {
+        let paramIdx = 0;
+        const matchesWhere = conditions.every(condition => {
+          const parts = condition.split('=');
+          const whereCol = parts[0].trim();
+          let whereVal = parts[1].trim();
+          if (whereVal === '?') {
+            whereVal = params[paramIdx++];
+          } else if (whereVal.startsWith("'") && whereVal.endsWith("'")) {
+            whereVal = whereVal.substring(1, whereVal.length - 1);
+          }
+          return String(row[whereCol]) === String(whereVal);
+        });
+        return !matchesWhere;
+      });
       const afterCount = db[tableName].length;
 
       this.setStorage(db);
@@ -542,11 +872,188 @@ let sqliteDbInstance: any = null;
 
 const getNativeDb = () => {
   if (!sqliteDbInstance) {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const SQLite = require('expo-sqlite');
     sqliteDbInstance = SQLite.openDatabaseSync('kopmart.db');
     initNativeSchema(sqliteDbInstance);
   }
   return sqliteDbInstance;
+};
+
+const ensureUserIdentityColumns = (db: any) => {
+  const columns = [
+    "ALTER TABLE users ADD COLUMN nik_masked TEXT;",
+    "ALTER TABLE users ADD COLUMN address TEXT;",
+    "ALTER TABLE users ADD COLUMN member_id TEXT;",
+    "ALTER TABLE users ADD COLUMN card_token TEXT;",
+    "ALTER TABLE users ADD COLUMN account_status TEXT DEFAULT 'ACTIVE';",
+    "ALTER TABLE users ADD COLUMN created_at TEXT;",
+  ];
+
+  columns.forEach((statement) => {
+    try {
+      db.execSync(statement);
+    } catch {
+      // Ignore when a column already exists on an upgraded local database.
+    }
+  });
+};
+
+const ensureNativeSeedUserIdentity = (db: any) => {
+  const users = db.getAllSync('SELECT id, role, rt_id, referral_code, member_id FROM users');
+  users.forEach((user: any, index: number) => {
+    const suffix = String(index + 1).padStart(3, '0');
+    const nikSuffix = String(index + 1).padStart(2, '0');
+    const memberId = user.member_id || (user.role === 'ADMIN' ? `ADM-KMP-${suffix}` : `KMP-RT03-${suffix}`);
+    db.runSync(
+      `UPDATE users
+       SET nik_masked = COALESCE(nik_masked, ?),
+           address = COALESCE(address, ?),
+           member_id = COALESCE(member_id, ?),
+           card_token = COALESCE(card_token, ?),
+           account_status = COALESCE(account_status, 'ACTIVE'),
+           created_at = COALESCE(created_at, ?)
+       WHERE id = ?`,
+      [
+        `327501********${nikSuffix}`,
+        user.rt_id ? `Desa Sukamaju, ${user.rt_id}` : 'Kantor Koperasi Merah Putih Sukamaju',
+        memberId,
+        `KOPDES-${memberId}-${user.referral_code || suffix}`,
+        new Date(Date.now() - (index + 1) * 86400000).toISOString(),
+        user.id,
+      ]
+    );
+  });
+};
+
+const ensureNativeDemoLogistics = (db: any) => {
+  const now = new Date().toISOString();
+
+  const driverUsers = [
+    ['user-ujang', 'Mang Ujang', '081300112233', 'DRIVER', 'RT 03', 'tenant-1', 0, 'UJANGKURIR', null, '333333', '327501********21', 'Kampung Sukamaju, RT 03/RW 02', 'DRV-KMP-001', 'KOPKURIR-DRV-KMP-001', 'ACTIVE', now],
+    ['user-dewi', 'Dewi Lestari', '081344556677', 'DRIVER', 'RT 04', 'tenant-1', 0, 'DEWIKURIR', null, '444444', '327501********22', 'Dusun Sukamaju Barat, RT 04/RW 02', 'DRV-KMP-002', 'KOPKURIR-DRV-KMP-002', 'ACTIVE', now],
+  ];
+
+  driverUsers.forEach((user) => {
+    db.runSync(
+      `INSERT OR IGNORE INTO users (
+        id, name, phone, role, rt_id, cooperative_id, points, referral_code, referred_by, pin,
+        nik_masked, address, member_id, card_token, account_status, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      user
+    );
+  });
+
+  const drivers = [
+    ['driver-ujang', 'user-ujang', 'tenant-1', 'Mang Ujang', '081300112233', 'MOTORCYCLE', 'ACTIVE', 5, 18, 4.8, 500000],
+    ['driver-dewi', 'user-dewi', 'tenant-1', 'Dewi Lestari', '081344556677', 'MOTORCYCLE', 'ACTIVE', 4, 12, 4.7, 400000],
+  ];
+
+  drivers.forEach((driver) => {
+    db.runSync(
+      `INSERT OR IGNORE INTO driver_profiles (
+        id, user_id, cooperative_id, name, phone, vehicle_type, status,
+        service_radius_km, total_completed_deliveries, rating, cash_limit
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      driver
+    );
+  });
+
+  const homeOrder = db.getFirstSync(`SELECT id FROM orders WHERE id = 'order-home-1'`);
+  if (!homeOrder) {
+    db.runSync(
+      `INSERT INTO orders (id, user_id, rt_batch_id, channel, fulfillment, subtotal, discount, points_redeemed, total, payment_status, order_status, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ['order-home-1', 'user-rina', null, 'SELF_ORDER', 'DELIVERY_TO_HOME', 72000, 0, 0, 79000, 'UNPAID', 'PENDING_PAYMENT', new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString()]
+    );
+    db.runSync(`INSERT OR IGNORE INTO order_items (id, order_id, product_id, name, price, quantity) VALUES (?, ?, ?, ?, ?, ?)`, ['item-home-1a', 'order-home-1', 'prod-telur', 'Telur Ayam 1kg', 28000, 1]);
+    db.runSync(`INSERT OR IGNORE INTO order_items (id, order_id, product_id, name, price, quantity) VALUES (?, ?, ?, ?, ?, ?)`, ['item-home-1b', 'order-home-1', 'prod-minyak', 'Minyak Goreng 1L', 18000, 2]);
+    db.runSync(`INSERT OR IGNORE INTO order_items (id, order_id, product_id, name, price, quantity) VALUES (?, ?, ?, ?, ?, ?)`, ['item-home-1c', 'order-home-1', 'prod-sabun', 'Sabun Cuci Wangi', 14000, 1]);
+  }
+
+  db.runSync(
+    `INSERT OR IGNORE INTO delivery_tasks (
+      id, cooperative_id, order_id, rt_batch_id, driver_id, provider_type, delivery_type,
+      origin_address, destination_address, status, delivery_fee, driver_incentive, cod_amount,
+      package_count, pickup_code, recipient_name, recipient_phone, manual_provider_name,
+      tracking_number, courier_contact, eta, failed_reason, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      'task-home-1',
+      'tenant-1',
+      'order-home-1',
+      null,
+      null,
+      'KOPKURIR',
+      'HOME_DELIVERY',
+      'Koperasi Merah Putih Sukamaju, Jl. Merdeka No. 12',
+      'Rumah Ibu Rina, RT 03/RW 02 Desa Sukamaju',
+      'PENDING_DISPATCH',
+      7000,
+      6000,
+      79000,
+      4,
+      'PU-HOME-001',
+      'Ibu Rina',
+      '087788990011',
+      null,
+      null,
+      null,
+      'Hari ini 15:30',
+      null,
+      now,
+      now,
+    ]
+  );
+
+  db.runSync(
+    `INSERT OR IGNORE INTO delivery_tasks (
+      id, cooperative_id, order_id, rt_batch_id, driver_id, provider_type, delivery_type,
+      origin_address, destination_address, status, delivery_fee, driver_incentive, cod_amount,
+      package_count, pickup_code, recipient_name, recipient_phone, manual_provider_name,
+      tracking_number, courier_contact, eta, failed_reason, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      'task-batch-demo-1',
+      'tenant-1',
+      null,
+      'batch-demo-1',
+      'driver-ujang',
+      'KOPKURIR',
+      'RT_BATCH_DELIVERY',
+      'Koperasi Merah Putih Sukamaju, Jl. Merdeka No. 12',
+      'Balai RT 03 / Pos Hansip',
+      'ASSIGNED',
+      0,
+      7000,
+      0,
+      2,
+      'PU-RT03-001',
+      'Pak Budi',
+      '089876543210',
+      null,
+      null,
+      null,
+      'Hari ini 16:00',
+      null,
+      now,
+      now,
+    ]
+  );
+
+  db.runSync(
+    `INSERT OR IGNORE INTO cash_collections (
+      id, delivery_task_id, collector_type, collector_id, expected_amount,
+      collected_amount, status, settled_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    ['cash-home-1', 'task-home-1', 'DRIVER', '', 79000, 0, 'PENDING', null]
+  );
+  db.runSync(
+    `UPDATE cash_collections
+     SET collector_id = ''
+     WHERE id = 'cash-home-1'
+       AND EXISTS (SELECT 1 FROM delivery_tasks WHERE id = 'task-home-1' AND driver_id IS NULL)`
+  );
 };
 
 const initNativeSchema = (db: any) => {
@@ -568,7 +1075,13 @@ const initNativeSchema = (db: any) => {
       points INTEGER DEFAULT 0,
       referral_code TEXT UNIQUE,
       referred_by TEXT,
-      pin TEXT DEFAULT '123456'
+      pin TEXT DEFAULT '123456',
+      nik_masked TEXT,
+      address TEXT,
+      member_id TEXT UNIQUE,
+      card_token TEXT UNIQUE,
+      account_status TEXT DEFAULT 'ACTIVE',
+      created_at TEXT
     );
     CREATE TABLE IF NOT EXISTS products (
       id TEXT PRIMARY KEY,
@@ -644,13 +1157,75 @@ const initNativeSchema = (db: any) => {
       quantity INTEGER,
       PRIMARY KEY (user_id, product_id)
     );
+    CREATE TABLE IF NOT EXISTS driver_profiles (
+      id TEXT PRIMARY KEY,
+      user_id TEXT,
+      cooperative_id TEXT,
+      name TEXT,
+      phone TEXT,
+      vehicle_type TEXT,
+      status TEXT,
+      service_radius_km REAL,
+      total_completed_deliveries INTEGER DEFAULT 0,
+      rating REAL DEFAULT 5,
+      cash_limit REAL DEFAULT 0
+    );
+    CREATE TABLE IF NOT EXISTS delivery_tasks (
+      id TEXT PRIMARY KEY,
+      cooperative_id TEXT,
+      order_id TEXT,
+      rt_batch_id TEXT,
+      driver_id TEXT,
+      provider_type TEXT,
+      delivery_type TEXT,
+      origin_address TEXT,
+      destination_address TEXT,
+      status TEXT,
+      delivery_fee REAL DEFAULT 0,
+      driver_incentive REAL DEFAULT 0,
+      cod_amount REAL DEFAULT 0,
+      package_count INTEGER DEFAULT 1,
+      pickup_code TEXT,
+      recipient_name TEXT,
+      recipient_phone TEXT,
+      manual_provider_name TEXT,
+      tracking_number TEXT,
+      courier_contact TEXT,
+      eta TEXT,
+      failed_reason TEXT,
+      created_at TEXT,
+      updated_at TEXT
+    );
+    CREATE TABLE IF NOT EXISTS delivery_proofs (
+      id TEXT PRIMARY KEY,
+      delivery_task_id TEXT,
+      proof_type TEXT,
+      proof_value TEXT,
+      photo_url TEXT,
+      latitude REAL,
+      longitude REAL,
+      confirmed_by_user_id TEXT,
+      created_at TEXT
+    );
+    CREATE TABLE IF NOT EXISTS cash_collections (
+      id TEXT PRIMARY KEY,
+      delivery_task_id TEXT,
+      collector_type TEXT,
+      collector_id TEXT,
+      expected_amount REAL,
+      collected_amount REAL,
+      status TEXT,
+      settled_at TEXT
+    );
   `);
+
+  ensureUserIdentityColumns(db);
 
   // Native database schema migrations for existing local sqlite files
   try {
     db.execSync("ALTER TABLE products ADD COLUMN cooperative_id TEXT DEFAULT 'tenant-1';");
     console.log("Database Migration: Added cooperative_id column to products table.");
-  } catch (e) {
+  } catch {
     // Ignore if column already exists
   }
 
@@ -819,6 +1394,9 @@ const initNativeSchema = (db: any) => {
     db.runSync(`INSERT INTO audit_logs (id, actor, action, details, created_at) VALUES (?, ?, ?, ?, ?)`,
       ['log-3', 'Pak Budi (RT Agent)', 'CARD_PURCHASE', 'Registered assisted order for Bu Sari using QR Card.', new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString()]);
   }
+
+  ensureNativeSeedUserIdentity(db);
+  ensureNativeDemoLogistics(db);
 };
 
 // ----------------------------------------------------
@@ -902,6 +1480,10 @@ export const dbService = {
         DROP TABLE IF EXISTS settlements;
         DROP TABLE IF EXISTS audit_logs;
         DROP TABLE IF EXISTS cart_items;
+        DROP TABLE IF EXISTS driver_profiles;
+        DROP TABLE IF EXISTS delivery_tasks;
+        DROP TABLE IF EXISTS delivery_proofs;
+        DROP TABLE IF EXISTS cash_collections;
       `);
       initNativeSchema(db);
     }

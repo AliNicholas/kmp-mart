@@ -1,26 +1,100 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { dbService, User, Product, RTBatch, Order, OrderItem, PointTransaction, Settlement, AuditLog } from '@/utils/db';
-import { Platform } from 'react-native';
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import {
+  AuditLog,
+  CashCollection,
+  dbService,
+  DeliveryProof,
+  DeliveryStatus,
+  DeliveryTask,
+  DriverProfile,
+  Order,
+  OrderItem,
+  Product,
+  RTBatch,
+  Settlement,
+  User,
+} from '@/utils/db';
 
 export interface CartItem {
   product: Product;
   quantity: number;
 }
 
+export type AppRole = 'USER' | 'ADMIN' | 'DRIVER';
+
+export interface RegisterCitizenInput {
+  fullName: string;
+  nik: string;
+  phone: string;
+  address: string;
+  rt: string;
+  rw: string;
+  cooperativeId: string;
+  referralCode?: string;
+  otp: string;
+  pin: string;
+}
+
+export const REGISTRATION_DEMO_OTP = '240826';
+
+const normalizePhone = (phone: string) => {
+  const digits = phone.replace(/\D/g, '');
+  if (digits.startsWith('62')) return `0${digits.slice(2)}`;
+  if (digits.startsWith('8')) return `0${digits}`;
+  return digits;
+};
+
+const maskNik = (nik: string) => {
+  const digits = nik.replace(/\D/g, '');
+  if (digits.length < 16) return '';
+  return `${digits.slice(0, 6)}********${digits.slice(-2)}`;
+};
+
+const buildReferralCode = (name: string, existingUsers: User[]) => {
+  const firstWord = name
+    .trim()
+    .split(/\s+/)[0]
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z0-9]/g, '')
+    .toUpperCase()
+    .slice(0, 8) || 'WARGA';
+
+  let code = `${firstWord}AJAK`;
+  let suffix = 1;
+  const existingCodes = new Set(existingUsers.map(user => user.referral_code));
+  while (existingCodes.has(code)) {
+    code = `${firstWord}${suffix}AJAK`;
+    suffix += 1;
+  }
+
+  return code;
+};
+
+const buildMemberId = (rt: string) => {
+  const cleanRt = rt.replace(/\D/g, '').padStart(2, '0').slice(-2);
+  const suffix = Date.now().toString().slice(-6);
+  return `KMP-RT${cleanRt}-${suffix}`;
+};
+
 interface AppContextType {
-  activeRole: 'USER' | 'ADMIN';
+  activeRole: AppRole;
   activeUser: User | null;
   allUsers: User[];
   products: Product[];
   batches: RTBatch[];
   orders: Order[];
+  driverProfiles: DriverProfile[];
+  deliveryTasks: DeliveryTask[];
+  deliveryProofs: DeliveryProof[];
+  cashCollections: CashCollection[];
   cart: CartItem[];
   settlements: Settlement[];
   auditLogs: AuditLog[];
   isLoading: boolean;
   
   // Setters/Refreshers
-  setActiveRole: (role: 'USER' | 'ADMIN') => void;
+  setActiveRole: (role: AppRole) => void;
   setActiveUser: (user: User) => void;
   refreshData: () => Promise<void>;
   resetAllData: () => Promise<void>;
@@ -52,20 +126,37 @@ interface AppContextType {
   createOrUpdateProduct: (product: Partial<Product>) => Promise<void>;
   processBatchFulfillment: (batchId: string, newStatus: 'PROCESSING' | 'DELIVERED_TO_RT' | 'COMPLETED') => Promise<void>;
   verifySettlement: (settlementId: string, isVerified: boolean) => Promise<void>;
+
+  // Driver & Dispatch Actions
+  createDeliveryTaskFromOrder: (orderId: string) => Promise<{ success: boolean; error?: string; taskId?: string }>;
+  createDeliveryTaskFromBatch: (batchId: string) => Promise<{ success: boolean; error?: string; taskId?: string }>;
+  assignDeliveryTask: (taskId: string, driverId: string) => Promise<{ success: boolean; error?: string }>;
+  assignManualProvider: (taskId: string, providerName: string, trackingNumber: string, courierContact: string, fee: number) => Promise<{ success: boolean; error?: string }>;
+  acceptDeliveryTask: (taskId: string) => Promise<{ success: boolean; error?: string }>;
+  rejectDeliveryTask: (taskId: string, reason: string) => Promise<{ success: boolean; error?: string }>;
+  confirmDeliveryPickup: (taskId: string, packageCount: number) => Promise<{ success: boolean; error?: string }>;
+  startDeliveryTransit: (taskId: string) => Promise<{ success: boolean; error?: string }>;
+  completeDeliveryTask: (taskId: string, proofValue: string, collectedAmount: number) => Promise<{ success: boolean; error?: string }>;
+  failDeliveryTask: (taskId: string, reason: string) => Promise<{ success: boolean; error?: string }>;
   
   // Referral
+  registerCitizen: (input: RegisterCitizenInput) => Promise<{ success: boolean; error?: string; user?: User }>;
   applyReferralCode: (code: string) => Promise<{ success: boolean; error?: string }>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider = ({ children }: { children: ReactNode }) => {
-  const [activeRole, setActiveRoleState] = useState<'USER' | 'ADMIN'>('USER');
+  const [activeRole, setActiveRoleState] = useState<AppRole>('USER');
   const [activeUser, setActiveUserState] = useState<User | null>(null);
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [batches, setBatches] = useState<RTBatch[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
+  const [driverProfiles, setDriverProfiles] = useState<DriverProfile[]>([]);
+  const [deliveryTasks, setDeliveryTasks] = useState<DeliveryTask[]>([]);
+  const [deliveryProofs, setDeliveryProofs] = useState<DeliveryProof[]>([]);
+  const [cashCollections, setCashCollections] = useState<CashCollection[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [settlements, setSettlements] = useState<Settlement[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
@@ -83,18 +174,37 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       }
     };
     init();
+    // refreshData is intentionally called once for initial database hydration.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Update activeUser automatically when role changes
   useEffect(() => {
     if (allUsers.length > 0) {
-      if (activeRole === 'USER') {
-        const dinda = allUsers.find(u => u.id === 'user-dinda') || allUsers[0];
-        setActiveUserState(dinda || null);
-      } else if (activeRole === 'ADMIN') {
-        const arif = allUsers.find(u => u.id === 'user-arif') || allUsers[0];
-        setActiveUserState(arif || null);
-      }
+      const syncTask = setTimeout(() => {
+        setActiveUserState(prev => {
+          const current = prev ? allUsers.find(u => u.id === prev.id) : null;
+
+          if (activeRole === 'USER') {
+            if (current && current.role !== 'ADMIN' && current.role !== 'DRIVER') return current;
+            return allUsers.find(u => u.id === 'user-dinda') || allUsers.find(u => u.role === 'USER') || null;
+          }
+
+          if (activeRole === 'ADMIN') {
+            if (current && current.role === 'ADMIN') return current;
+            return allUsers.find(u => u.id === 'user-arif') || allUsers.find(u => u.role === 'ADMIN') || null;
+          }
+
+          if (activeRole === 'DRIVER') {
+            if (current && current.role === 'DRIVER') return current;
+            return allUsers.find(u => u.id === 'user-ujang') || allUsers.find(u => u.role === 'DRIVER') || null;
+          }
+
+          return current || allUsers[0] || null;
+        });
+      }, 0);
+
+      return () => clearTimeout(syncTask);
     }
   }, [activeRole, allUsers]);
 
@@ -135,7 +245,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     loadCart();
   }, [activeUser]);
 
-  const refreshData = async () => {
+  async function refreshData() {
     try {
       // 1. Fetch Users
       const usersData = await dbService.getAll<User>('SELECT * FROM users');
@@ -151,23 +261,35 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       const productsData = await dbService.getAll<Product>('SELECT * FROM products');
       setProducts(productsData);
 
-      // 3. Fetch Batches (Empty since RT is gone)
-      setBatches([]);
+      // 3. Fetch RT Batches for dispatch/RT pickup flows
+      const batchData = await dbService.getAll<RTBatch>('SELECT * FROM rt_batches');
+      setBatches(batchData);
 
       // 4. Fetch Orders
       const ordersData = await dbService.getAll<Order>('SELECT * FROM orders ORDER BY created_at DESC');
       setOrders(ordersData);
 
-      // 5. Fetch Settlements (Empty since RT is gone)
-      setSettlements([]);
+      // 5. Fetch driver/logistics records
+      const driversData = await dbService.getAll<DriverProfile>('SELECT * FROM driver_profiles');
+      setDriverProfiles(driversData);
+      const taskData = await dbService.getAll<DeliveryTask>('SELECT * FROM delivery_tasks');
+      setDeliveryTasks([...taskData].sort((a, b) => String(b.updated_at).localeCompare(String(a.updated_at))));
+      const proofData = await dbService.getAll<DeliveryProof>('SELECT * FROM delivery_proofs');
+      setDeliveryProofs(proofData);
+      const cashData = await dbService.getAll<CashCollection>('SELECT * FROM cash_collections');
+      setCashCollections(cashData);
 
-      // 6. Fetch Audit Logs
+      // 6. Fetch Settlements
+      const settlementsData = await dbService.getAll<Settlement>('SELECT * FROM settlements');
+      setSettlements(settlementsData);
+
+      // 7. Fetch Audit Logs
       const logsData = await dbService.getAll<AuditLog>('SELECT * FROM audit_logs ORDER BY created_at DESC LIMIT 50');
       setAuditLogs(logsData);
     } catch (err) {
       console.error("Failed to query database:", err);
     }
-  };
+  }
 
   const resetAllData = async () => {
     setIsLoading(true);
@@ -182,7 +304,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const setActiveRole = (role: 'USER' | 'ADMIN') => {
+  const setActiveRole = (role: AppRole) => {
     setActiveRoleState(role);
     setCart([]); // Clear cart when switching roles
   };
@@ -273,6 +395,490 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     );
   };
 
+  async function createCashCollectionIfNeeded(taskId: string, collectorId: string | null, codAmount: number) {
+    if (codAmount <= 0) return;
+
+    const existing = await dbService.getFirst<CashCollection>('SELECT * FROM cash_collections WHERE delivery_task_id = ?', [taskId]);
+    if (existing) return;
+
+    await dbService.run(
+      `INSERT INTO cash_collections (
+        id, delivery_task_id, collector_type, collector_id, expected_amount, collected_amount, status, settled_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [`cash-${taskId}`, taskId, 'DRIVER', collectorId || '', codAmount, 0, 'PENDING', null]
+    );
+  }
+
+  async function getPackageCountForOrder(orderId: string) {
+    const items = await dbService.getAll<OrderItem>('SELECT * FROM order_items WHERE order_id = ?', [orderId]);
+    return items.reduce((sum, item) => sum + item.quantity, 0) || 1;
+  }
+
+  async function issueCompletionRewards(order: Order) {
+    if (order.order_status === 'COMPLETED') return 0;
+
+    const orderItems = await dbService.getAll<OrderItem>('SELECT * FROM order_items WHERE order_id = ?', [order.id]);
+    let basePoints = Math.floor(order.total / 10000);
+    const containsLocal = orderItems.some((item) => {
+      const product = products.find((p) => p.id === item.product_id);
+      return product?.is_local === 1;
+    });
+
+    if (containsLocal) {
+      basePoints *= 2;
+    }
+
+    const prevOrders = orders.filter((o) => o.user_id === order.user_id && o.id !== order.id && o.order_status === 'COMPLETED');
+    const firstOrderBonus = prevOrders.length === 0 ? 100 : 0;
+    const totalEarnedPoints = basePoints + firstOrderBonus;
+
+    if (totalEarnedPoints > 0) {
+      const user = allUsers.find((u) => u.id === order.user_id);
+      if (user) {
+        await dbService.run('UPDATE users SET points = ? WHERE id = ?', [user.points + totalEarnedPoints, order.user_id]);
+        await dbService.run(
+          `INSERT INTO point_transactions (id, user_id, type, points, source, reference_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          [`pt-${Date.now()}-drv-earn`, order.user_id, 'EARN', totalEarnedPoints, 'ORDER', order.id, new Date().toISOString()]
+        );
+      }
+    }
+
+    const buyer = allUsers.find((u) => u.id === order.user_id);
+    if (buyer?.referred_by && prevOrders.length === 0) {
+      const referrer = allUsers.find((u) => u.referral_code === buyer.referred_by);
+      if (referrer) {
+        await dbService.run('UPDATE users SET points = ? WHERE id = ?', [referrer.points + 100, referrer.id]);
+        await dbService.run(
+          `INSERT INTO point_transactions (id, user_id, type, points, source, reference_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          [`pt-${Date.now()}-drv-ref`, referrer.id, 'EARN', 100, 'REFERRAL', order.id, new Date().toISOString()]
+        );
+      }
+    }
+
+    return totalEarnedPoints;
+  }
+
+  async function createDeliveryTaskFromOrder(orderId: string) {
+    const existing = deliveryTasks.find((task) => task.order_id === orderId) ||
+      await dbService.getFirst<DeliveryTask>('SELECT * FROM delivery_tasks WHERE order_id = ?', [orderId]);
+    if (existing) {
+      return { success: true, taskId: existing.id };
+    }
+
+    const order = orders.find((item) => item.id === orderId) || await dbService.getFirst<Order>('SELECT * FROM orders WHERE id = ?', [orderId]);
+    if (!order) return { success: false, error: 'Pesanan tidak ditemukan.' };
+    if (order.fulfillment !== 'DELIVERY_TO_HOME') {
+      return { success: false, error: 'Hanya pesanan kirim ke rumah yang membutuhkan tugas KopKurir.' };
+    }
+
+    const buyer = allUsers.find((user) => user.id === order.user_id) || await dbService.getFirst<User>('SELECT * FROM users WHERE id = ?', [order.user_id]);
+    if (!buyer) return { success: false, error: 'Pembeli tidak ditemukan.' };
+
+    const nowStr = new Date().toISOString();
+    const taskId = `task-${order.id}`;
+    const deliveryFee = Math.max(0, order.total - order.subtotal + order.discount);
+    const driverIncentive = Math.max(6000, deliveryFee - 1000);
+    const codAmount = order.payment_status === 'UNPAID' ? order.total : 0;
+    const packageCount = await getPackageCountForOrder(order.id);
+
+    await dbService.run(
+      `INSERT INTO delivery_tasks (
+        id, cooperative_id, order_id, rt_batch_id, driver_id, provider_type, delivery_type,
+        origin_address, destination_address, status, delivery_fee, driver_incentive, cod_amount,
+        package_count, pickup_code, recipient_name, recipient_phone, manual_provider_name,
+        tracking_number, courier_contact, eta, failed_reason, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        taskId,
+        buyer.cooperative_id,
+        order.id,
+        null,
+        null,
+        'KOPKURIR',
+        'HOME_DELIVERY',
+        'Koperasi Merah Putih Sukamaju, Jl. Merdeka No. 12',
+        buyer.address || `Alamat warga ${buyer.rt_id || 'RT'}`,
+        'PENDING_DISPATCH',
+        deliveryFee,
+        driverIncentive,
+        codAmount,
+        packageCount,
+        `PU-${order.id.slice(-6).toUpperCase()}`,
+        buyer.name,
+        buyer.phone,
+        null,
+        null,
+        null,
+        'Hari ini',
+        null,
+        nowStr,
+        nowStr,
+      ]
+    );
+
+    await createCashCollectionIfNeeded(taskId, null, codAmount);
+    await logAudit('Sistem Dispatch', 'CREATE_DELIVERY_TASK', `Created KopKurir task ${taskId} for order ${order.id}.`);
+    await refreshData();
+
+    return { success: true, taskId };
+  }
+
+  async function createDeliveryTaskFromBatch(batchId: string) {
+    const existing = deliveryTasks.find((task) => task.rt_batch_id === batchId) ||
+      await dbService.getFirst<DeliveryTask>('SELECT * FROM delivery_tasks WHERE rt_batch_id = ?', [batchId]);
+    if (existing) {
+      return { success: true, taskId: existing.id };
+    }
+
+    const batch = batches.find((item) => item.id === batchId) || await dbService.getFirst<RTBatch>('SELECT * FROM rt_batches WHERE id = ?', [batchId]);
+    if (!batch) return { success: false, error: 'Batch RT tidak ditemukan.' };
+
+    const batchOrders = await dbService.getAll<Order>('SELECT * FROM orders WHERE rt_batch_id = ?', [batchId]);
+    const codAmount = batchOrders.filter((order) => order.payment_status === 'UNPAID').reduce((sum, order) => sum + order.total, 0);
+    const nowStr = new Date().toISOString();
+    const taskId = `task-${batch.id}`;
+    const packageCount = Math.max(batchOrders.length, batch.total_orders || 1);
+    const driverIncentive = 5000 + packageCount * 1000;
+
+    await dbService.run(
+      `INSERT INTO delivery_tasks (
+        id, cooperative_id, order_id, rt_batch_id, driver_id, provider_type, delivery_type,
+        origin_address, destination_address, status, delivery_fee, driver_incentive, cod_amount,
+        package_count, pickup_code, recipient_name, recipient_phone, manual_provider_name,
+        tracking_number, courier_contact, eta, failed_reason, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        taskId,
+        'tenant-1',
+        null,
+        batch.id,
+        null,
+        'KOPKURIR',
+        'RT_BATCH_DELIVERY',
+        'Koperasi Merah Putih Sukamaju, Jl. Merdeka No. 12',
+        batch.pickup_point,
+        'PENDING_DISPATCH',
+        batch.total_gmv > 500000 ? 0 : 5000,
+        driverIncentive,
+        codAmount,
+        packageCount,
+        `PU-${batch.rt_id.replace(/\s/g, '')}-${batch.id.slice(-3).toUpperCase()}`,
+        batch.rt_id,
+        'RT Agent',
+        null,
+        null,
+        null,
+        'Hari ini',
+        null,
+        nowStr,
+        nowStr,
+      ]
+    );
+
+    await createCashCollectionIfNeeded(taskId, null, codAmount);
+    await logAudit('Sistem Dispatch', 'CREATE_RT_DELIVERY_TASK', `Created RT pickup point task ${taskId} for ${batch.name}.`);
+    await refreshData();
+
+    return { success: true, taskId };
+  }
+
+  async function assignDeliveryTask(taskId: string, driverId: string) {
+    const task = deliveryTasks.find((item) => item.id === taskId);
+    const driver = driverProfiles.find((item) => item.id === driverId);
+    if (!task) return { success: false, error: 'Tugas pengiriman tidak ditemukan.' };
+    if (!driver) return { success: false, error: 'KopKurir tidak ditemukan.' };
+
+    const nowStr = new Date().toISOString();
+    await dbService.run(
+      `UPDATE delivery_tasks
+       SET driver_id = ?, provider_type = ?, status = ?, courier_contact = ?, eta = ?, updated_at = ?
+       WHERE id = ?`,
+      [driver.id, 'KOPKURIR', 'ASSIGNED', driver.phone, 'Hari ini', nowStr, taskId]
+    );
+
+    const cash = await dbService.getFirst<CashCollection>('SELECT * FROM cash_collections WHERE delivery_task_id = ?', [taskId]);
+    if (cash) {
+      await dbService.run('UPDATE cash_collections SET collector_id = ? WHERE id = ?', [driver.id, cash.id]);
+    }
+
+    await logAudit(activeUser?.name || 'Admin', 'DRIVER_ASSIGNED', `${driver.name} assigned to ${taskId}.`);
+    await refreshData();
+    return { success: true };
+  }
+
+  async function assignManualProvider(taskId: string, providerName: string, trackingNumber: string, courierContact: string, fee: number) {
+    const task = deliveryTasks.find((item) => item.id === taskId);
+    if (!task) return { success: false, error: 'Tugas pengiriman tidak ditemukan.' };
+
+    const nowStr = new Date().toISOString();
+    await dbService.run(
+      `UPDATE delivery_tasks
+       SET driver_id = ?, provider_type = ?, status = ?, manual_provider_name = ?, tracking_number = ?,
+           courier_contact = ?, delivery_fee = ?, eta = ?, updated_at = ?
+       WHERE id = ?`,
+      [null, 'MANUAL', 'IN_TRANSIT', providerName.trim() || 'Kurir Manual', trackingNumber.trim(), courierContact.trim(), fee, 'Menunggu update kurir', nowStr, taskId]
+    );
+
+    if (task.order_id) {
+      await dbService.run("UPDATE orders SET order_status = 'PICKED_UP' WHERE id = ?", [task.order_id]);
+    }
+
+    await logAudit(activeUser?.name || 'Admin', 'MANUAL_PROVIDER_ASSIGNED', `${providerName || 'Kurir Manual'} assigned to ${taskId}, AWB ${trackingNumber || '-'}.`);
+    await refreshData();
+    return { success: true };
+  }
+
+  async function updateDeliveryTaskStatus(taskId: string, status: DeliveryStatus, details: string) {
+    const task = deliveryTasks.find((item) => item.id === taskId);
+    if (!task) return { success: false, error: 'Tugas pengiriman tidak ditemukan.' };
+
+    await dbService.run('UPDATE delivery_tasks SET status = ?, updated_at = ? WHERE id = ?', [status, new Date().toISOString(), taskId]);
+    await logAudit(activeUser?.name || 'KopKurir', 'DELIVERY_STATUS_CHANGED', `${taskId}: ${task.status} -> ${status}. ${details}`);
+    await refreshData();
+    return { success: true };
+  }
+
+  async function acceptDeliveryTask(taskId: string) {
+    return updateDeliveryTaskStatus(taskId, 'ACCEPTED', 'Driver accepted task.');
+  }
+
+  async function rejectDeliveryTask(taskId: string, reason: string) {
+    const task = deliveryTasks.find((item) => item.id === taskId);
+    if (!task) return { success: false, error: 'Tugas pengiriman tidak ditemukan.' };
+
+    await dbService.run(
+      'UPDATE delivery_tasks SET status = ?, failed_reason = ?, updated_at = ? WHERE id = ?',
+      ['REJECTED', reason || 'Driver menolak tugas', new Date().toISOString(), taskId]
+    );
+    await logAudit(activeUser?.name || 'KopKurir', 'TASK_REJECTED', `${taskId} rejected. Reason: ${reason || '-'}`);
+    await refreshData();
+    return { success: true };
+  }
+
+  async function confirmDeliveryPickup(taskId: string, packageCount: number) {
+    const task = deliveryTasks.find((item) => item.id === taskId);
+    if (!task) return { success: false, error: 'Tugas pengiriman tidak ditemukan.' };
+
+    const nowStr = new Date().toISOString();
+    await dbService.run(
+      'UPDATE delivery_tasks SET status = ?, package_count = ?, updated_at = ? WHERE id = ?',
+      ['PICKED_UP', Math.max(1, packageCount || task.package_count), nowStr, taskId]
+    );
+    await dbService.run(
+      `INSERT INTO delivery_proofs (
+        id, delivery_task_id, proof_type, proof_value, photo_url, latitude, longitude, confirmed_by_user_id, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [`proof-pickup-${Date.now()}`, taskId, 'QR', task.pickup_code, null, null, null, activeUser?.id || null, nowStr]
+    );
+
+    if (task.order_id) {
+      await dbService.run("UPDATE orders SET order_status = 'PICKED_UP' WHERE id = ?", [task.order_id]);
+    } else if (task.rt_batch_id) {
+      await dbService.run("UPDATE rt_batches SET status = 'PROCESSING' WHERE id = ?", [task.rt_batch_id]);
+    }
+
+    await logAudit(activeUser?.name || 'KopKurir', 'PICKUP_CONFIRMED', `${taskId} pickup QR ${task.pickup_code}, packages: ${packageCount || task.package_count}.`);
+    await refreshData();
+    return { success: true };
+  }
+
+  async function startDeliveryTransit(taskId: string) {
+    const task = deliveryTasks.find((item) => item.id === taskId);
+    if (task?.order_id) {
+      await dbService.run("UPDATE orders SET order_status = 'PICKED_UP' WHERE id = ?", [task.order_id]);
+    }
+    return updateDeliveryTaskStatus(taskId, 'IN_TRANSIT', 'Package is now in transit.');
+  }
+
+  async function completeDeliveryTask(taskId: string, proofValue: string, collectedAmount: number) {
+    const task = deliveryTasks.find((item) => item.id === taskId);
+    if (!task) return { success: false, error: 'Tugas pengiriman tidak ditemukan.' };
+
+    const nowStr = new Date().toISOString();
+    const proofType = task.delivery_type === 'RT_BATCH_DELIVERY' ? 'RT_CONFIRMATION' : 'PIN';
+    await dbService.run('UPDATE delivery_tasks SET status = ?, updated_at = ? WHERE id = ?', ['DELIVERED', nowStr, taskId]);
+    await dbService.run(
+      `INSERT INTO delivery_proofs (
+        id, delivery_task_id, proof_type, proof_value, photo_url, latitude, longitude, confirmed_by_user_id, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [`proof-delivery-${Date.now()}`, taskId, proofType, proofValue || 'CONFIRMED', null, null, null, activeUser?.id || null, nowStr]
+    );
+
+    const cash = await dbService.getFirst<CashCollection>('SELECT * FROM cash_collections WHERE delivery_task_id = ?', [taskId]);
+    if (cash) {
+      const amount = Math.max(0, collectedAmount || 0);
+      const cashStatus = amount >= cash.expected_amount ? 'COLLECTED' : amount > 0 ? 'SHORT' : 'PENDING';
+      await dbService.run(
+        'UPDATE cash_collections SET collected_amount = ?, status = ? WHERE id = ?',
+        [amount, cashStatus, cash.id]
+      );
+    }
+
+    if (task.order_id) {
+      const order = orders.find((item) => item.id === task.order_id) || await dbService.getFirst<Order>('SELECT * FROM orders WHERE id = ?', [task.order_id]);
+      if (order) {
+        const earned = await issueCompletionRewards(order);
+        await dbService.run("UPDATE orders SET order_status = 'COMPLETED', payment_status = 'PAID' WHERE id = ?", [order.id]);
+        await logAudit(activeUser?.name || 'KopKurir', 'DELIVERY_COMPLETED', `${taskId} delivered to ${task.recipient_name}. Points awarded: ${earned}.`);
+      }
+    } else if (task.rt_batch_id) {
+      await dbService.run("UPDATE rt_batches SET status = 'DELIVERED_TO_RT' WHERE id = ?", [task.rt_batch_id]);
+      await dbService.run("UPDATE orders SET order_status = 'DELIVERED_TO_RT' WHERE rt_batch_id = ?", [task.rt_batch_id]);
+      await logAudit(activeUser?.name || 'KopKurir', 'RT_BATCH_DELIVERED', `${taskId} delivered to RT point with proof ${proofValue || 'CONFIRMED'}.`);
+    }
+
+    if (task.driver_id) {
+      const driver = driverProfiles.find((item) => item.id === task.driver_id);
+      if (driver) {
+        await dbService.run(
+          'UPDATE driver_profiles SET total_completed_deliveries = ? WHERE id = ?',
+          [driver.total_completed_deliveries + 1, driver.id]
+        );
+      }
+    }
+
+    await refreshData();
+    return { success: true };
+  }
+
+  async function failDeliveryTask(taskId: string, reason: string) {
+    const task = deliveryTasks.find((item) => item.id === taskId);
+    if (!task) return { success: false, error: 'Tugas pengiriman tidak ditemukan.' };
+
+    await dbService.run(
+      'UPDATE delivery_tasks SET status = ?, failed_reason = ?, updated_at = ? WHERE id = ?',
+      ['FAILED', reason || 'Alamat tidak ditemukan / penerima tidak dapat dihubungi', new Date().toISOString(), taskId]
+    );
+    await logAudit(activeUser?.name || 'KopKurir', 'FAILED_DELIVERY', `${taskId} failed. Reason: ${reason || '-'}`);
+    await refreshData();
+    return { success: true };
+  }
+
+  const registerCitizen = async (input: RegisterCitizenInput) => {
+    const fullName = input.fullName.trim();
+    const phone = normalizePhone(input.phone);
+    const nik = input.nik.replace(/\D/g, '');
+    const rtNumber = input.rt.replace(/\D/g, '').padStart(2, '0').slice(-2);
+    const rwNumber = input.rw.replace(/\D/g, '').padStart(2, '0').slice(-2);
+    const address = input.address.trim();
+    const cooperativeId = input.cooperativeId || 'tenant-1';
+    const cleanReferralCode = input.referralCode?.trim().toUpperCase() || null;
+    const pin = input.pin.replace(/\D/g, '');
+
+    if (fullName.length < 3) {
+      return { success: false, error: 'Nama sesuai KTP minimal 3 karakter.' };
+    }
+
+    if (nik.length !== 16) {
+      return { success: false, error: 'NIK KTP harus 16 digit.' };
+    }
+
+    if (phone.length < 10 || phone.length > 13 || !phone.startsWith('0')) {
+      return { success: false, error: 'Nomor HP harus memakai format Indonesia yang valid.' };
+    }
+
+    if (!address || !rtNumber || !rwNumber) {
+      return { success: false, error: 'Alamat, RT, dan RW wajib diisi.' };
+    }
+
+    if (input.otp.trim() !== REGISTRATION_DEMO_OTP) {
+      return { success: false, error: 'Kode OTP tidak sesuai.' };
+    }
+
+    if (!/^\d{6}$/.test(pin)) {
+      return { success: false, error: 'PIN harus 6 digit angka.' };
+    }
+
+    try {
+      const duplicatePhone = await dbService.getFirst<User>('SELECT * FROM users WHERE phone = ?', [phone]);
+      if (duplicatePhone) {
+        return { success: false, error: 'Nomor HP sudah terdaftar. Pilih akun dari menu pengguna.' };
+      }
+
+      const cooperative = await dbService.getFirst('SELECT * FROM tenants WHERE id = ?', [cooperativeId]);
+      if (!cooperative) {
+        return { success: false, error: 'Koperasi tujuan tidak ditemukan.' };
+      }
+
+      let referredBy: string | null = null;
+      if (cleanReferralCode) {
+        const referrer = allUsers.find(u => u.referral_code === cleanReferralCode);
+        if (!referrer) {
+          return { success: false, error: 'Kode KopAjak tidak ditemukan.' };
+        }
+        referredBy = cleanReferralCode;
+      }
+
+      const nowStr = new Date().toISOString();
+      const userId = `user-${phone.slice(-4)}-${Date.now()}`;
+      const referralCode = buildReferralCode(fullName, allUsers);
+      const memberId = buildMemberId(rtNumber);
+      const cardToken = `KOPDES-${memberId}-${Math.floor(Math.random() * 9000 + 1000)}`;
+      const rtId = `RT ${rtNumber}`;
+      const fullAddress = `${address}, RT ${rtNumber}/RW ${rwNumber}`;
+
+      const newUser: User = {
+        id: userId,
+        name: fullName,
+        phone,
+        role: 'USER',
+        rt_id: rtId,
+        cooperative_id: cooperativeId,
+        points: 0,
+        referral_code: referralCode,
+        referred_by: referredBy,
+        pin,
+        nik_masked: maskNik(nik),
+        address: fullAddress,
+        member_id: memberId,
+        card_token: cardToken,
+        account_status: 'ACTIVE',
+        created_at: nowStr,
+      };
+
+      await dbService.run(
+        `INSERT INTO users (
+          id, name, phone, role, rt_id, cooperative_id, points, referral_code, referred_by, pin,
+          nik_masked, address, member_id, card_token, account_status, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          newUser.id,
+          newUser.name,
+          newUser.phone,
+          newUser.role,
+          newUser.rt_id,
+          newUser.cooperative_id,
+          newUser.points,
+          newUser.referral_code,
+          newUser.referred_by,
+          newUser.pin,
+          newUser.nik_masked,
+          newUser.address,
+          newUser.member_id,
+          newUser.card_token,
+          newUser.account_status,
+          newUser.created_at,
+        ]
+      );
+
+      await logAudit(
+        'Sistem Registrasi',
+        'USER_REGISTERED',
+        `${fullName} aktif sebagai anggota ${memberId} di ${rtId}. NIK tersimpan sebagai ${newUser.nik_masked}.`
+      );
+
+      setActiveRoleState('USER');
+      setActiveUserState(newUser);
+      setCart([]);
+      await refreshData();
+
+      return { success: true, user: newUser };
+    } catch (err: any) {
+      console.error('Registration failed:', err);
+      return { success: false, error: err.message || 'Registrasi gagal.' };
+    }
+  };
+
   // Checkout
   const checkout = async (
     fulfillment: 'PICKUP_AT_COOP' | 'DELIVERY_TO_HOME' | 'RT_PICKUP_POINT',
@@ -313,22 +919,25 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       const pointsUsed = Math.min(pointsRedeemed, Math.floor(discount / 1000));
       
       // Check if any product is from a different cooperative (cross-cooperative shopping)
-      let surcharge = 0;
+      let logisticsSurcharge = 0;
       for (const item of cart) {
         const prod = products.find(p => p.id === item.product.id);
         if (prod && prod.cooperative_id !== buyer.cooperative_id) {
           if (prod.cooperative_id === 'tenant-2' || prod.cooperative_id === 'tenant-3') {
-            surcharge = Math.max(surcharge, 5000);
+            logisticsSurcharge = Math.max(logisticsSurcharge, 5000);
           } else if (prod.cooperative_id === 'tenant-4') {
-            surcharge = Math.max(surcharge, 15000);
+            logisticsSurcharge = Math.max(logisticsSurcharge, 15000);
           } else if (prod.cooperative_id === 'tenant-5' || prod.cooperative_id === 'tenant-6') {
-            surcharge = Math.max(surcharge, 25000);
+            logisticsSurcharge = Math.max(logisticsSurcharge, 25000);
           } else {
-            surcharge = Math.max(surcharge, 5000);
+            logisticsSurcharge = Math.max(logisticsSurcharge, 5000);
           }
         }
       }
-      const total = subtotal - discount + surcharge;
+      const deliveryFee = fulfillment === 'DELIVERY_TO_HOME'
+        ? Math.max(logisticsSurcharge, 7000)
+        : logisticsSurcharge;
+      const total = subtotal - discount + deliveryFee;
 
       const orderId = `order-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
       const nowStr = new Date().toISOString();
@@ -401,6 +1010,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         'CHECKOUT', 
         `Fulfillment: ${fulfillment}, Channel: ${channelDesc}, Total: Rp${total.toLocaleString('id-ID')}, Items: ${cart.length} SKUs for User: ${buyer.name}`
       );
+
+      if (fulfillment === 'DELIVERY_TO_HOME') {
+        await createDeliveryTaskFromOrder(orderId);
+      }
 
       // Clear cart from database
       await dbService.run(
@@ -477,6 +1090,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       'SUBMIT_BATCH',
       `Submitted batch ${batchId} for fulfillment. Created settlement.`
     );
+    await createDeliveryTaskFromBatch(batchId);
     await refreshData();
   };
 
@@ -619,8 +1233,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         ? 'DELIVERED_TO_RT' 
         : 'COMPLETED';
 
-    const targetPaymentStatus = newStatus === 'COMPLETED' ? 'PAID' : 'UNPAID';
-
     // Update all orders linked to this batch
     await dbService.run(
       'UPDATE orders SET order_status = ? WHERE rt_batch_id = ?',
@@ -694,6 +1306,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       products,
       batches,
       orders,
+      driverProfiles,
+      deliveryTasks,
+      deliveryProofs,
+      cashCollections,
       cart,
       settlements,
       auditLogs,
@@ -720,6 +1336,17 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       createOrUpdateProduct,
       processBatchFulfillment,
       verifySettlement,
+      createDeliveryTaskFromOrder,
+      createDeliveryTaskFromBatch,
+      assignDeliveryTask,
+      assignManualProvider,
+      acceptDeliveryTask,
+      rejectDeliveryTask,
+      confirmDeliveryPickup,
+      startDeliveryTransit,
+      completeDeliveryTask,
+      failDeliveryTask,
+      registerCitizen,
       applyReferralCode
     }}>
       {children}

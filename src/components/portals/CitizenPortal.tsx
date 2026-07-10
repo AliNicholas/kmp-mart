@@ -21,14 +21,12 @@ export default function CitizenPortal() {
     products,
     orders,
     cart,
-    batches,
     addToCart,
     updateCartQuantity,
     removeFromCart,
     clearCart,
     checkout,
     applyReferralCode,
-    allUsers,
   } = useApp();
 
   const [subTab, setSubTab] = useState(0); // 0: Belanja, 1: Pesanan, 2: Kartu & Poin
@@ -52,7 +50,11 @@ export default function CitizenPortal() {
   // Synchronize cooperative ID with active user
   React.useEffect(() => {
     if (activeUser?.cooperative_id) {
-      setActiveCooperativeId(activeUser.cooperative_id);
+      const syncTask = setTimeout(() => {
+        setActiveCooperativeId(activeUser.cooperative_id);
+      }, 0);
+
+      return () => clearTimeout(syncTask);
     }
   }, [activeUser]);
 
@@ -99,13 +101,17 @@ export default function CitizenPortal() {
     : 0;
   const discount = pointsToRedeem * 1000;
   const isCrossCoop = activeCooperativeId !== (activeUser?.cooperative_id || 'tenant-1');
-  const surcharge = isCrossCoop ? 5000 : 0;
-  const total = subtotal - discount + surcharge;
-
-  // Active batches linked to user's RT
-  const userRTBatches = batches.filter(
-    (b) => b.rt_id === activeUser?.rt_id && b.status === "OPEN",
-  );
+  const logisticsSurcharge = activeCooperativeId === 'tenant-4'
+    ? 15000
+    : activeCooperativeId === 'tenant-5' || activeCooperativeId === 'tenant-6'
+      ? 25000
+      : isCrossCoop
+        ? 5000
+        : 0;
+  const deliveryFee = selectedFulfillment === "DELIVERY_TO_HOME"
+    ? Math.max(logisticsSurcharge, 7000)
+    : logisticsSurcharge;
+  const total = subtotal - discount + deliveryFee;
 
   const handleCheckout = async () => {
     if (cart.length === 0) return;
@@ -547,12 +553,17 @@ export default function CitizenPortal() {
                 {activeUser?.name}
               </Text>
               <Text className="text-emerald-200 text-[9px] mt-0.5">
-                MEMBER ID: {activeUser?.referral_code || "MEMBER-ID"}
+                MEMBER ID: {activeUser?.member_id || activeUser?.referral_code || "MEMBER-ID"}
               </Text>
               <Text className="text-emerald-300 text-[8px]">
-                NIK: 3275***********{" "}
+                NIK: {activeUser?.nik_masked || "3275**********01"}{" "}
                 {activeUser?.rt_id ? `• ${activeUser.rt_id}` : ""}
               </Text>
+              {activeUser?.card_token && (
+                <Text className="text-emerald-300 text-[7px] mt-0.5 max-w-[190px]" numberOfLines={1}>
+                  QR token: {activeUser.card_token}
+                </Text>
+              )}
             </View>
             {/* Simulation barcode / QR */}
             <View className="bg-white p-1 rounded-lg">
@@ -1063,13 +1074,13 @@ export default function CitizenPortal() {
                     </Text>
                   </View>
                 )}
-                {isCrossCoop && (
+                {deliveryFee > 0 && (
                   <View className="flex-row justify-between py-1">
                     <Text className="text-amber-700 text-[10px]">
-                      Biaya Kurir Lintas Koperasi
+                      {isCrossCoop ? "Biaya Logistik Lintas Koperasi" : "Biaya KopKurir Desa"}
                     </Text>
                     <Text className="text-amber-700 text-xs font-bold">
-                      +Rp5.000
+                      +Rp{deliveryFee.toLocaleString("id-ID")}
                     </Text>
                   </View>
                 )}

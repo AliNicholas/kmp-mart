@@ -1,4 +1,3 @@
-import React from 'react';
 import { View, Text } from 'react-native';
 import { useApp } from '@/contexts/AppContext';
 import { SymbolView } from 'expo-symbols';
