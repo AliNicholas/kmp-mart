@@ -13,6 +13,7 @@ import {
   View,
 } from "react-native";
 import DeliveryTrackerModal from "../DeliveryTrackerModal";
+import CoopSelectorModal from "../CoopSelectorModal";
 
 export default function CitizenPortal() {
   const {
@@ -47,6 +48,7 @@ export default function CitizenPortal() {
     string | null
   >(null);
   const [activeCooperativeId, setActiveCooperativeId] = useState<string>('tenant-1');
+  const [coopSelectorVisible, setCoopSelectorVisible] = useState(false);
 
   // Synchronize cooperative ID with active user
   React.useEffect(() => {
@@ -195,6 +197,35 @@ export default function CitizenPortal() {
     }
   };
 
+  const getCoopName = (id: string) => {
+    switch (id) {
+      case 'tenant-1': return 'Koperasi Merah Putih Sukamaju';
+      case 'tenant-2': return 'Koperasi Sukasari (Tetangga)';
+      case 'tenant-3': return 'Koperasi Sukamukti (Tetangga)';
+      case 'tenant-4': return 'Koperasi Jaya Makmur (Jawa Timur)';
+      case 'tenant-5': return 'Koperasi Danau Toba (Sumatera Utara)';
+      case 'tenant-6': return 'Koperasi Bunaken Lestari (Sulawesi Utara)';
+      default: return 'Koperasi Desa';
+    }
+  };
+
+  const getCoopWarningText = (id: string) => {
+    switch (id) {
+      case 'tenant-2':
+        return '⚠️ Anda sedang belanja di Koperasi Sukasari (Tetangga). Pengiriman +1 hari & biaya kurir tambahan Rp5.000 berlaku.';
+      case 'tenant-3':
+        return '⚠️ Anda sedang belanja di Koperasi Sukamukti (Tetangga). Pengiriman +1 hari & biaya kurir tambahan Rp5.000 berlaku.';
+      case 'tenant-4':
+        return '⚠️ Anda sedang belanja di Koperasi Jaya Makmur (Jawa Timur - Luar Pulau). Pengiriman +3 hari & biaya logistik tambahan Rp15.000 berlaku.';
+      case 'tenant-5':
+        return '⚠️ Anda sedang belanja di Koperasi Danau Toba (Sumatera Utara - Luar Pulau). Pengiriman +5 hari & biaya logistik tambahan Rp25.000 berlaku.';
+      case 'tenant-6':
+        return '⚠️ Anda sedang belanja di Koperasi Bunaken Lestari (Sulawesi Utara - Luar Pulau). Pengiriman +4 hari & biaya logistik tambahan Rp25.000 berlaku.';
+      default:
+        return '';
+    }
+  };
+
   // Render Belanja
   const renderBelanja = () => (
     <View className="flex-1 pb-16">
@@ -230,22 +261,14 @@ export default function CitizenPortal() {
           <View>
             <Text style={{ fontSize: 8, color: '#a7f3d0', fontWeight: 'bold', textTransform: 'uppercase' }}>Lokasi Belanja Koperasi</Text>
             <Text style={{ fontSize: 11, color: '#fff', fontWeight: 'bold' }}>
-              {activeCooperativeId === 'tenant-1' ? 'Koperasi Merah Putih Sukamaju' : 'Koperasi Sukasari (Tetangga)'}
+              {getCoopName(activeCooperativeId)}
             </Text>
           </View>
         </View>
         
         {/* Switch button */}
         <Pressable
-          onPress={() => {
-            const nextCoop = activeCooperativeId === 'tenant-1' ? 'tenant-2' : 'tenant-1';
-            setActiveCooperativeId(nextCoop);
-            clearCart();
-            Alert.alert(
-              "Beralih Koperasi", 
-              `Berhasil beralih ke ${nextCoop === 'tenant-1' ? 'Koperasi Sukamaju' : 'Koperasi Sukasari'}. Keranjang Anda telah dikosongkan untuk menyesuaikan katalog toko.`
-            );
-          }}
+          onPress={() => setCoopSelectorVisible(true)}
           style={{
             backgroundColor: '#047857',
             paddingHorizontal: 10,
@@ -264,7 +287,7 @@ export default function CitizenPortal() {
         <View style={{ backgroundColor: '#fffbeb', paddingHorizontal: 12, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#fef3c7', flexDirection: 'row', alignItems: 'center', gap: 6 }}>
           <SymbolView name="exclamationmark.triangle.fill" size={12} tintColor="#d97706" />
           <Text style={{ fontSize: 9, color: '#b45309', fontWeight: '600', flex: 1, lineHeight: 12 }}>
-            ⚠️ Anda sedang belanja di Koperasi Sukasari (Koperasi Tetangga). Pengiriman +1 hari & biaya kurir tambahan Rp5.000 berlaku.
+            {getCoopWarningText(activeCooperativeId)}
           </Text>
         </View>
       )}
@@ -1310,6 +1333,16 @@ export default function CitizenPortal() {
         orderId={activeDeliveryOrderId}
         visible={!!activeDeliveryOrderId}
         onClose={() => setActiveDeliveryOrderId(null)}
+      />
+
+      <CoopSelectorModal
+        visible={coopSelectorVisible}
+        onClose={() => setCoopSelectorVisible(false)}
+        activeCoopId={activeCooperativeId}
+        onSelectCoop={(id) => {
+          setActiveCooperativeId(id);
+          clearCart();
+        }}
       />
     </View>
   );

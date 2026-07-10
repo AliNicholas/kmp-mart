@@ -318,14 +318,21 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       const pointsUsed = Math.min(pointsRedeemed, Math.floor(discount / 1000));
       
       // Check if any product is from a different cooperative (cross-cooperative shopping)
-      let hasCrossCoop = false;
+      let surcharge = 0;
       for (const item of cart) {
         const prod = products.find(p => p.id === item.product.id);
         if (prod && prod.cooperative_id !== buyer.cooperative_id) {
-          hasCrossCoop = true;
+          if (prod.cooperative_id === 'tenant-2' || prod.cooperative_id === 'tenant-3') {
+            surcharge = Math.max(surcharge, 5000);
+          } else if (prod.cooperative_id === 'tenant-4') {
+            surcharge = Math.max(surcharge, 15000);
+          } else if (prod.cooperative_id === 'tenant-5' || prod.cooperative_id === 'tenant-6') {
+            surcharge = Math.max(surcharge, 25000);
+          } else {
+            surcharge = Math.max(surcharge, 5000);
+          }
         }
       }
-      const surcharge = hasCrossCoop ? 5000 : 0;
       const total = subtotal - discount + surcharge;
 
       const orderId = `order-${Date.now()}-${Math.floor(Math.random() * 1000)}`;

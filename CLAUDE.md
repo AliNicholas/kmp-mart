@@ -708,7 +708,7 @@ Allows user/RT to create and pay orders.
 | CHK-007 | Create order invoice                         | P0       | Persist orders in SQLite database |
 | CHK-008 | Order is idempotent                          | P1       | Prevent double checkouts |
 | CHK-009 | Live Delivery Simulation (GoFood-style)      | P0       | For `DELIVERY_TO_HOME`, show real-time 4-stage tracking modal (Driver: Mang Ujang). Reaching 'Arrived' auto-completes order (`COMPLETED`/`PAID`) in DB. |
-| CHK-010 | Cross-Coop Shopping & Surcharge             | P0       | Warga can switch active Kopdes (e.g. Sukamaju to Sukasari). Surcharge of Rp5.000 & +1 day delivery applies for neighbor coop orders. |
+| CHK-010 | Cross-Coop Shopping & Surcharge             | P0       | Warga can switch active Kopdes (Local, Neighboring, or National/Luar Pulau). National map displays all 6 cooperative locations across islands (Sumatra, Java, Bali, Sulawesi) using real Google Maps with dynamic surcharges (Rp5.000 to Rp25.000) and delivery adjustments (+1 to +5 days). |
 
 ---
 

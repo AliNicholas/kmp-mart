@@ -174,6 +174,46 @@ class WebDatabase {
       changed = true;
     }
 
+    // Ensure Sukamukti (tenant-3) exists
+    if (db['tenants'] && !db['tenants'].some((t: any) => t.id === 'tenant-3')) {
+      db['tenants'].push({
+        id: 'tenant-3',
+        name: 'Koperasi Sukamukti (Tetangga)',
+        code: 'KOP-SUKAMUKTI',
+        village: 'Sukamukti',
+        status: 'ACTIVE'
+      });
+      
+      // Seed products for Sukamukti
+      db['products'].push(
+        { id: 'prod-beras-3', cooperative_id: 'tenant-3', name: 'Beras Merah Organik 2kg', price: 45000, cost_price: 39000, stock: 35, unit: 'pcs', is_local: 1, image_url: 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=400' },
+        { id: 'prod-madu', cooperative_id: 'tenant-3', name: 'Madu Hutan Asli Sukamukti', price: 65000, cost_price: 55000, stock: 20, unit: 'pcs', is_local: 1, image_url: 'https://images.unsplash.com/photo-1587049352846-4a222e784d38?w=400' },
+        { id: 'prod-kopi', cooperative_id: 'tenant-3', name: 'Kopi Bubuk Robusta 250g', price: 24000, cost_price: 19000, stock: 60, unit: 'pcs', is_local: 1, image_url: 'https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=400' }
+      );
+      changed = true;
+    }
+
+    // Ensure Koperasi Jaya Makmur (tenant-4) exists
+    if (db['tenants'] && !db['tenants'].some((t: any) => t.id === 'tenant-4')) {
+      db['tenants'].push({ id: 'tenant-4', name: 'Koperasi Jaya Makmur (Jawa Timur)', code: 'KOP-JAYAMAKMUR', village: 'Surabaya', status: 'ACTIVE' });
+      db['products'].push({ id: 'prod-apel', cooperative_id: 'tenant-4', name: 'Apel Malang Segar 1kg', price: 25000, cost_price: 20000, stock: 80, unit: 'kg', is_local: 1, image_url: 'https://images.unsplash.com/photo-1560806887-1e4cd0b6cbd6?w=400' });
+      changed = true;
+    }
+
+    // Ensure Koperasi Danau Toba (tenant-5) exists
+    if (db['tenants'] && !db['tenants'].some((t: any) => t.id === 'tenant-5')) {
+      db['tenants'].push({ id: 'tenant-5', name: 'Koperasi Danau Toba (Sumatera Utara)', code: 'KOP-DANAUTOBA', village: 'Balige', status: 'ACTIVE' });
+      db['products'].push({ id: 'prod-kopi-lintong', cooperative_id: 'tenant-5', name: 'Kopi Lintong Premium 250g', price: 48000, cost_price: 40000, stock: 40, unit: 'pcs', is_local: 1, image_url: 'https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=400' });
+      changed = true;
+    }
+
+    // Ensure Koperasi Bunaken Lestari (tenant-6) exists
+    if (db['tenants'] && !db['tenants'].some((t: any) => t.id === 'tenant-6')) {
+      db['tenants'].push({ id: 'tenant-6', name: 'Koperasi Bunaken Lestari (Sulawesi Utara)', code: 'KOP-BUNAKEN', village: 'Manado', status: 'ACTIVE' });
+      db['products'].push({ id: 'prod-roa', cooperative_id: 'tenant-6', name: 'Sambal Roa Manado', price: 22000, cost_price: 17000, stock: 50, unit: 'pcs', is_local: 1, image_url: 'https://images.unsplash.com/photo-1595124201382-742455b33db6?w=400' });
+      changed = true;
+    }
+
     if (updated || changed) {
       this.setStorage(db);
     }
@@ -634,10 +674,54 @@ const initNativeSchema = (db: any) => {
         ['prod-paket-2', 'tenant-2', 'Paket Hemat Sukasari 75K', 75000, 65000, 15, 'pack', 0, 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=400']);
     }
 
+    const tenants3 = db.getAllSync(`SELECT * FROM tenants WHERE id = 'tenant-3'`);
+    if (tenants3.length === 0) {
+      console.log("Database Migration: Seeding Sukamukti (tenant-3) and items...");
+      db.runSync(`INSERT OR IGNORE INTO tenants (id, name, code, village, status) VALUES (?, ?, ?, ?, ?)`, 
+        ['tenant-3', 'Koperasi Sukamukti (Tetangga)', 'KOP-SUKAMUKTI', 'Sukamukti', 'ACTIVE']);
+      
+      db.runSync(`INSERT OR IGNORE INTO products (id, cooperative_id, name, price, cost_price, stock, unit, is_local, image_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`, 
+        ['prod-beras-3', 'tenant-3', 'Beras Merah Organik 2kg', 45000, 39000, 35, 'pcs', 1, 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=400']);
+      db.runSync(`INSERT OR IGNORE INTO products (id, cooperative_id, name, price, cost_price, stock, unit, is_local, image_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`, 
+        ['prod-madu', 'tenant-3', 'Madu Hutan Asli Sukamukti', 65000, 55000, 20, 'pcs', 1, 'https://images.unsplash.com/photo-1587049352846-4a222e784d38?w=400']);
+      db.runSync(`INSERT OR IGNORE INTO products (id, cooperative_id, name, price, cost_price, stock, unit, is_local, image_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`, 
+        ['prod-kopi', 'tenant-3', 'Kopi Bubuk Robusta 250g', 24000, 19000, 60, 'pcs', 1, 'https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=400']);
+    }
+
+    // Seed tenant-4 (Jawa Timur)
+    const tenants4 = db.getAllSync(`SELECT * FROM tenants WHERE id = 'tenant-4'`);
+    if (tenants4.length === 0) {
+      console.log("Database Migration: Seeding tenant-4...");
+      db.runSync(`INSERT OR IGNORE INTO tenants (id, name, code, village, status) VALUES (?, ?, ?, ?, ?)`, 
+        ['tenant-4', 'Koperasi Jaya Makmur (Jawa Timur)', 'KOP-JAYAMAKMUR', 'Surabaya', 'ACTIVE']);
+      db.runSync(`INSERT OR IGNORE INTO products (id, cooperative_id, name, price, cost_price, stock, unit, is_local, image_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`, 
+        ['prod-apel', 'tenant-4', 'Apel Malang Segar 1kg', 25000, 20000, 80, 'kg', 1, 'https://images.unsplash.com/photo-1560806887-1e4cd0b6cbd6?w=400']);
+    }
+
+    // Seed tenant-5 (Sumatera Utara)
+    const tenants5 = db.getAllSync(`SELECT * FROM tenants WHERE id = 'tenant-5'`);
+    if (tenants5.length === 0) {
+      console.log("Database Migration: Seeding tenant-5...");
+      db.runSync(`INSERT OR IGNORE INTO tenants (id, name, code, village, status) VALUES (?, ?, ?, ?, ?)`, 
+        ['tenant-5', 'Koperasi Danau Toba (Sumatera Utara)', 'KOP-DANAUTOBA', 'Balige', 'ACTIVE']);
+      db.runSync(`INSERT OR IGNORE INTO products (id, cooperative_id, name, price, cost_price, stock, unit, is_local, image_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`, 
+        ['prod-kopi-lintong', 'tenant-5', 'Kopi Lintong Premium 250g', 48000, 40000, 40, 'pcs', 1, 'https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=400']);
+    }
+
+    // Seed tenant-6 (Sulawesi Utara)
+    const tenants6 = db.getAllSync(`SELECT * FROM tenants WHERE id = 'tenant-6'`);
+    if (tenants6.length === 0) {
+      console.log("Database Migration: Seeding tenant-6...");
+      db.runSync(`INSERT OR IGNORE INTO tenants (id, name, code, village, status) VALUES (?, ?, ?, ?, ?)`, 
+        ['tenant-6', 'Koperasi Bunaken Lestari (Sulawesi Utara)', 'KOP-BUNAKEN', 'Manado', 'ACTIVE']);
+      db.runSync(`INSERT OR IGNORE INTO products (id, cooperative_id, name, price, cost_price, stock, unit, is_local, image_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`, 
+        ['prod-roa', 'tenant-6', 'Sambal Roa Manado', 22000, 17000, 50, 'pcs', 1, 'https://images.unsplash.com/photo-1595124201382-742455b33db6?w=400']);
+    }
+
     // Set Sukamaju beras stock to 2 for low stock demo
     db.runSync("UPDATE products SET stock = 2 WHERE id = 'prod-beras';");
   } catch (e) {
-    console.error("Database Migration Error seeding Sukasari:", e);
+    console.error("Database Migration Error seeding tenants:", e);
   }
 
   // Check if seeded
@@ -650,6 +734,14 @@ const initNativeSchema = (db: any) => {
       ['tenant-1', 'Koperasi Merah Putih Sukamaju', 'KOP-SUKAMAJU', 'Sukamaju', 'ACTIVE']);
     db.runSync(`INSERT INTO tenants (id, name, code, village, status) VALUES (?, ?, ?, ?, ?)`, 
       ['tenant-2', 'Koperasi Sukasari (Tetangga)', 'KOP-SUKASARI', 'Sukasari', 'ACTIVE']);
+    db.runSync(`INSERT INTO tenants (id, name, code, village, status) VALUES (?, ?, ?, ?, ?)`, 
+      ['tenant-3', 'Koperasi Sukamukti (Tetangga)', 'KOP-SUKAMUKTI', 'Sukamukti', 'ACTIVE']);
+    db.runSync(`INSERT INTO tenants (id, name, code, village, status) VALUES (?, ?, ?, ?, ?)`, 
+      ['tenant-4', 'Koperasi Jaya Makmur (Jawa Timur)', 'KOP-JAYAMAKMUR', 'Surabaya', 'ACTIVE']);
+    db.runSync(`INSERT INTO tenants (id, name, code, village, status) VALUES (?, ?, ?, ?, ?)`, 
+      ['tenant-5', 'Koperasi Danau Toba (Sumatera Utara)', 'KOP-DANAUTOBA', 'Balige', 'ACTIVE']);
+    db.runSync(`INSERT INTO tenants (id, name, code, village, status) VALUES (?, ?, ?, ?, ?)`, 
+      ['tenant-6', 'Koperasi Bunaken Lestari (Sulawesi Utara)', 'KOP-BUNAKEN', 'Manado', 'ACTIVE']);
 
     // Seed Users
     db.runSync(`INSERT INTO users (id, name, phone, role, rt_id, cooperative_id, points, referral_code, referred_by, pin) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, 
