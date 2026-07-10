@@ -4,7 +4,6 @@ import {
   Text,
   Pressable,
   Modal,
-  StyleSheet,
   ActivityIndicator,
   Alert,
   Platform,
@@ -12,6 +11,7 @@ import {
   Animated,
 } from 'react-native';
 import { SymbolView } from 'expo-symbols';
+import { cn } from '@/lib/utils';
 import type { SFSymbol } from 'expo-symbols';
 import { useApp } from '@/contexts/AppContext';
 import { dbService } from '@/utils/db';
@@ -298,10 +298,10 @@ export default function DeliveryTrackerModal({
       onRequestClose={onClose}
       statusBarTranslucent={true}
     >
-      <View style={styles.root}>
+      <View className={styles.root}>
 
         {/* ── REAL GOOGLE MAP (Full Screen Background) ── */}
-        <View style={StyleSheet.absoluteFill}>
+        <View className="absolute inset-0">
           {Platform.OS === 'web' ? (
             /* Web fallback: embed via iframe */
             <iframe
@@ -311,7 +311,7 @@ export default function DeliveryTrackerModal({
           ) : MapView ? (
             <MapView
               ref={mapRef}
-              style={StyleSheet.absoluteFill}
+              style={{ flex: 1 }}
               initialRegion={MAP_CENTER}
               showsUserLocation={false}
               showsTraffic={false}
@@ -367,17 +367,15 @@ export default function DeliveryTrackerModal({
                   anchor={{ x: 0.5, y: 0.5 }}
                 >
                   {/* Custom driver icon */}
-                  <View style={styles.driverMarkerOuter}>
+                  <View className={styles.driverMarkerOuter}>
                     <Animated.View
-                      style={[
-                        styles.driverPulseRing,
-                        {
-                          transform: [{ scale: pulseAnim }],
-                          backgroundColor: stageInfo.color + '30',
-                        },
-                      ]}
+                      className={styles.driverPulseRing}
+                      style={{
+                        transform: [{ scale: pulseAnim }],
+                        backgroundColor: stageInfo.color + '30',
+                      }}
                     />
-                    <View style={[styles.driverMarkerDot, { backgroundColor: stageInfo.color }]}>
+                    <View className={styles.driverMarkerDot} style={{ backgroundColor: stageInfo.color }}>
                       <SymbolView name="bicycle" size={13} tintColor="#fff" />
                     </View>
                   </View>
@@ -385,87 +383,85 @@ export default function DeliveryTrackerModal({
               )}
             </MapView>
           ) : (
-            <View style={styles.mapFallback}>
-              <Text style={styles.mapFallbackText}>Peta tidak dapat dimuat</Text>
+            <View className={styles.mapFallback}>
+              <Text className={styles.mapFallbackText}>Peta tidak dapat dimuat</Text>
             </View>
           )}
 
           {/* Stage chip overlay on map */}
-          <View style={styles.mapTopOverlay}>
-            <View style={[styles.stageChip, { backgroundColor: stageInfo.color }]}>
+          <View className={styles.mapTopOverlay}>
+            <View className={styles.stageChip} style={{ backgroundColor: stageInfo.color }}>
               <SymbolView name={stageInfo.icon} size={11} tintColor="#fff" />
-              <Text style={styles.stageChipText}>{stageInfo.label}</Text>
+              <Text className={styles.stageChipText}>{stageInfo.label}</Text>
             </View>
-            <Pressable onPress={onClose} style={styles.closeMapBtn}>
+            <Pressable onPress={onClose} className={styles.closeMapBtn}>
               <SymbolView name="xmark" size={13} tintColor="#333" />
             </Pressable>
           </View>
         </View>
 
         {/* ── BOTTOM PANEL (Gojek/Grab style) ── */}
-        <View style={styles.panel}>
+        <View className={styles.panel}>
 
           {/* Loading state */}
           {loading ? (
-            <View style={styles.loadingRow}>
+            <View className={styles.loadingRow}>
               <ActivityIndicator size="small" color="#059669" />
-              <Text style={styles.loadingText}>Memuat detail pengiriman...</Text>
+              <Text className={styles.loadingText}>Memuat detail pengiriman...</Text>
             </View>
           ) : (
             <>
               {/* Status */}
-              <View style={styles.statusRow}>
-                <View style={[styles.statusIconBg, { backgroundColor: stageInfo.color + '20' }]}>
+              <View className={styles.statusRow}>
+                <View className={styles.statusIconBg} style={{ backgroundColor: stageInfo.color + '20' }}>
                   <SymbolView name={stageInfo.icon} size={20} tintColor={stageInfo.color} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.statusTitle}>{stageInfo.label}</Text>
-                  <Text style={styles.statusSub}>{stageInfo.sublabel}</Text>
+                  <Text className={styles.statusTitle}>{stageInfo.label}</Text>
+                  <Text className={styles.statusSub}>{stageInfo.sublabel}</Text>
                 </View>
                 {stageInfo.eta !== 'Tiba' && (
-                  <View style={[styles.etaBadge, { borderColor: stageInfo.color + '50' }]}>
-                    <Text style={[styles.etaText, { color: stageInfo.color }]}>{stageInfo.eta}</Text>
+                  <View className={styles.etaBadge} style={{ borderColor: stageInfo.color + '50' }}>
+                    <Text className={styles.etaText} style={{ color: stageInfo.color }}>{stageInfo.eta}</Text>
                   </View>
                 )}
               </View>
 
               {/* Stage progress dots (moved inside bottom panel) */}
-              <View style={styles.stageDotsRow}>
+              <View className={styles.stageDotsRow}>
                 {STAGE_INFO.map((_, i) => (
                   <View
                     key={i}
-                    style={[
-                      styles.stageDot,
-                      {
-                        backgroundColor: i <= stage ? stageInfo.color : '#d4d4d4',
-                        width: i === stage ? 20 : 7,
-                      },
-                    ]}
+                    className={styles.stageDot}
+                    style={{
+                      backgroundColor: i <= stage ? stageInfo.color : '#d4d4d4',
+                      width: i === stage ? 20 : 7,
+                    }}
                   />
                 ))}
               </View>
 
-              <View style={styles.divider} />
+              <View className={styles.divider} />
 
               {/* Driver card */}
-              <View style={styles.driverCard}>
-                <View style={styles.driverAvatar}>
-                  <Text style={styles.driverAvatarInitials}>MU</Text>
-                  <View style={styles.onlineDot} />
+              <View className={styles.driverCard}>
+                <View className={styles.driverAvatar}>
+                  <Text className={styles.driverAvatarInitials}>MU</Text>
+                  <View className={styles.onlineDot} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.driverName}>Mang Ujang</Text>
-                  <Text style={styles.driverVehicle}>Honda Supra Fit · DK 4821 RT</Text>
-                  <View style={styles.ratingRow}>
+                  <Text className={styles.driverName}>Mang Ujang</Text>
+                  <Text className={styles.driverVehicle}>Honda Supra Fit · DK 4821 RT</Text>
+                  <View className={styles.ratingRow}>
                     <SymbolView name="star.fill" size={9} tintColor="#f59e0b" />
-                    <Text style={styles.ratingText}>4.9 · Kurir Desa Terpercaya</Text>
+                    <Text className={styles.ratingText}>4.9 · Kurir Desa Terpercaya</Text>
                   </View>
                 </View>
-                <View style={styles.driverActionBtns}>
-                  <Pressable style={styles.iconBtn}>
+                <View className={styles.driverActionBtns}>
+                  <Pressable className={styles.iconBtn}>
                     <SymbolView name="phone.fill" size={15} tintColor="#059669" />
                   </Pressable>
-                  <Pressable style={styles.iconBtn}>
+                  <Pressable className={styles.iconBtn}>
                     <SymbolView name="message.fill" size={15} tintColor="#3b82f6" />
                   </Pressable>
                 </View>
@@ -473,40 +469,40 @@ export default function DeliveryTrackerModal({
 
               {/* Chat bubble */}
               {chatVisible && (
-                <View style={styles.chatBubble}>
-                  <View style={styles.chatAvatar}>
-                    <Text style={styles.chatAvatarText}>MU</Text>
+                <View className={styles.chatBubble}>
+                  <View className={styles.chatAvatar}>
+                    <Text className={styles.chatAvatarText}>MU</Text>
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.chatText}>"{stageInfo.chat}"</Text>
-                    <Text style={styles.chatTime}>Baru saja</Text>
+                    <Text className={styles.chatText}>"{stageInfo.chat}"</Text>
+                    <Text className={styles.chatTime}>Baru saja</Text>
                   </View>
                 </View>
               )}
 
               {/* Payment row */}
               {currentOrder && (
-                <View style={styles.paymentRow}>
+                <View className={styles.paymentRow}>
                   <SymbolView name="banknote.fill" size={12} tintColor="#065f46" />
-                  <Text style={styles.paymentLabel}>
+                  <Text className={styles.paymentLabel}>
                     {currentOrder.payment_status === 'PAID' ? '✅ Pembayaran Lunas' : '💵 Siapkan COD'}
                   </Text>
-                  <Text style={styles.paymentAmount}>
+                  <Text className={styles.paymentAmount}>
                     Rp{currentOrder.total?.toLocaleString('id-ID') ?? '—'}
                   </Text>
                 </View>
               )}
 
               {/* Buttons */}
-              <View style={styles.btnRow}>
+              <View className={styles.btnRow}>
                 {stage < 3 && (
-                  <Pressable onPress={advanceStage} style={styles.speedBtn}>
+                  <Pressable onPress={advanceStage} className={styles.speedBtn}>
                     <SymbolView name="forward.fill" size={13} tintColor="#fff" />
-                    <Text style={styles.speedBtnText}>Percepat Simulasi</Text>
+                    <Text className={styles.speedBtnText}>Percepat Simulasi</Text>
                   </Pressable>
                 )}
-                <Pressable onPress={onClose} style={styles.closeBtn}>
-                  <Text style={styles.closeBtnText}>Tutup</Text>
+                <Pressable onPress={onClose} className={styles.closeBtn}>
+                  <Text className={styles.closeBtnText}>Tutup</Text>
                 </Pressable>
               </View>
             </>
@@ -518,337 +514,50 @@ export default function DeliveryTrackerModal({
   );
 }
 
-const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: '#000',
-    justifyContent: 'flex-end',
-    position: 'relative',
-  },
-  mapFallback: {
-    flex: 1,
-    backgroundColor: '#e2e8f0',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  mapFallbackText: {
-    color: '#64748b',
-    fontSize: 13,
-  },
-
-  // Driver marker (custom, rendered inside Marker)
-  driverMarkerOuter: {
-    width: 52,
-    height: 52,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  driverPulseRing: {
-    position: 'absolute',
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-  },
-  driverMarkerDot: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 3,
-    borderColor: '#fff',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.35,
-    shadowRadius: 4,
-    elevation: 6,
-  },
-
-  // Map overlays
-  mapTopOverlay: {
-    position: 'absolute',
-    top: Platform.OS === 'ios' ? 60 : 24,
-    left: 16,
-    right: 16,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    zIndex: 10,
-  },
-  stageChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.22,
-    shadowRadius: 4,
-    elevation: 5,
-  },
-  stageChipText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 12,
-  },
-  closeMapBtn: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 3,
-    elevation: 3,
-  },
-  stageDotsRow: {
-    flexDirection: 'row',
-    gap: 4,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  stageDot: {
-    height: 6,
-    borderRadius: 3,
-  },
-
-  // Bottom panel
-  panel: {
-    backgroundColor: '#fff',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 14,
-  },
-  loadingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    paddingVertical: 20,
-    justifyContent: 'center',
-  },
-  loadingText: {
-    color: '#78716c',
-    fontSize: 12,
-  },
-
-  statusRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    marginBottom: 12,
-  },
-  statusIconBg: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  statusTitle: {
-    fontSize: 14,
-    fontWeight: '900',
-    color: '#1c1917',
-  },
-  statusSub: {
-    fontSize: 10,
-    color: '#78716c',
-    marginTop: 2,
-  },
-  etaBadge: {
-    borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    backgroundColor: '#f8fafc',
-  },
-  etaText: {
-    fontSize: 10,
-    fontWeight: 'bold',
-  },
-  divider: {
-    height: 1,
-    backgroundColor: '#f5f5f4',
-    marginBottom: 12,
-  },
-
-  // Driver card
-  driverCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    marginBottom: 10,
-  },
-  driverAvatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#047857',
-    alignItems: 'center',
-    justifyContent: 'center',
-    position: 'relative',
-  },
-  driverAvatarInitials: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 14,
-  },
-  onlineDot: {
-    position: 'absolute',
-    bottom: 1,
-    right: 1,
-    width: 11,
-    height: 11,
-    borderRadius: 6,
-    backgroundColor: '#22c55e',
-    borderWidth: 2,
-    borderColor: '#fff',
-  },
-  driverName: {
-    fontWeight: 'bold',
-    fontSize: 13,
-    color: '#1c1917',
-  },
-  driverVehicle: {
-    fontSize: 9,
-    color: '#78716c',
-    marginTop: 1,
-  },
-  ratingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-    marginTop: 3,
-  },
-  ratingText: {
-    fontSize: 9,
-    color: '#78716c',
-    fontWeight: '600',
-  },
-  driverActionBtns: {
-    flexDirection: 'row',
-    gap: 6,
-  },
-  iconBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: '#f5f5f4',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#e7e5e4',
-  },
-
-  // Chat
-  chatBubble: {
-    flexDirection: 'row',
-    gap: 8,
-    alignItems: 'flex-start',
-    backgroundColor: '#f0fdf4',
-    borderWidth: 1,
-    borderColor: '#bbf7d0',
-    borderRadius: 14,
-    borderTopLeftRadius: 2,
-    padding: 10,
-    marginBottom: 10,
-  },
-  chatAvatar: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    backgroundColor: '#047857',
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-  },
-  chatAvatarText: {
-    color: '#fff',
-    fontSize: 8,
-    fontWeight: 'bold',
-  },
-  chatText: {
-    fontSize: 10,
-    fontStyle: 'italic',
-    color: '#065f46',
-    lineHeight: 15,
-  },
-  chatTime: {
-    fontSize: 7.5,
-    color: '#6ee7b7',
-    marginTop: 3,
-  },
-
-  // Payment
-  paymentRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: '#ecfdf5',
-    borderWidth: 1,
-    borderColor: '#a7f3d0',
-    borderRadius: 10,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-    marginBottom: 14,
-  },
-  paymentLabel: {
-    flex: 1,
-    fontSize: 10,
-    color: '#065f46',
-    fontWeight: '600',
-  },
-  paymentAmount: {
-    fontSize: 11,
-    fontWeight: 'bold',
-    color: '#064e3b',
-  },
-
-  // Buttons
-  btnRow: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  speedBtn: {
-    flex: 2,
-    backgroundColor: '#059669',
-    borderRadius: 12,
-    paddingVertical: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-  },
-  speedBtnText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 12,
-  },
-  closeBtn: {
-    flex: 1,
-    backgroundColor: '#f5f5f4',
-    borderRadius: 12,
-    paddingVertical: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#e7e5e4',
-  },
-  closeBtnText: {
-    color: '#44403c',
-    fontWeight: 'bold',
-    fontSize: 12,
-  },
-});
+const styles = {
+  root: 'flex-1 bg-black justify-end relative',
+  mapFallback: 'flex-1 bg-slate-200 items-center justify-center',
+  mapFallbackText: 'text-slate-500 text-xs',
+  driverMarkerOuter: 'w-[52px] h-[52px] items-center justify-center',
+  driverPulseRing: 'absolute w-[52px] h-[52px] rounded-full',
+  driverMarkerDot: 'w-9 h-9 rounded-full items-center justify-center border-[3px] border-white shadow-md elevation-6',
+  mapTopOverlay: 'absolute top-16 left-4 right-4 flex-row justify-between items-center z-10',
+  stageChip: 'flex-row items-center gap-1.5 px-3.5 py-2 rounded-full shadow-md elevation-5',
+  stageChipText: 'text-white font-bold text-xs',
+  closeMapBtn: 'w-8 h-8 rounded-full bg-white items-center justify-center shadow elevation-3',
+  stageDotsRow: 'flex-row gap-1 justify-center items-center mb-3',
+  stageDot: 'h-1.5 rounded-full',
+  panel: 'bg-white rounded-t-3xl px-5 pt-4 pb-6 shadow-2xl elevation-14',
+  loadingRow: 'flex-row items-center gap-2.5 py-5 justify-center',
+  loadingText: 'text-stone-500 text-xs',
+  statusRow: 'flex-row items-center gap-3 mb-3',
+  statusIconBg: 'w-[46px] h-[46px] rounded-full items-center justify-center',
+  statusTitle: 'text-sm font-black text-stone-900',
+  statusSub: 'text-[10px] text-stone-500 mt-0.5',
+  etaBadge: 'border border-slate-200 rounded-xl px-2 py-1 bg-slate-50',
+  etaText: 'text-[10px] font-bold',
+  divider: 'h-[1px] bg-stone-100 mb-3',
+  driverCard: 'flex-row items-center gap-2.5 mb-2.5',
+  driverAvatar: 'w-11 h-11 rounded-full bg-emerald-700 items-center justify-center relative',
+  driverAvatarInitials: 'text-white font-bold text-sm',
+  onlineDot: 'absolute bottom-0 right-0 w-3 h-3 rounded-full bg-green-500 border-2 border-white',
+  driverName: 'font-bold text-xs text-stone-900',
+  driverVehicle: 'text-[9px] text-stone-500 mt-0.5',
+  ratingRow: 'flex-row items-center gap-1 mt-0.5',
+  ratingText: 'text-[9px] text-stone-500 font-semibold',
+  driverActionBtns: 'flex-row gap-1.5',
+  iconBtn: 'w-9 h-9 rounded-full bg-stone-100 items-center justify-center border border-stone-200',
+  chatBubble: 'flex-row gap-2 items-start bg-emerald-50 border border-emerald-250 rounded-2xl rounded-tl-sm p-2.5 mb-2.5',
+  chatAvatar: 'w-6 h-6 rounded-full bg-emerald-700 items-center justify-center flex-shrink-0',
+  chatAvatarText: 'text-white text-[8px] font-bold',
+  chatText: 'text-[10px] italic text-emerald-800 leading-4',
+  chatTime: 'text-[7.5px] text-emerald-400 mt-0.5',
+  paymentRow: 'flex-row items-center gap-1.5 bg-emerald-50 border border-emerald-200 rounded-xl px-2.5 py-1.5 mb-3.5',
+  paymentLabel: 'flex-1 text-[10px] text-emerald-800 font-semibold',
+  paymentAmount: 'text-[11px] font-bold text-emerald-950',
+  btnRow: 'flex-row gap-2',
+  speedBtn: 'flex-[2] bg-emerald-600 rounded-xl py-3 flex-row items-center justify-center gap-1.5',
+  speedBtnText: 'text-white font-bold text-xs',
+  closeBtn: 'flex-1 bg-stone-100 rounded-xl py-3 items-center justify-center border border-stone-200',
+  closeBtnText: 'text-stone-700 font-bold text-xs',
+};

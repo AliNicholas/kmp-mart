@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Pressable, Modal, StyleSheet, ScrollView, Alert, Linking, Platform } from 'react-native';
+import { View, Text, Pressable, Modal, ScrollView, Alert, Linking, Platform } from 'react-native';
 import { SymbolView } from 'expo-symbols';
+import { cn } from '@/lib/utils';
 
 // Conditional imports for native maps
 let MapView: any = null;
@@ -138,15 +139,15 @@ export default function CoopSelectorModal({ visible, onClose, activeCoopId, onSe
         animationType="slide"
         onRequestClose={onClose}
       >
-        <View style={styles.overlay}>
-          <View style={styles.content}>
+        <View className={styles.overlay}>
+          <View className={styles.content}>
             
-            <View style={styles.header}>
+            <View className={styles.header}>
               <View style={{ flex: 1 }}>
-                <Text style={styles.title}>Pilih Lokasi Koperasi Desa</Text>
-                <Text style={styles.subtitle}>Bandingkan ketersediaan stok & jarak pengiriman</Text>
+                <Text className={styles.title}>Pilih Lokasi Koperasi Desa</Text>
+                <Text className={styles.subtitle}>Bandingkan ketersediaan stok & jarak pengiriman</Text>
               </View>
-              <Pressable onPress={onClose} style={styles.closeButton}>
+              <Pressable onPress={onClose} className={styles.closeButton}>
                 <SymbolView name="xmark" size={14} tintColor="#555" />
               </Pressable>
             </View>
@@ -154,12 +155,12 @@ export default function CoopSelectorModal({ visible, onClose, activeCoopId, onSe
             {/* Nusantara map shortcut */}
             <Pressable 
               onPress={handleOpenNationalMap}
-              style={styles.nationalMapBanner}
+              className={styles.nationalMapBanner}
             >
               <SymbolView name="network" size={16} tintColor="#fff" />
               <View style={{ flex: 1 }}>
-                <Text style={styles.nationalMapBannerTitle}>Lihat Seluruh Koperasi Nusantara</Text>
-                <Text style={styles.nationalMapBannerSubtitle}>Peta sebaran Kopdes antar pulau di Indonesia</Text>
+                <Text className={styles.nationalMapBannerTitle}>Lihat Seluruh Koperasi Nusantara</Text>
+                <Text className={styles.nationalMapBannerSubtitle}>Peta sebaran Kopdes antar pulau di Indonesia</Text>
               </View>
               <SymbolView name="chevron.right" size={12} tintColor="#fff" />
             </Pressable>
@@ -172,57 +173,57 @@ export default function CoopSelectorModal({ visible, onClose, activeCoopId, onSe
                 return (
                   <View 
                     key={coop.id}
-                    style={[
+                    className={cn(
                       styles.coopCard,
                       isActive && styles.activeCard
-                    ]}
+                    )}
                   >
                     <View style={{ flex: 1 }}>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                        <Text style={[styles.coopName, isActive && styles.activeTextGreen]}>
+                        <Text className={cn(styles.coopName, isActive && styles.activeTextGreen)}>
                           {coop.name}
                         </Text>
                         {isActive && (
-                          <View style={styles.activeTag}>
-                            <Text style={styles.activeTagText}>AKTIF</Text>
+                          <View className={styles.activeTag}>
+                            <Text className={styles.activeTagText}>AKTIF</Text>
                           </View>
                         )}
                         {isFar && (
-                          <View style={styles.islandTag}>
-                            <Text style={styles.islandTagText}>LUAR PULAU</Text>
+                          <View className={styles.islandTag}>
+                            <Text className={styles.islandTagText}>LUAR PULAU</Text>
                           </View>
                         )}
                       </View>
                       
-                      <Text style={styles.coopAddress}>{coop.address}</Text>
+                      <Text className={styles.coopAddress}>{coop.address}</Text>
                       
-                      <View style={styles.statsRow}>
-                        <View style={styles.statItem}>
+                      <View className={styles.statsRow}>
+                        <View className={styles.statItem}>
                           <SymbolView name="mappin.and.ellipse" size={11} tintColor="#d97706" />
-                          <Text style={styles.statText}>{coop.distance}</Text>
+                          <Text className={styles.statText}>{coop.distance}</Text>
                         </View>
                         {coop.surcharge > 0 && (
-                          <View style={styles.statItem}>
+                          <View className={styles.statItem}>
                             <SymbolView name="shippingbox" size={11} tintColor="#059669" />
-                            <Text style={styles.statText}>Ongkir +Rp{coop.surcharge.toLocaleString('id-ID')}</Text>
+                            <Text className={styles.statText}>Ongkir +Rp{coop.surcharge.toLocaleString('id-ID')}</Text>
                           </View>
                         )}
                       </View>
 
                       {coop.deliveryDaysExtra > 0 && (
-                        <Text style={styles.deliveryWarning}>
+                        <Text className={styles.deliveryWarning}>
                           🕒 Pengiriman memerlukan +{coop.deliveryDaysExtra} hari tambahan (Logistik Lintas Wilayah).
                         </Text>
                       )}
                     </View>
 
-                    <View style={styles.actionColumn}>
+                    <View className={styles.actionColumn}>
                       <Pressable
                         onPress={() => handleOpenMap(coop)}
-                        style={styles.mapBtn}
+                        className={styles.mapBtn}
                       >
                         <SymbolView name="map.fill" size={12} tintColor="#047857" />
-                        <Text style={styles.mapBtnText}>Peta</Text>
+                        <Text className={styles.mapBtnText}>Peta</Text>
                       </Pressable>
 
                       {!isActive ? (
@@ -231,14 +232,14 @@ export default function CoopSelectorModal({ visible, onClose, activeCoopId, onSe
                             onSelectCoop(coop.id);
                             onClose();
                           }}
-                          style={styles.selectBtn}
+                          className={styles.selectBtn}
                         >
-                          <Text style={styles.selectBtnText}>Pilih</Text>
+                          <Text className={styles.selectBtnText}>Pilih</Text>
                         </Pressable>
                       ) : (
-                        <View style={styles.selectedIndicator}>
+                        <View className={styles.selectedIndicator}>
                           <SymbolView name="checkmark.circle.fill" size={16} tintColor="#059669" />
-                          <Text style={styles.selectedIndicatorText}>Aktif</Text>
+                          <Text className={styles.selectedIndicatorText}>Aktif</Text>
                         </View>
                       )}
                     </View>
@@ -259,45 +260,45 @@ export default function CoopSelectorModal({ visible, onClose, activeCoopId, onSe
           animationType="fade"
           onRequestClose={() => setMapVisible(false)}
         >
-          <View style={styles.mapOverlay}>
-            <View style={styles.mapWindow}>
+          <View className={styles.mapOverlay}>
+            <View className={styles.mapWindow}>
               
               {/* Map Header */}
-              <View style={styles.mapHeader}>
+              <View className={styles.mapHeader}>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.mapTitle}>
+                  <Text className={styles.mapTitle}>
                     {isNationalView ? "Peta Koperasi Nusantara (Indonesia)" : "Peta Google Maps Terintegrasi"}
                   </Text>
-                  <Text style={styles.mapSubtitle}>
+                  <Text className={styles.mapSubtitle}>
                     {isNationalView ? "Menampilkan sebaran Kopdes antar pulau" : selectedCoopForMap.name}
                   </Text>
                 </View>
-                <Pressable onPress={() => setMapVisible(false)} style={styles.closeButton}>
+                <Pressable onPress={() => setMapVisible(false)} className={styles.closeButton}>
                   <SymbolView name="xmark" size={14} tintColor="#555" />
                 </Pressable>
               </View>
 
               {/* MAP SCOPE TOGGLE CONTROLS */}
-              <View style={styles.mapScopeBar}>
+              <View className={styles.mapScopeBar}>
                 <Pressable
                   onPress={() => setIsNationalView(false)}
-                  style={[styles.scopeBtn, !isNationalView && styles.scopeBtnActive]}
+                  className={cn(styles.scopeBtn, !isNationalView && styles.scopeBtnActive)}
                 >
                   <SymbolView name="mappin.circle.fill" size={11} tintColor={!isNationalView ? "#fff" : "#666"} />
-                  <Text style={[styles.scopeBtnText, !isNationalView && styles.scopeBtnTextActive]}>Fokus Terdekat (Bali)</Text>
+                  <Text className={cn(styles.scopeBtnText, !isNationalView && styles.scopeBtnTextActive)}>Fokus Terdekat (Bali)</Text>
                 </Pressable>
 
                 <Pressable
                   onPress={() => setIsNationalView(true)}
-                  style={[styles.scopeBtn, isNationalView && styles.scopeBtnActive]}
+                  className={cn(styles.scopeBtn, isNationalView && styles.scopeBtnActive)}
                 >
                   <SymbolView name="network" size={11} tintColor={isNationalView ? "#fff" : "#666"} />
-                  <Text style={[styles.scopeBtnText, isNationalView && styles.scopeBtnTextActive]}>Skala Nasional (Nusantara)</Text>
+                  <Text className={cn(styles.scopeBtnText, isNationalView && styles.scopeBtnTextActive)}>Skala Nasional (Nusantara)</Text>
                 </Pressable>
               </View>
 
               {/* REAL INTERACTIVE MAP AREA */}
-              <View style={styles.mapArea}>
+              <View className={styles.mapArea}>
                 {Platform.OS === 'web' ? (
                   <iframe
                     src={
@@ -358,11 +359,11 @@ export default function CoopSelectorModal({ visible, onClose, activeCoopId, onSe
               </View>
 
               {/* Map Footer Info */}
-              <View style={styles.mapFooter}>
+              <View className={styles.mapFooter}>
                 <View style={{ flex: 1, marginRight: 8 }}>
-                  <Text style={styles.distanceLabel}>Koperasi Terpilih:</Text>
-                  <Text style={styles.distanceValue} numberOfLines={1}>{selectedCoopForMap.name}</Text>
-                  <Text style={styles.coopCoords}>
+                  <Text className={styles.distanceLabel}>Koperasi Terpilih:</Text>
+                  <Text className={styles.distanceValue} numberOfLines={1}>{selectedCoopForMap.name}</Text>
+                  <Text className={styles.coopCoords}>
                     {selectedCoopForMap.distance} • Ongkir: Rp{selectedCoopForMap.surcharge.toLocaleString('id-ID')}
                   </Text>
                 </View>
@@ -375,18 +376,18 @@ export default function CoopSelectorModal({ visible, onClose, activeCoopId, onSe
                         setMapVisible(false);
                         onClose();
                       }}
-                      style={styles.mapSelectBtn}
+                      className={styles.mapSelectBtn}
                     >
-                      <Text style={styles.mapSelectBtnText}>Ganti Ke Koperasi Ini</Text>
+                      <Text className={styles.mapSelectBtnText}>Ganti Ke Koperasi Ini</Text>
                     </Pressable>
                   )}
                   
                   <Pressable
                     onPress={() => handleOpenExternalMap(selectedCoopForMap)}
-                    style={styles.gmapsBtn}
+                    className={styles.gmapsBtn}
                   >
                     <SymbolView name="safari" size={10} tintColor="#fff" />
-                    <Text style={styles.gmapsBtnText}>Rute Peta</Text>
+                    <Text className={styles.gmapsBtnText}>Rute Peta</Text>
                   </Pressable>
                 </View>
               </View>
@@ -399,318 +400,53 @@ export default function CoopSelectorModal({ visible, onClose, activeCoopId, onSe
   );
 }
 
-const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    justifyContent: 'flex-end',
-  },
-  content: {
-    backgroundColor: '#fafaf9', // stone-50
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    padding: 20,
-    height: '70%',
-    borderTopWidth: 1,
-    borderTopColor: '#e7e5e4',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e7e5e4',
-    paddingBottom: 12,
-    marginBottom: 12,
-  },
-  title: {
-    color: '#064e3b',
-    fontWeight: '900',
-    fontSize: 16,
-  },
-  subtitle: {
-    color: '#78716c',
-    fontSize: 10,
-    marginTop: 2,
-  },
-  closeButton: {
-    padding: 6,
-    borderRadius: 9999,
-    backgroundColor: '#e7e5e4',
-  },
-  nationalMapBanner: {
-    backgroundColor: '#0284c7', // light-blue-600
-    borderRadius: 14,
-    padding: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    marginBottom: 14,
-  },
-  nationalMapBannerTitle: {
-    color: '#fff',
-    fontSize: 11,
-    fontWeight: 'black',
-  },
-  nationalMapBannerSubtitle: {
-    color: '#e0f2fe',
-    fontSize: 8.5,
-    marginTop: 1,
-  },
-  coopCard: {
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#e7e5e4',
-    borderRadius: 16,
-    padding: 14,
-    marginBottom: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 1,
-    elevation: 1,
-  },
-  activeCard: {
-    borderColor: '#10b981', // emerald-500
-    backgroundColor: '#f0fdf4', // emerald-50
-    borderLeftWidth: 5,
-    borderLeftColor: '#059669',
-  },
-  coopName: {
-    fontSize: 12,
-    fontWeight: '900',
-    color: '#1c1917',
-  },
-  activeTextGreen: {
-    color: '#064e3b',
-  },
-  activeTag: {
-    backgroundColor: '#059669',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-  },
-  activeTagText: {
-    color: '#fff',
-    fontSize: 7,
-    fontWeight: 'bold',
-  },
-  islandTag: {
-    backgroundColor: '#0284c7', // blue
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-  },
-  islandTagText: {
-    color: '#fff',
-    fontSize: 7,
-    fontWeight: 'bold',
-  },
-  coopAddress: {
-    fontSize: 10,
-    color: '#78716c',
-    marginTop: 3,
-  },
-  statsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginTop: 8,
-  },
-  statItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: '#f5f5f4',
-    paddingHorizontal: 6,
-    paddingVertical: 3,
-    borderRadius: 6,
-    borderWidth: 0.5,
-    borderColor: '#e7e5e4',
-  },
-  statText: {
-    fontSize: 9,
-    color: '#44403c',
-    fontWeight: 'bold',
-  },
-  deliveryWarning: {
-    fontSize: 9,
-    color: '#b45309', // amber-700
-    fontWeight: 'bold',
-    marginTop: 8,
-  },
-  actionColumn: {
-    alignItems: 'flex-end',
-    gap: 10,
-    minWidth: 80,
-  },
-  mapBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    borderWidth: 1,
-    borderColor: '#a7f3d0',
-    backgroundColor: '#ecfdf5',
-    paddingHorizontal: 8,
-    paddingVertical: 5,
-    borderRadius: 8,
-  },
-  mapBtnText: {
-    color: '#047857',
-    fontSize: 9,
-    fontWeight: 'bold',
-  },
-  selectBtn: {
-    backgroundColor: '#059669',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-  },
-  selectBtnText: {
-    color: '#fff',
-    fontSize: 10,
-    fontWeight: 'bold',
-  },
-  selectedIndicator: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  selectedIndicatorText: {
-    color: '#059669',
-    fontSize: 9,
-    fontWeight: 'bold',
-  },
-  
-  // MAP MODAL STYLES
-  mapOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  mapWindow: {
-    width: '100%',
-    height: '70%',
-    backgroundColor: '#fafaf9',
-    borderRadius: 24,
-    borderWidth: 1,
-    borderColor: '#e7e5e4',
-    overflow: 'hidden',
-  },
-  mapHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e7e5e4',
-    backgroundColor: '#fff',
-  },
-  mapTitle: {
-    fontSize: 13,
-    fontWeight: '900',
-    color: '#064e3b',
-  },
-  mapSubtitle: {
-    fontSize: 10,
-    color: '#78716c',
-    marginTop: 2,
-  },
-  mapScopeBar: {
-    flexDirection: 'row',
-    backgroundColor: '#f5f5f4',
-    padding: 4,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e7e5e4',
-    justifyContent: 'space-between',
-    gap: 4,
-  },
-  scopeBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 8,
-    borderRadius: 8,
-    backgroundColor: '#fff',
-    borderWidth: 0.5,
-    borderColor: '#d6d3d1',
-  },
-  scopeBtnActive: {
-    backgroundColor: '#059669',
-    borderColor: '#047857',
-  },
-  scopeBtnText: {
-    fontSize: 9.5,
-    fontWeight: '600',
-    color: '#44403c',
-  },
-  scopeBtnTextActive: {
-    color: '#fff',
-    fontWeight: 'bold',
-  },
-  mapArea: {
-    flex: 1,
-    backgroundColor: '#e2e8f0',
-    position: 'relative',
-    overflow: 'hidden',
-  },
-  mapFooter: {
-    backgroundColor: '#fff',
-    padding: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#e7e5e4',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  distanceLabel: {
-    fontSize: 8,
-    fontWeight: 'bold',
-    color: '#a8a29e',
-    textTransform: 'uppercase',
-  },
-  distanceValue: {
-    fontSize: 12,
-    fontWeight: '900',
-    color: '#064e3b',
-  },
-  coopCoords: {
-    fontSize: 8,
-    color: '#78716c',
-    marginTop: 2,
-  },
-  mapSelectBtn: {
-    backgroundColor: '#059669',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  mapSelectBtnText: {
-    color: '#fff',
-    fontSize: 9,
-    fontWeight: 'black',
-  },
-  gmapsBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 4,
-    backgroundColor: '#ea580c', // Orange google maps style button
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 8,
-  },
-  gmapsBtnText: {
-    color: '#fff',
-    fontSize: 9,
-    fontWeight: 'bold',
-  }
-});
+const styles = {
+  overlay: 'flex-1 bg-black/60 justify-end',
+  content: 'bg-stone-50 rounded-t-3xl p-5 h-[70%] border-t border-stone-200',
+  header: 'flex-row justify-between items-center border-b border-stone-200 pb-3 mb-3',
+  title: 'text-emerald-950 font-black text-base',
+  subtitle: 'text-stone-500 text-[10px] mt-0.5',
+  closeButton: 'p-1.5 rounded-full bg-stone-200',
+  nationalMapBanner: 'bg-sky-600 rounded-2xl p-3 flex-row items-center gap-2.5 mb-3.5',
+  nationalMapBannerTitle: 'text-white text-[11px] font-black',
+  nationalMapBannerSubtitle: 'text-sky-100 text-[8.5px] mt-0.5',
+  coopCard: 'bg-white border border-stone-200 rounded-2xl p-3.5 mb-3 flex-row items-center gap-3 shadow-sm elevation-1',
+  activeCard: 'border-emerald-500 bg-emerald-50 border-l-[5px] border-l-emerald-600',
+  coopName: 'text-xs font-black text-stone-900',
+  activeTextGreen: 'text-emerald-950',
+  activeTag: 'bg-emerald-600 px-1.5 py-0.5 rounded',
+  activeTagText: 'text-white text-[7px] font-bold',
+  islandTag: 'bg-sky-600 px-1.5 py-0.5 rounded',
+  islandTagText: 'text-white text-[7px] font-bold',
+  coopAddress: 'text-[10px] text-stone-500 mt-0.5',
+  statsRow: 'flex-row flex-wrap gap-2 mt-2',
+  statItem: 'flex-row items-center gap-1 bg-stone-100 px-1.5 py-0.5 rounded-md border border-stone-200',
+  statText: 'text-[9px] text-stone-700 font-bold',
+  deliveryWarning: 'text-[9px] text-amber-700 font-bold mt-2',
+  actionColumn: 'items-end gap-2.5 min-w-[80px]',
+  mapBtn: 'flex-row items-center gap-1 border border-emerald-200 bg-emerald-50 px-2 py-1 rounded-lg',
+  mapBtnText: 'text-emerald-700 text-[9px] font-bold',
+  selectBtn: 'bg-emerald-600 px-3 py-1.5 rounded-lg',
+  selectBtnText: 'text-white text-[10px] font-bold',
+  selectedIndicator: 'flex-row items-center gap-1',
+  selectedIndicatorText: 'text-emerald-600 text-[9px] font-bold',
+  mapOverlay: 'flex-1 bg-black/70 justify-center items-center p-5',
+  mapWindow: 'w-full h-[70%] bg-stone-50 rounded-3xl border border-stone-200 overflow-hidden',
+  mapHeader: 'flex-row justify-between items-center p-4 border-b border-stone-200 bg-white',
+  mapTitle: 'text-xs font-black text-emerald-950',
+  mapSubtitle: 'text-[10px] text-stone-500 mt-0.5',
+  mapScopeBar: 'flex-row bg-stone-100 p-1 border-b border-stone-200 justify-between gap-1',
+  scopeBtn: 'flex-1 flex-row items-center justify-center gap-1.5 py-2 rounded-lg bg-white border border-stone-300',
+  scopeBtnActive: 'bg-emerald-600 border-emerald-700',
+  scopeBtnText: 'text-[9.5px] font-semibold text-stone-700',
+  scopeBtnTextActive: 'text-white font-bold',
+  mapArea: 'flex-1 bg-slate-200 relative overflow-hidden',
+  mapFooter: 'bg-white p-3 border-t border-stone-200 flex-row items-center justify-between',
+  distanceLabel: 'text-[8px] font-bold text-stone-400 uppercase',
+  distanceValue: 'text-xs font-black text-emerald-950',
+  coopCoords: 'text-[8px] text-stone-500 mt-0.5',
+  mapSelectBtn: 'bg-emerald-600 px-2.5 py-1.5 rounded-lg items-center',
+  mapSelectBtnText: 'text-white text-[9px] font-black',
+  gmapsBtn: 'flex-row items-center justify-center gap-1 bg-orange-600 px-2.5 py-1.5 rounded-lg',
+  gmapsBtnText: 'text-white text-[9px] font-bold',
+};
