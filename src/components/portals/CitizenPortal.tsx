@@ -1,6 +1,6 @@
+import { SymbolView } from "@/components/app-symbol";
 import { useApp } from "@/contexts/AppContext";
 import { dbService } from "@/utils/db";
-import { SymbolView } from "@/components/app-symbol";
 import React, { useState } from "react";
 import {
   Alert,
@@ -321,7 +321,10 @@ export default function CitizenPortal() {
       setSubTab(1); // Switch to orders tab
 
       if (paymentMethod === "QRIS") {
-        Alert.alert("Pembayaran Berhasil", "Pembayaran QRIS terverifikasi! Pesanan Anda sedang diproses.");
+        Alert.alert(
+          "Pembayaran Berhasil",
+          "Pembayaran QRIS terverifikasi! Pesanan Anda sedang diproses.",
+        );
       } else if (selectedFulfillment === "DELIVERY_TO_HOME") {
         setActiveDeliveryOrderId(res.orderId || null);
       } else {
@@ -591,7 +594,7 @@ export default function CitizenPortal() {
                 </Text>
               </View>
               <Text className="text-white font-extrabold text-sm leading-tight">
-                Merdeka Belanja Lokal
+                Merdeka Belanja Lokalan
               </Text>
               <Text
                 className="text-emerald-300 text-[9px] mt-0.5"
@@ -846,7 +849,7 @@ export default function CitizenPortal() {
     // Get point history
     // Since points are inside SQLite/mock, let's fetch point transactions or mock. We will query it or mock
     const referredUsers = allUsers.filter(
-      (u) => u.referred_by === activeUser?.referral_code
+      (u) => u.referred_by === activeUser?.referral_code,
     );
     return (
       <ScrollView
@@ -1009,7 +1012,9 @@ export default function CitizenPortal() {
               </Text>
             ) : (
               referredUsers.map((refUser) => {
-                const refUserOrders = orders.filter((o) => o.user_id === refUser.id);
+                const refUserOrders = orders.filter(
+                  (o) => o.user_id === refUser.id,
+                );
                 const hasOrdered = refUserOrders.length > 0;
                 return (
                   <View
@@ -1505,11 +1510,7 @@ export default function CitizenPortal() {
                         : "circle"
                     }
                     size={18}
-                    tintColor={
-                      paymentMethod === "CASH"
-                        ? "#0f5132"
-                        : "#ccc"
-                    }
+                    tintColor={paymentMethod === "CASH" ? "#0f5132" : "#ccc"}
                   />
                 </Pressable>
 
@@ -1523,11 +1524,7 @@ export default function CitizenPortal() {
                   }`}
                 >
                   <View className="bg-stone-100 p-2 rounded-full">
-                    <SymbolView
-                      name="qrcode"
-                      size={14}
-                      tintColor="#555"
-                    />
+                    <SymbolView name="qrcode" size={14} tintColor="#555" />
                   </View>
                   <View className="flex-1">
                     <Text className="text-stone-900 font-bold text-xs">
@@ -1544,11 +1541,7 @@ export default function CitizenPortal() {
                         : "circle"
                     }
                     size={18}
-                    tintColor={
-                      paymentMethod === "QRIS"
-                        ? "#0f5132"
-                        : "#ccc"
-                    }
+                    tintColor={paymentMethod === "QRIS" ? "#0f5132" : "#ccc"}
                   />
                 </Pressable>
               </View>
@@ -1566,7 +1559,10 @@ export default function CitizenPortal() {
                     <View className="absolute bottom-2 right-2 w-4 h-4 border-b-2 border-r-2 border-emerald-800" />
                     <View className="w-32 h-32 flex-wrap flex-row gap-0.5 justify-center items-center opacity-85">
                       {Array.from({ length: 9 }).map((_, i) => (
-                        <View key={i} className={`w-8 h-8 rounded ${i % 3 === 0 ? "bg-emerald-950" : i % 2 === 0 ? "bg-stone-900" : "bg-emerald-850/10"}`} />
+                        <View
+                          key={i}
+                          className={`w-8 h-8 rounded ${i % 3 === 0 ? "bg-emerald-950" : i % 2 === 0 ? "bg-stone-900" : "bg-emerald-850/10"}`}
+                        />
                       ))}
                     </View>
                   </View>
@@ -1574,7 +1570,10 @@ export default function CitizenPortal() {
                     GPN - KMP MART
                   </Text>
                   <Text className="text-[9px] text-stone-500 text-center">
-                    Total: <Text className="font-extrabold text-stone-700">Rp{total.toLocaleString("id-ID")}</Text>
+                    Total:{" "}
+                    <Text className="font-extrabold text-stone-700">
+                      Rp{total.toLocaleString("id-ID")}
+                    </Text>
                   </Text>
                 </View>
               )}

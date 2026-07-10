@@ -18,6 +18,7 @@
     - [x] Dynamically populate the RFQ product choice selector from the unique items in `supplierProducts`
     - [x] Apply strict separation of Superadmin vs Operasional: hide all operational tabs for Superadmin (ADMIN) leaving Keuangan and Pengadaan, and hide Keuangan and Pengadaan for Operasional (OPERASIONAL)
     - [x] Default Superadmin view tab to Keuangan, and Operasional view tab to Stok Barang
+    - [x] Fix self order detail modal to hide action buttons ("Tandai Barang Siap Diambil" / "Serahkan Barang") when the order status is already `COMPLETED` or `CANCELLED`
 - [x] Citizen Portal Component (`CitizenPortal.tsx`)
     - [x] Add dynamic "Riwayat Ajak" (Referred Users list) directly inside the referral card under the card-poin tab, showing name, NIK, and points status (cair vs waiting)
     - [x] Wrap the "Beli Lagi (Reorder)" button logic in a confirmation Alert Dialog to verify user intent before adding products back to the shopping cart
@@ -33,6 +34,9 @@
     - [x] Update mini role label in `UserMenu` button using `getRoleLabel` to dynamically display the correct persona role (Superadmin, Operasional, KopKurir, Mitra Agen, Mitra Supplier, Warga Digital) on switcher click
     - [x] Embed the "Pilih Persona Demo (Juri)" button inside the profile Popover content
     - [x] Move the KMP Mart Demo DevTools switcher modal and role selection ScrollView sheet into the UserMenu component
+- [x] Auth Gateway Component (`auth-gateway.tsx`)
+    - [x] Add "Demo" switcher button inside the top header row of the AuthGateway page for instant, scroll-free access
+    - [x] Embed the same DevTools role selection switcher Modal sheet into AuthGateway to allow switching roles when logged out
 - [x] Reusable Symbol Wrapper (`app-symbol.tsx`)
     - [x] Create a wrapper component `app-symbol.tsx` with a mapping of all 37+ SF symbols used in the project to their equivalent Android/Web Material Symbols
     - [x] Automatically construct the platform-specific name object `{ ios: 'sf.name', android: 'material_name', web: 'material_name' }` from a string prop

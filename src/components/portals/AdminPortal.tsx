@@ -2072,38 +2072,40 @@ export default function AdminPortal() {
                 </View>
 
                 {/* Action Buttons */}
-                <View className="mt-4 gap-2 mb-6">
-                  {activeSelfOrder.order_status === "READY_FOR_PICKUP" ? (
-                    <Pressable
-                      onPress={() => {
-                        handleUpdateSelfOrderFulfillment(
-                          activeSelfOrder.id,
-                          "COMPLETED",
-                        );
-                        setActiveSelfOrder(null);
-                      }}
-                      className="bg-emerald-700 border border-emerald-800 py-3.5 rounded-xl items-center justify-center active:bg-emerald-950"
-                    >
-                      <Text className="text-white font-black text-xs">
-                        Serahkan Barang (Selesai Pickup)
-                      </Text>
-                    </Pressable>
-                  ) : (
-                    <Pressable
-                      onPress={() => {
-                        handleUpdateSelfOrderFulfillment(
-                          activeSelfOrder.id,
-                          "READY_FOR_PICKUP",
-                        );
-                      }}
-                      className="bg-blue-600 border border-blue-700 py-3.5 rounded-xl items-center justify-center active:bg-blue-850"
-                    >
-                      <Text className="text-white font-black text-xs">
-                        Tandai Barang Siap Diambil
-                      </Text>
-                    </Pressable>
-                  )}
-                </View>
+                {activeSelfOrder.order_status !== "COMPLETED" && activeSelfOrder.order_status !== "CANCELLED" && (
+                  <View className="mt-4 gap-2 mb-6">
+                    {activeSelfOrder.order_status === "READY_FOR_PICKUP" ? (
+                      <Pressable
+                        onPress={() => {
+                          handleUpdateSelfOrderFulfillment(
+                            activeSelfOrder.id,
+                            "COMPLETED",
+                          );
+                          setActiveSelfOrder(null);
+                        }}
+                        className="bg-emerald-700 border border-emerald-800 py-3.5 rounded-xl items-center justify-center active:bg-emerald-950"
+                      >
+                        <Text className="text-white font-black text-xs">
+                          Serahkan Barang (Selesai Pickup)
+                        </Text>
+                      </Pressable>
+                    ) : (
+                      <Pressable
+                        onPress={() => {
+                          handleUpdateSelfOrderFulfillment(
+                            activeSelfOrder.id,
+                            "READY_FOR_PICKUP",
+                          );
+                        }}
+                        className="bg-blue-600 border border-blue-700 py-3.5 rounded-xl items-center justify-center active:bg-blue-850"
+                      >
+                        <Text className="text-white font-black text-xs">
+                          Tandai Barang Siap Diambil
+                        </Text>
+                      </Pressable>
+                    )}
+                  </View>
+                )}
               </ScrollView>
             </Pressable>
           </Pressable>
