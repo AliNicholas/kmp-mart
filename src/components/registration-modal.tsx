@@ -19,23 +19,7 @@ interface RegistrationModalProps {
   onClose: () => void;
 }
 
-const cooperatives = [
-  {
-    id: 'tenant-1',
-    title: 'KMP Sukamaju',
-    subtitle: 'Koperasi Merah Putih desa utama',
-  },
-  {
-    id: 'tenant-2',
-    title: 'KMP Sukasari',
-    subtitle: 'Koperasi tetangga terdekat',
-  },
-  {
-    id: 'tenant-3',
-    title: 'KMP Sukamukti',
-    subtitle: 'Koperasi tetangga wilayah timur',
-  },
-];
+
 
 const fieldClass = 'bg-white border border-stone-200 rounded-xl px-3 py-2.5 text-xs text-stone-900';
 const labelClass = 'text-stone-700 text-[10px] font-black uppercase tracking-wide mb-1';
@@ -50,7 +34,7 @@ export default function RegistrationModal({ visible, onClose }: RegistrationModa
   const [address, setAddress] = React.useState('Jl. Merah Putih No. 17, Desa Sukamaju');
   const rt = '00';
   const [rw, setRw] = React.useState('02');
-  const [cooperativeId, setCooperativeId] = React.useState('tenant-1');
+  const cooperativeId = 'tenant-1';
   const [referralCode, setReferralCode] = React.useState('');
   const [otp, setOtp] = React.useState('');
   const [pin, setPin] = React.useState('');
