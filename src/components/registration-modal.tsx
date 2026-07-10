@@ -25,7 +25,7 @@ const fieldClass = 'bg-white border border-stone-200 rounded-xl px-3 py-2.5 text
 const labelClass = 'text-stone-700 text-[10px] font-black uppercase tracking-wide mb-1';
 
 export default function RegistrationModal({ visible, onClose }: RegistrationModalProps) {
-  const { registerCitizen } = useApp();
+  const { registerCitizen, allUsers } = useApp();
 
   const [step, setStep] = React.useState<0 | 1 | 2>(0);
   const [fullName, setFullName] = React.useState('Siti Aminah');
@@ -65,6 +65,12 @@ export default function RegistrationModal({ visible, onClose }: RegistrationModa
     if (!address.trim()) return 'Alamat KTP wajib diisi.';
     if (!rw.replace(/\D/g, '')) return 'RW wajib diisi.';
     if (!referralCode.trim()) return 'Kode KopAjak wajib diisi.';
+
+    // Check if the referral code exists in the database
+    const cleanReferral = referralCode.trim().toUpperCase();
+    const referrer = allUsers.find(u => u.referral_code === cleanReferral);
+    if (!referrer) return 'Kode KopAjak tidak ditemukan.';
+
     return '';
   };
 

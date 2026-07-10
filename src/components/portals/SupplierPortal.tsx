@@ -2,7 +2,11 @@ import { useApp } from "@/contexts/AppContext";
 import { dbService } from "@/utils/db";
 import { SymbolView } from "expo-symbols";
 import React, { useState } from "react";
-import { Alert, Pressable, ScrollView, Text, View } from "react-native";
+import { Alert, Pressable, ScrollView, Text, View, Modal, TextInput } from "react-native";
+
+const generateSupplierProductId = () => {
+  return `sp-${Date.now()}`;
+};
 
 export default function SupplierPortal() {
   const {
@@ -12,6 +16,52 @@ export default function SupplierPortal() {
   } = useApp();
 
   const [activeTab, setActiveTab] = useState(0); // 0: PO Masuk, 1: Katalog Produk
+
+  const [addModalOpen, setAddModalOpen] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newPrice, setNewPrice] = useState("");
+  const [newMoq, setNewMoq] = useState("");
+  const [newUnit, setNewUnit] = useState("pcs");
+  const [newLeadTime, setNewLeadTime] = useState("1 Hari");
+
+  const handleAddProduct = async () => {
+    if (!newName.trim() || !newPrice.trim() || !newMoq.trim()) {
+      Alert.alert("Gagal", "Harap isi semua kolom wajib.");
+      return;
+    }
+
+    const priceNum = parseFloat(newPrice);
+    const moqNum = parseInt(newMoq);
+
+    if (isNaN(priceNum) || priceNum <= 0) {
+      Alert.alert("Gagal", "Harga kontrak harus berupa angka positif.");
+      return;
+    }
+    if (isNaN(moqNum) || moqNum <= 0) {
+      Alert.alert("Gagal", "MOQ harus berupa angka positif.");
+      return;
+    }
+
+    try {
+      const newId = generateSupplierProductId();
+      await dbService.run(
+        `INSERT INTO supplier_products (id, supplier_id, name, price, moq, lead_time, unit)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [newId, supplierId, newName.trim(), priceNum, moqNum, newLeadTime, newUnit.trim()]
+      );
+
+      Alert.alert("Sukses", `Produk ${newName} telah ditambahkan ke katalog.`);
+      setAddModalOpen(false);
+      setNewName("");
+      setNewPrice("");
+      setNewMoq("");
+      setNewUnit("pcs");
+      setNewLeadTime("1 Hari");
+      await refreshData();
+    } catch (err: any) {
+      Alert.alert("Gagal", err.message || "Gagal menambahkan produk.");
+    }
+  };
 
   // Supplier ID for Agro Pangan (pre-seeded as sup-1)
   const supplierId = "sup-1";
@@ -94,7 +144,16 @@ export default function SupplierPortal() {
 
   const renderKatalog = () => (
     <ScrollView className="flex-1 px-4 pt-3 mb-16">
-      <Text className="text-stone-900 font-extrabold text-xs mb-3">Daftar Produk Terdaftar</Text>
+      <View className="flex-row justify-between items-center mb-3">
+        <Text className="text-stone-900 font-extrabold text-xs">Daftar Produk Terdaftar</Text>
+        <Pressable
+          onPress={() => setAddModalOpen(true)}
+          className="bg-emerald-800 active:bg-emerald-950 px-3 py-1.5 rounded-full flex-row items-center gap-1"
+        >
+          <SymbolView name="plus" size={10} tintColor="#fff" />
+          <Text className="text-white text-[9px] font-black">Tambah Produk</Text>
+        </Pressable>
+      </View>
       {myProducts.length === 0 ? (
         <View className="bg-white border border-stone-200 border-dashed rounded-3xl p-6 items-center">
           <Text className="text-stone-400 text-[11px] italic">Belum ada produk terdaftar untuk supplier ini.</Text>
@@ -151,6 +210,124 @@ export default function SupplierPortal() {
           </Text>
         </Pressable>
       </View>
+
+      {/* Add Product Modal */}
+      <Modal
+        visible={addModalOpen}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setAddModalOpen(false)}
+      >
+        <Pressable
+          onPress={() => setAddModalOpen(false)}
+          className="flex-1 justify-end bg-black/60"
+        >
+          <Pressable onPress={() => {}} className="bg-white rounded-t-3xl p-5 max-h-[85%]">
+            <View className="flex-row justify-between items-center border-b border-stone-200 pb-3 mb-4">
+              <Text className="text-emerald-950 font-black text-lg">
+                Tambah Produk Kontrak
+              </Text>
+              <Pressable
+                onPress={() => setAddModalOpen(false)}
+                className="w-8 h-8 rounded-full bg-stone-100 items-center justify-center active:bg-stone-200"
+              >
+                <SymbolView name="xmark" size={14} tintColor="#1c1917" />
+              </Pressable>
+            </View>
+
+            <ScrollView className="mb-4">
+              <View className="mb-3">
+                <Text className="text-stone-500 text-[10px] font-bold uppercase mb-1">
+                  Nama Produk <Text className="text-rose-500">*</Text>
+                </Text>
+                <TextInput
+                  value={newName}
+                  onChangeText={setNewName}
+                  placeholder="Contoh: Beras Premium 5kg"
+                  className="bg-stone-50 border border-stone-200 rounded-xl px-3 py-2.5 text-xs text-stone-950 font-bold"
+                />
+              </View>
+
+              <View className="mb-3">
+                <Text className="text-stone-500 text-[10px] font-bold uppercase mb-1">
+                  Harga Kontrak (Rp) <Text className="text-rose-500">*</Text>
+                </Text>
+                <TextInput
+                  value={newPrice}
+                  onChangeText={setNewPrice}
+                  placeholder="Contoh: 62000"
+                  keyboardType="numeric"
+                  className="bg-stone-50 border border-stone-200 rounded-xl px-3 py-2.5 text-xs text-stone-950 font-bold"
+                />
+              </View>
+
+              <View className="mb-3">
+                <Text className="text-stone-500 text-[10px] font-bold uppercase mb-1">
+                  Minimum Order Qty (MOQ) <Text className="text-rose-500">*</Text>
+                </Text>
+                <TextInput
+                  value={newMoq}
+                  onChangeText={setNewMoq}
+                  placeholder="Contoh: 20"
+                  keyboardType="numeric"
+                  className="bg-stone-50 border border-stone-200 rounded-xl px-3 py-2.5 text-xs text-stone-950 font-bold"
+                />
+              </View>
+
+              <View className="mb-3">
+                <Text className="text-stone-500 text-[10px] font-bold uppercase mb-1">
+                  Satuan Unit
+                </Text>
+                <View className="flex-row flex-wrap gap-1.5 mt-1">
+                  {["pcs", "kg", "liter", "karung", "pack", "dus"].map((u) => {
+                    const isSelected = newUnit === u;
+                    return (
+                      <Pressable
+                        key={u}
+                        onPress={() => setNewUnit(u)}
+                        className={`px-3 py-1.5 rounded-xl border ${
+                          isSelected
+                            ? "bg-emerald-800 border-emerald-950"
+                            : "bg-stone-50 border-stone-200"
+                        }`}
+                      >
+                        <Text
+                          className={`text-[10px] font-bold ${
+                            isSelected ? "text-white font-black" : "text-stone-600"
+                          }`}
+                        >
+                          {u}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              </View>
+
+              <View className="mb-4">
+                <Text className="text-stone-500 text-[10px] font-bold uppercase mb-1">
+                  Estimasi Lead Time (Waktu Kirim)
+                </Text>
+                <TextInput
+                  value={newLeadTime}
+                  onChangeText={setNewLeadTime}
+                  placeholder="Contoh: 2 Hari"
+                  className="bg-stone-50 border border-stone-200 rounded-xl px-3 py-2.5 text-xs text-stone-950 font-bold"
+                />
+              </View>
+            </ScrollView>
+
+            <Pressable
+              onPress={handleAddProduct}
+              className="bg-emerald-800 active:bg-emerald-950 py-3 rounded-2xl items-center mb-6"
+            >
+              <Text className="text-white text-xs font-black">
+                Simpan & Daftarkan Produk
+              </Text>
+            </Pressable>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }

@@ -1,0 +1,25 @@
+- [x] Configuration and Type Updates (`AppContext.tsx`)
+    - [x] Update AppRole to include SUPPLIER role
+- [x] Portal Render Updates (`index.tsx`)
+    - [x] Import and render `SupplierPortal` for SUPPLIER role
+    - [x] Add Pak Slamet (Mitra Supplier) to DevTools switcher
+    - [x] Update `handleSwitchRole` to dynamically insert user on demand to prevent missing seed database mismatch errors
+- [x] Supplier Portal Component (`SupplierPortal.tsx`)
+    - [x] Implement PO Masuk list with "Konfirmasi & Kirim Barang" shipper trigger
+    - [x] Implement Supplier Product catalog
+    - [x] Add "+" button to catalog list header to open product registration form modal
+    - [x] Implement product creation form modal and save handler with purity-compliant ID generation helper
+    - [x] Replace unit text input with horizontal selectable option pills
+- [x] Admin Portal Component (`AdminPortal.tsx`)
+    - [x] Replace product creation/edition unit text input with horizontal selectable option pills
+    - [x] Dynamically populate the RFQ product choice selector from the unique items in `supplierProducts`
+    - [x] Apply strict separation of Superadmin vs Operasional: hide all operational tabs for Superadmin (ADMIN) leaving Keuangan and Pengadaan, and hide Keuangan and Pengadaan for Operasional (OPERASIONAL)
+    - [x] Default Superadmin view tab to Keuangan, and Operasional view tab to Stok Barang
+- [x] Registration Modal Component (`registration-modal.tsx`)
+    - [x] Update first tab validation check to verify referral code existence in allUsers immediately when clicking "Kirim OTP" instead of verifying it at the end of the flow
+- [x] Database Seeding (`db.ts`)
+    - [x] Seed supplier user Pak Slamet in web & native SQLite DB
+- [x] User Menu Labels Update (`user-menu.tsx`)
+    - [x] Map SUPPLIER to Mitra Supplier
+- [x] Verification
+    - [x] Run compiler and lint checks

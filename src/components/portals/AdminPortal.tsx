@@ -46,12 +46,14 @@ export default function AdminPortal() {
     checkout,
   } = useApp();
 
-  const [subTab, setSubTab] = useState(0);
+  const [subTab, setSubTab] = useState(() => {
+    return activeRole === "ADMIN" ? 2 : 0;
+  });
   const [prevRole, setPrevRole] = useState(activeRole);
 
   if (activeRole !== prevRole) {
     setPrevRole(activeRole);
-    setSubTab(0);
+    setSubTab(activeRole === "ADMIN" ? 2 : 0);
   }
 
   // Tab 0: Inventory states
@@ -1141,8 +1143,15 @@ export default function AdminPortal() {
   );
 
   const renderProcurement = () => {
+    const rfqProducts = Array.from(
+      new Set(supplierProducts.map((sp) => sp.name))
+    );
+    const activeRfqProduct = rfqProducts.includes(selectedRfqProduct)
+      ? selectedRfqProduct
+      : rfqProducts[0] || "";
+
     const matchingQuotes = supplierProducts.filter(
-      (sp) => sp.name.toLowerCase() === selectedRfqProduct.toLowerCase()
+      (sp) => sp.name.toLowerCase() === activeRfqProduct.toLowerCase()
     );
 
     const qty = parseInt(rfqQty) || 1;
@@ -1175,20 +1184,20 @@ export default function AdminPortal() {
           <Text className="text-stone-900 font-extrabold text-xs mb-3">Buat RFQ Baru (Sourcing)</Text>
           
           <Text className="text-stone-500 text-[9px] font-bold uppercase mb-1">Pilih Produk Kebutuhan:</Text>
-          <View className="flex-row gap-2 mb-3">
-            {["Beras Premium 5kg", "Minyak Goreng 1L"].map((p) => (
+          <View className="flex-row flex-wrap gap-2 mb-3">
+            {rfqProducts.map((p) => (
               <Pressable
                 key={p}
                 onPress={() => setSelectedRfqProduct(p)}
-                className={`px-3 py-2 rounded-xl border flex-1 items-center ${
-                  selectedRfqProduct === p
+                className={`px-3 py-2 rounded-xl border items-center min-w-[100px] ${
+                  activeRfqProduct === p
                     ? "bg-emerald-50 border-emerald-600"
                     : "bg-stone-50 border-stone-200"
                 }`}
               >
                 <Text
                   className={`text-[10px] font-black ${
-                    selectedRfqProduct === p ? "text-emerald-800" : "text-stone-600"
+                    activeRfqProduct === p ? "text-emerald-800" : "text-stone-600"
                   }`}
                 >
                   {p}
@@ -1653,7 +1662,7 @@ export default function AdminPortal() {
 
       {/* Sub Tabs Bottom Bar */}
       <View className="absolute bottom-0 left-0 right-0 bg-white border-t border-stone-200 h-16 flex-row justify-around items-center">
-        {(activeRole === "ADMIN" || activeRole === "OPERASIONAL") && (
+        {activeRole === "OPERASIONAL" && (
           <Pressable
             onPress={() => setSubTab(0)}
             className="items-center justify-center flex-1 h-full active:bg-stone-50"
@@ -1671,7 +1680,7 @@ export default function AdminPortal() {
           </Pressable>
         )}
 
-        {(activeRole === "ADMIN" || activeRole === "OPERASIONAL") && (
+        {activeRole === "OPERASIONAL" && (
           <Pressable
             onPress={() => setSubTab(1)}
             className="items-center justify-center flex-1 h-full active:bg-stone-50"
@@ -1707,7 +1716,7 @@ export default function AdminPortal() {
           </Pressable>
         )}
 
-        {(activeRole === "ADMIN" || activeRole === "OPERASIONAL") && (
+        {activeRole === "OPERASIONAL" && (
           <Pressable
             onPress={() => setSubTab(3)}
             className="items-center justify-center flex-1 h-full active:bg-stone-50"
@@ -1743,7 +1752,7 @@ export default function AdminPortal() {
           </Pressable>
         )}
 
-        {(activeRole === "ADMIN" || activeRole === "OPERASIONAL") && (
+        {activeRole === "OPERASIONAL" && (
           <Pressable
             onPress={() => setSubTab(5)}
             className="items-center justify-center flex-1 h-full active:bg-stone-50"
@@ -1843,12 +1852,30 @@ export default function AdminPortal() {
                   <Text className="text-stone-700 text-xs font-bold mb-1">
                     Satuan Produk
                   </Text>
-                  <TextInput
-                    value={prodUnit}
-                    onChangeText={setProdUnit}
-                    placeholder="pcs / kg / liter / pack"
-                    className="bg-stone-100 border border-stone-200 rounded-xl px-4 py-2.5 text-xs text-stone-900"
-                  />
+                  <View className="flex-row flex-wrap gap-1 mt-1">
+                    {["pcs", "kg", "liter", "karung", "pack", "dus"].map((u) => {
+                      const isSelected = prodUnit === u;
+                      return (
+                        <Pressable
+                          key={u}
+                          onPress={() => setProdUnit(u)}
+                          className={`px-2.5 py-1.5 rounded-xl border ${
+                            isSelected
+                              ? "bg-emerald-850 border-emerald-900"
+                              : "bg-stone-100 border-stone-200"
+                          }`}
+                        >
+                          <Text
+                            className={`text-[9px] font-bold ${
+                              isSelected ? "text-white font-extrabold" : "text-stone-600"
+                            }`}
+                          >
+                            {u}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
                 </View>
               </View>
 
