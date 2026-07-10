@@ -1,9 +1,12 @@
 - [x] Configuration and Type Updates (`AppContext.tsx`)
     - [x] Update AppRole to include SUPPLIER role
+    - [x] Make referralCode validation optional in `registerCitizen` handler (only validates code against database if non-empty)
+    - [x] Add `isQris?: boolean` parameter to `checkout` method inside `AppContextInterface` and implementation block, automatically setting order status to `CONFIRMED` and payment status to `PAID` if QRIS is used
+    - [x] Add `handleSwitchRole` declaration to `AppContextInterface` and implementation block to allow switching demo personas from any component
 - [x] Portal Render Updates (`index.tsx`)
     - [x] Import and render `SupplierPortal` for SUPPLIER role
-    - [x] Add Pak Slamet (Mitra Supplier) to DevTools switcher
     - [x] Update `handleSwitchRole` to dynamically insert user on demand to prevent missing seed database mismatch errors
+    - [x] Remove floating DevTools switcher trigger button and DevTools Modal from the main HomeScreen view, keeping it clean and minimal
 - [x] Supplier Portal Component (`SupplierPortal.tsx`)
     - [x] Implement PO Masuk list with "Konfirmasi & Kirim Barang" shipper trigger
     - [x] Implement Supplier Product catalog
@@ -18,12 +21,24 @@
 - [x] Citizen Portal Component (`CitizenPortal.tsx`)
     - [x] Add dynamic "Riwayat Ajak" (Referred Users list) directly inside the referral card under the card-poin tab, showing name, NIK, and points status (cair vs waiting)
     - [x] Wrap the "Beli Lagi (Reorder)" button logic in a confirmation Alert Dialog to verify user intent before adding products back to the shopping cart
+    - [x] Add "Pilih Metode Pembayaran" section in the checkout modal (options: "Bayar Tunai / COD", "QRIS Digital Lintas Koperasi")
+    - [x] Render a beautiful, visually framed mockup of the QRIS code dynamically inside the checkout modal if QRIS option is active
+    - [x] Pass QRIS indicator to the backend checkout call, showing payment success dialog on order creation
 - [x] Registration Modal Component (`registration-modal.tsx`)
     - [x] Update first tab validation check to verify referral code existence in allUsers immediately when clicking "Kirim OTP" instead of verifying it at the end of the flow
     - [x] Render referral code validation error directly underneath the KopAjak input field in red, changing the input border to red, and hiding it from the main general error banner
+    - [x] Make KopAjak (referral code) input field optional in both `validateProfile` profile checking and UI styling (changed label and placeholder to "(Opsional)")
+- [x] User Menu Component (`user-menu.tsx`)
+    - [x] Map SUPPLIER to Mitra Supplier
+    - [x] Update mini role label in `UserMenu` button using `getRoleLabel` to dynamically display the correct persona role (Superadmin, Operasional, KopKurir, Mitra Agen, Mitra Supplier, Warga Digital) on switcher click
+    - [x] Embed the "Pilih Persona Demo (Juri)" button inside the profile Popover content
+    - [x] Move the KMP Mart Demo DevTools switcher modal and role selection ScrollView sheet into the UserMenu component
+- [x] Reusable Symbol Wrapper (`app-symbol.tsx`)
+    - [x] Create a wrapper component `app-symbol.tsx` with a mapping of all 37+ SF symbols used in the project to their equivalent Android/Web Material Symbols
+    - [x] Automatically construct the platform-specific name object `{ ios: 'sf.name', android: 'material_name', web: 'material_name' }` from a string prop
+    - [x] Replace all direct imports and usages of `SymbolView` from `expo-symbols` across 14 project files with the new wrapper
 - [x] Database Seeding (`db.ts`)
     - [x] Seed supplier user Pak Slamet in web & native SQLite DB
-- [x] User Menu Labels Update (`user-menu.tsx`)
-    - [x] Map SUPPLIER to Mitra Supplier
+    - [x] Extend `User` type definition to allow `"AGENT" | "OPERASIONAL" | "SUPPLIER"` values
 - [x] Verification
     - [x] Run compiler and lint checks

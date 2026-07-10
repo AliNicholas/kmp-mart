@@ -53,6 +53,7 @@ export default function CitizenPortal() {
   >("DELIVERY_TO_HOME");
   const [usePoints, setUsePoints] = useState(false);
   const [referralInput, setReferralInput] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState<"CASH" | "QRIS">("CASH");
   const [detailOrder, setDetailOrder] = useState<any | null>(null);
   const [ptHistory, setPtHistory] = useState<any[]>([]);
   const [activeDeliveryOrderId, setActiveDeliveryOrderId] = useState<
@@ -308,15 +309,20 @@ export default function CitizenPortal() {
       "SELF_ORDER",
       pointsToRedeem,
       null,
+      undefined,
+      paymentMethod === "QRIS",
     );
 
     if (res.success) {
       setCheckoutModalOpen(false);
       setIsCartOpen(false);
       setUsePoints(false);
+      setPaymentMethod("CASH");
       setSubTab(1); // Switch to orders tab
 
-      if (selectedFulfillment === "DELIVERY_TO_HOME") {
+      if (paymentMethod === "QRIS") {
+        Alert.alert("Pembayaran Berhasil", "Pembayaran QRIS terverifikasi! Pesanan Anda sedang diproses.");
+      } else if (selectedFulfillment === "DELIVERY_TO_HOME") {
         setActiveDeliveryOrderId(res.orderId || null);
       } else {
         Alert.alert("Sukses", "Pesanan berhasil dibuat!");
@@ -1462,6 +1468,116 @@ export default function CitizenPortal() {
                   />
                 </Pressable>
               </View>
+
+              {/* Payment Method Selection */}
+              <Text className="text-stone-900 font-bold text-xs mb-1 mt-3">
+                Pilih Metode Pembayaran
+              </Text>
+              <View className="space-y-2 mb-3">
+                {/* Cash / COD */}
+                <Pressable
+                  onPress={() => setPaymentMethod("CASH")}
+                  className={`p-3 rounded-xl border flex-row items-center gap-3 mb-2 ${
+                    paymentMethod === "CASH"
+                      ? "bg-emerald-50 border-emerald-600"
+                      : "bg-white border-stone-200"
+                  }`}
+                >
+                  <View className="bg-stone-100 p-2 rounded-full">
+                    <SymbolView
+                      name="banknote.fill"
+                      size={14}
+                      tintColor="#555"
+                    />
+                  </View>
+                  <View className="flex-1">
+                    <Text className="text-stone-900 font-bold text-xs">
+                      Bayar Tunai / COD
+                    </Text>
+                    <Text className="text-[10px] text-stone-500 mt-0.5">
+                      Bayar tunai saat barang diterima/diambil.
+                    </Text>
+                  </View>
+                  <SymbolView
+                    name={
+                      paymentMethod === "CASH"
+                        ? "checkmark.circle.fill"
+                        : "circle"
+                    }
+                    size={18}
+                    tintColor={
+                      paymentMethod === "CASH"
+                        ? "#0f5132"
+                        : "#ccc"
+                    }
+                  />
+                </Pressable>
+
+                {/* QRIS */}
+                <Pressable
+                  onPress={() => setPaymentMethod("QRIS")}
+                  className={`p-3 rounded-xl border flex-row items-center gap-3 mb-2 ${
+                    paymentMethod === "QRIS"
+                      ? "bg-emerald-50 border-emerald-600"
+                      : "bg-white border-stone-200"
+                  }`}
+                >
+                  <View className="bg-stone-100 p-2 rounded-full">
+                    <SymbolView
+                      name="qrcode"
+                      size={14}
+                      tintColor="#555"
+                    />
+                  </View>
+                  <View className="flex-1">
+                    <Text className="text-stone-900 font-bold text-xs">
+                      QRIS Digital Lintas Koperasi
+                    </Text>
+                    <Text className="text-[10px] text-stone-500 mt-0.5">
+                      Scan kode QRIS desa untuk bayar instan.
+                    </Text>
+                  </View>
+                  <SymbolView
+                    name={
+                      paymentMethod === "QRIS"
+                        ? "checkmark.circle.fill"
+                        : "circle"
+                    }
+                    size={18}
+                    tintColor={
+                      paymentMethod === "QRIS"
+                        ? "#0f5132"
+                        : "#ccc"
+                    }
+                  />
+                </Pressable>
+              </View>
+
+              {/* Show QRIS Code if QRIS is selected */}
+              {paymentMethod === "QRIS" && (
+                <View className="bg-stone-50 border border-stone-200 p-4 rounded-xl mb-4 items-center">
+                  <Text className="text-stone-700 font-bold text-xs mb-2">
+                    Scan QRIS Koperasi Desa
+                  </Text>
+                  <View className="bg-white p-3 rounded-xl border border-stone-200 shadow-sm items-center justify-center w-40 h-40 mb-2 relative">
+                    <View className="absolute top-2 left-2 w-4 h-4 border-t-2 border-l-2 border-emerald-800" />
+                    <View className="absolute top-2 right-2 w-4 h-4 border-t-2 border-r-2 border-emerald-800" />
+                    <View className="absolute bottom-2 left-2 w-4 h-4 border-b-2 border-l-2 border-emerald-800" />
+                    <View className="absolute bottom-2 right-2 w-4 h-4 border-b-2 border-r-2 border-emerald-800" />
+                    <View className="w-32 h-32 flex-wrap flex-row gap-0.5 justify-center items-center opacity-85">
+                      {Array.from({ length: 9 }).map((_, i) => (
+                        <View key={i} className={`w-8 h-8 rounded ${i % 3 === 0 ? "bg-emerald-950" : i % 2 === 0 ? "bg-stone-900" : "bg-emerald-850/10"}`} />
+                      ))}
+                    </View>
+                  </View>
+                  <Text className="text-[10px] text-emerald-800 font-black tracking-widest uppercase mb-1">
+                    GPN - KMP MART
+                  </Text>
+                  <Text className="text-[9px] text-stone-500 text-center">
+                    Total: <Text className="font-extrabold text-stone-700">Rp{total.toLocaleString("id-ID")}</Text>
+                  </Text>
+                </View>
+              )}
 
               {/* Point Loyalty Redeem Option */}
               <View className="bg-stone-50 border border-stone-200 p-3.5 rounded-xl mb-4">

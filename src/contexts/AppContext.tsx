@@ -24,6 +24,7 @@ import {
   useEffect,
   useState,
 } from "react";
+import { Alert } from "react-native";
 
 export interface CartItem {
   product: Product;
@@ -134,7 +135,9 @@ interface AppContextType {
     pointsRedeemed: number,
     rtBatchId: string | null,
     overrideUserId?: string, // used for assisted checkout
+    isQris?: boolean,
   ) => Promise<{ success: boolean; error?: string; orderId?: string }>;
+
 
   // RT Batch Actions
   createBatch: (
@@ -219,6 +222,13 @@ interface AppContextType {
     taskId: string,
     reason: string,
   ) => Promise<{ success: boolean; error?: string }>;
+
+  // Demo Switcher
+  handleSwitchRole: (
+    userId: string,
+    role: AppRole,
+    name: string,
+  ) => Promise<void>;
 
   // Referral
   registerCitizen: (
@@ -1234,6 +1244,52 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     return { success: true };
   }
 
+  const handleSwitchRole = async (userId: string, role: AppRole, name: string) => {
+    let user = allUsers.find((u) => u.id === userId);
+    if (!user) {
+      try {
+        await dbService.run(
+          `INSERT OR IGNORE INTO users (id, name, phone, role, rt_id, cooperative_id, points, referral_code, pin)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            userId,
+            name,
+            userId === 'user-slamet' ? '089988776655' : '081234567890',
+            role,
+            role === 'USER' ? 'RT 03' : null,
+            'tenant-1',
+            0,
+            `${userId.toUpperCase()}AJAK`,
+            '123456',
+          ],
+        );
+        await refreshData();
+        user = {
+          id: userId,
+          name: name,
+          phone: userId === 'user-slamet' ? '089988776655' : '081234567890',
+          role: role,
+          rt_id: role === 'USER' ? 'RT 03' : null,
+          cooperative_id: 'tenant-1',
+          points: 0,
+          referral_code: `${userId.toUpperCase()}AJAK`,
+          referred_by: null,
+          pin: '123456',
+        };
+      } catch (err) {
+        console.error("Failed to auto-insert switcher user:", err);
+      }
+    }
+
+    if (user) {
+      setActiveUserState(user);
+      setActiveRole(role);
+      Alert.alert("Identitas Berganti", `Masuk sebagai: ${name} (${role})`);
+    } else {
+      Alert.alert("Gagal", `Identitas ${name} tidak ditemukan di database.`);
+    }
+  };
+
   const registerCitizen = async (input: RegisterCitizenInput) => {
     const fullName = input.fullName.trim();
     const phone = normalizePhone(input.phone);
@@ -1294,17 +1350,16 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         return { success: false, error: "Koperasi tujuan tidak ditemukan." };
       }
 
-      if (!cleanReferralCode) {
-        return { success: false, error: "Kode KopAjak wajib diisi." };
+      let referredBy: string | null = null;
+      if (cleanReferralCode) {
+        const referrer = allUsers.find(
+          (u) => u.referral_code === cleanReferralCode,
+        );
+        if (!referrer) {
+          return { success: false, error: "Kode KopAjak tidak ditemukan." };
+        }
+        referredBy = cleanReferralCode;
       }
-
-      const referrer = allUsers.find(
-        (u) => u.referral_code === cleanReferralCode,
-      );
-      if (!referrer) {
-        return { success: false, error: "Kode KopAjak tidak ditemukan." };
-      }
-      const referredBy = cleanReferralCode;
 
       const nowStr = new Date().toISOString();
       const userId = `user-${phone.slice(-4)}-${Date.now()}`;
@@ -1383,6 +1438,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     pointsRedeemed: number,
     rtBatchId: string | null,
     overrideUserId?: string,
+    isQris?: boolean,
   ) => {
     const targetUserId = overrideUserId || activeUser?.id;
     if (!targetUserId)
@@ -1455,7 +1511,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       // Let's mark card purchase and cash-payment channel as UNPAID initially, which updates to PAID on settlement, or PAID if paid upfront.
       // Let's mark it UNPAID, or PAID if simulation QRIS is used. Let's make it UNPAID to show the RT Settlement flow!
       const isPaidUpfront =
-        channel === "SELF_ORDER" && fulfillment === "PICKUP_AT_COOP";
+        isQris || (channel === "SELF_ORDER" && fulfillment === "PICKUP_AT_COOP");
       const paymentStatus = isPaidUpfront ? "PAID" : "UNPAID";
       const orderStatus = isPaidUpfront ? "CONFIRMED" : "PENDING_PAYMENT";
 
@@ -2148,6 +2204,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         startDeliveryTransit,
         completeDeliveryTask,
         failDeliveryTask,
+        handleSwitchRole,
         registerCitizen,
         applyReferralCode,
         updateUserField,

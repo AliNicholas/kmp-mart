@@ -524,6 +524,10 @@ export default function AdminPortal() {
         o.order_status !== "CANCELLED",
     );
 
+    const completedOrders = orders.filter(
+      (o) => o.order_status === "COMPLETED"
+    );
+
     return (
       <ScrollView
         className="flex-1 bg-stone-50"
@@ -717,6 +721,63 @@ export default function AdminPortal() {
                       </Text>
                     </Button>
                   )}
+                </View>
+              </Pressable>
+            );
+          })
+        )}
+
+        {/* Riwayat Transaksi Selesai */}
+        <Text className="text-stone-900 font-black text-lg mt-6 mb-3">
+          Riwayat Transaksi Selesai (Selesai Pickup & Delivery)
+        </Text>
+        {completedOrders.length === 0 ? (
+          <View className="bg-white p-6 rounded-xl border border-stone-200 items-center justify-center mb-5">
+            <SymbolView
+              name="clock.fill"
+              size={32}
+              tintColor="#a8a29e"
+            />
+            <Text className="text-stone-500 text-xs mt-2 text-center">
+              Belum ada riwayat transaksi selesai.
+            </Text>
+          </View>
+        ) : (
+          completedOrders.map((o) => {
+            const user = allUsers.find((u) => u.id === o.user_id);
+            return (
+              <Pressable
+                key={o.id}
+                onPress={() => handleOpenSelfOrderDetails(o)}
+                className="bg-white p-4 rounded-xl border border-stone-200 mb-3 shadow-sm active:bg-stone-100 flex-row justify-between items-center"
+              >
+                <View className="flex-1 pr-2">
+                  <View className="flex-row items-center gap-2">
+                    <Text className="text-stone-955 font-bold text-sm">
+                      {user?.name || "Warga"}
+                    </Text>
+                    <View className={`px-2 py-0.5 rounded border ${o.fulfillment === "DELIVERY_TO_HOME" ? "bg-blue-100 border-blue-200" : "bg-emerald-100 border-emerald-200"}`}>
+                      <Text className={`${o.fulfillment === "DELIVERY_TO_HOME" ? "text-blue-800" : "text-emerald-800"} text-[8px] font-bold`}>
+                        {o.fulfillment === "DELIVERY_TO_HOME" ? "KIRIM" : "MANDIRI"}
+                      </Text>
+                    </View>
+                  </View>
+                  <Text className="text-stone-400 text-[10px] mt-0.5">
+                    ID: {o.id.substring(0, 12)}... • Telp: {user?.phone || "—"}
+                  </Text>
+                  <Text className="text-stone-500 text-[10px] mt-1.5 font-bold">
+                    Total: Rp{o.total.toLocaleString("id-ID")} • 💳 Lunas
+                  </Text>
+                </View>
+
+                <View className="items-end gap-1">
+                  <View className="bg-emerald-50 border border-emerald-200 px-2 py-1 rounded-lg flex-row items-center gap-1">
+                    <SymbolView name="checkmark.circle.fill" size={10} tintColor="#047857" />
+                    <Text className="text-emerald-700 text-[8px] font-bold">SELESAI</Text>
+                  </View>
+                  <Text className="text-stone-400 text-[8px] mt-1">
+                    {new Date(o.created_at).toLocaleDateString("id-ID", { day: 'numeric', month: 'short' })}
+                  </Text>
                 </View>
               </Pressable>
             );

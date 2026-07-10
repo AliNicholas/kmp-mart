@@ -65,12 +65,12 @@ export default function RegistrationModal({ visible, onClose }: RegistrationModa
     if (cleanPhone.length < 10 || cleanPhone.length > 13) return 'Nomor HP belum valid.';
     if (!address.trim()) return 'Alamat KTP wajib diisi.';
     if (!rw.replace(/\D/g, '')) return 'RW wajib diisi.';
-    if (!referralCode.trim()) return 'Kode KopAjak wajib diisi.';
-
-    // Check if the referral code exists in the database
-    const cleanReferral = referralCode.trim().toUpperCase();
-    const referrer = allUsers.find(u => u.referral_code === cleanReferral);
-    if (!referrer) return 'Kode KopAjak tidak ditemukan.';
+    // Check if the referral code exists in the database only if they typed one
+    if (referralCode.trim()) {
+      const cleanReferral = referralCode.trim().toUpperCase();
+      const referrer = allUsers.find(u => u.referral_code === cleanReferral);
+      if (!referrer) return 'Kode KopAjak tidak ditemukan.';
+    }
 
     return '';
   };
@@ -218,13 +218,13 @@ export default function RegistrationModal({ visible, onClose }: RegistrationModa
       </View>
 
       <View className="mb-2">
-        <Text className={labelClass}>Kode KopAjak (Wajib)</Text>
+        <Text className={labelClass}>Kode KopAjak (Opsional)</Text>
         <TextInput
           value={referralCode}
           onChangeText={setReferralCode}
           autoCapitalize="characters"
           className={`${fieldClass} ${isReferralError ? 'border-rose-500 bg-rose-50/10 text-rose-900' : ''}`}
-          placeholder="Masukkan kode KopAjak"
+          placeholder="Masukkan kode KopAjak (opsional)"
         />
         {isReferralError ? (
           <Text className="text-rose-600 text-[10px] font-bold mt-1 pl-1">

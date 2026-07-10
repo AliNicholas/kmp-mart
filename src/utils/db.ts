@@ -13,7 +13,7 @@ export interface User {
   id: string;
   name: string;
   phone: string;
-  role: "USER" | "RT_AGENT" | "ADMIN" | "DRIVER";
+  role: "USER" | "RT_AGENT" | "ADMIN" | "DRIVER" | "AGENT" | "OPERASIONAL" | "SUPPLIER";
   rt_id: string | null;
   cooperative_id: string;
   points: number;
