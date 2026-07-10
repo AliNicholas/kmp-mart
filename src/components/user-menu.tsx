@@ -34,7 +34,7 @@ export function UserMenu() {
   };
 
   const handleLogout = () => {
-    Alert.alert('Keluar dari akun?', 'Anda perlu login lagi untuk mengakses KopMart RT.', [
+    Alert.alert('Keluar dari akun?', 'Anda perlu login lagi untuk mengakses KMP Mart.', [
       { text: 'Batal', style: 'cancel' },
       {
         text: 'Keluar',

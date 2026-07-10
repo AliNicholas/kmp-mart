@@ -131,7 +131,23 @@ export default function DeliveryTrackerModal({
   const [chatVisible, setChatVisible] = useState(false);
 
   const mapRef = useRef<any>(null);
+  const currentWpIdxRef = useRef<number>(0);
+  const animationTimeoutsRef = useRef<any[]>([]);
   const [pulseAnim] = useState(() => new Animated.Value(1));
+
+  const clearTimeouts = useCallback(() => {
+    animationTimeoutsRef.current.forEach(t => clearTimeout(t));
+    animationTimeoutsRef.current = [];
+  }, []);
+
+  useEffect(() => {
+    if (!visible) {
+      clearTimeouts();
+    }
+    return () => {
+      clearTimeouts();
+    };
+  }, [visible, clearTimeouts]);
 
   // Pulse ring animation
   useEffect(() => {
@@ -178,9 +194,11 @@ export default function DeliveryTrackerModal({
         if (orderData?.order_status === 'COMPLETED') {
           setStage(3);
           setDriverCoord(activeCoords[activeCoords.length - 1]);
+          currentWpIdxRef.current = activeCoords.length - 1;
         } else {
           setStage(0);
           setDriverCoord(activeCoords[0]);
+          currentWpIdxRef.current = 0;
         }
       } catch (err) {
         console.error('Failed to load delivery order:', err);
@@ -194,33 +212,56 @@ export default function DeliveryTrackerModal({
   // Smoothly move driver through each waypoint
   const animateDriverAlongRoute = useCallback((targetIdx: number, coordsList: any[]) => {
     if (coordsList.length === 0) return;
-    const currentIdx = coordsList.findIndex(
-      (c) => c.latitude === driverCoord.latitude && c.longitude === driverCoord.longitude
-    );
-    const from = Math.max(currentIdx, 0);
-    if (targetIdx <= from) return;
+    clearTimeouts();
+
+    const from = currentWpIdxRef.current;
+
+    // Web optimization: set target coordinate immediately to prevent iframe reloading / flashy flickering
+    if (Platform.OS === 'web') {
+      setDriverCoord(coordsList[targetIdx]);
+      currentWpIdxRef.current = targetIdx;
+      return;
+    }
+
+    if (targetIdx === from) {
+      setDriverCoord(coordsList[targetIdx]);
+      return;
+    }
+    
+    if (targetIdx < from) {
+      currentWpIdxRef.current = targetIdx;
+      setDriverCoord(coordsList[targetIdx]);
+      return;
+    }
 
     let delay = 0;
-    const step = Math.max(Math.floor((targetIdx - from) / 15), 1); // Limit animation speed if there are too many OSRM points
+    const stepsCount = targetIdx - from;
+    const totalDuration = 4000; // total duration of movement animation in ms
+    const maxUpdates = 16; // cap updates to keep JS thread lightweight and smooth
+    const step = Math.max(Math.floor(stepsCount / maxUpdates), 1); 
+    const interval = totalDuration / (stepsCount / step);
 
     for (let i = from + 1; i <= targetIdx; i += step) {
       const idx = Math.min(i, targetIdx);
       const coord = coordsList[idx];
-      setTimeout(() => {
+      const t = setTimeout(() => {
         setDriverCoord(coord);
-        // Pan map to follow driver
-        if (mapRef.current && idx === targetIdx) {
+        currentWpIdxRef.current = idx;
+        
+        // Pan map smoothly to follow driver
+        if (mapRef.current) {
           mapRef.current.animateToRegion({
             latitude: coord.latitude,
             longitude: coord.longitude,
             latitudeDelta: 0.008,
             longitudeDelta: 0.008,
-          }, 800);
+          }, interval * 0.95);
         }
       }, delay);
-      delay += Math.max(1000 / ((targetIdx - from) / step), 100);
+      animationTimeoutsRef.current.push(t);
+      delay += interval;
     }
-  }, [driverCoord]);
+  }, [clearTimeouts]);
 
   const advanceStage = useCallback(async () => {
     if (stage < 3) {

@@ -17,7 +17,7 @@ export default function Header() {
           </View>
           <View>
             <Text className="text-white font-black text-xl">
-              KopMart <Text className="text-amber-400">RT</Text>
+              KMP <Text className="text-amber-400">Mart</Text>
             </Text>
             <Text className="text-emerald-200 text-[10px] font-semibold">SIMKOPDES 2026 - Pilar 1</Text>
           </View>

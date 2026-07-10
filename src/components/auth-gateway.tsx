@@ -53,7 +53,7 @@ export default function AuthGateway() {
                 </View>
                 <View>
                   <Text className="text-white text-2xl font-black tracking-tight">
-                    KopMart <Text className="text-amber-400">RT</Text>
+                    KMP <Text className="text-amber-400">Mart</Text>
                   </Text>
                   <Text className="text-emerald-200 text-[10px] font-bold tracking-wider uppercase">
                     Koperasi dekat, belanja mudah

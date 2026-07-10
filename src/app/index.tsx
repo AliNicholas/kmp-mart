@@ -13,7 +13,7 @@ export default function HomeScreen() {
     return (
       <View className="flex-1 bg-emerald-900 justify-center items-center">
         <ActivityIndicator size="large" color="#fbbf24" />
-        <Text className="text-white font-bold text-sm mt-4 tracking-wider">Memuat Database KopMart RT...</Text>
+        <Text className="text-white font-bold text-sm mt-4 tracking-wider">Memuat Database KMP Mart...</Text>
         <Text className="text-emerald-300 text-[10px] mt-1 font-semibold">SIMKOPDES Koperasi Inklusif 2026</Text>
       </View>
     );
