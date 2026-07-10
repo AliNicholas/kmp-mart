@@ -226,7 +226,7 @@ export default function RegistrationModal({ visible, onClose }: RegistrationModa
       </View>
 
       <View className="mb-2">
-        <Text className={labelClass}>Kode Referral opsional</Text>
+        <Text className={labelClass}>Kode KopAjak opsional</Text>
         <TextInput
           value={referralCode}
           onChangeText={setReferralCode}
@@ -317,7 +317,7 @@ export default function RegistrationModal({ visible, onClose }: RegistrationModa
 
       <View className="bg-emerald-50 border border-emerald-100 rounded-xl p-3">
         <Text className="text-emerald-900 text-[10px] leading-4">
-          Setelah aktif, warga langsung punya member ID, Kartu Kopdes QR token, dan kode referral sendiri.
+          Setelah aktif, warga langsung punya member ID, Kartu Kopdes QR token, dan kode KopAjak sendiri.
         </Text>
       </View>
 

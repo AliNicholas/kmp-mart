@@ -827,7 +827,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       if (cleanReferralCode) {
         const referrer = allUsers.find(u => u.referral_code === cleanReferralCode);
         if (!referrer) {
-          return { success: false, error: 'Kode referral tidak ditemukan.' };
+          return { success: false, error: 'Kode KopAjak tidak ditemukan.' };
         }
         referredBy = cleanReferralCode;
       }

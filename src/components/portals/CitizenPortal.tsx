@@ -1629,8 +1629,8 @@ export default function CitizenPortal() {
                 <View className="mt-3 bg-amber-50 p-2.5 rounded-lg border border-amber-200">
                   <Text className="text-[9px] text-amber-850 font-bold leading-tight">
                     💡 Silakan lakukan pembayaran tunai (COD) sebesar Rp
-                    {detailOrder.total.toLocaleString("id-ID")} kepada Agen Transit
-                    Anda (Pak Budi) saat mengambil barang.
+                    {detailOrder.total.toLocaleString("id-ID")} kepada Agen
+                    Transit Anda (Pak Budi) saat mengambil barang.
                   </Text>
                 </View>
               )}
