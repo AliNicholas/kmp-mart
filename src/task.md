@@ -44,5 +44,10 @@
 - [x] Database Seeding (`db.ts`)
     - [x] Seed supplier user Pak Slamet in web & native SQLite DB
     - [x] Extend `User` type definition to allow `"AGENT" | "OPERASIONAL" | "SUPPLIER"` values
+- [x] De-EAS / Local Expo Go Cleanup
+    - [x] Delete `eas.json` configuration file
+    - [x] Remove EAS `projectId` block from `app.json` `extra`
+    - [x] Remove `expo-dev-client` from `package.json` dependencies
+    - [x] Re-run `npm install` and verify build compiles successfully in standard Expo Go mode
 - [x] Verification
     - [x] Run compiler and lint checks
