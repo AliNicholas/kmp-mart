@@ -1,5 +1,5 @@
 import { Image } from 'expo-image';
-import { SymbolView } from 'expo-symbols';
+import { SymbolView } from '@/components/app-symbol';
 import { Platform, Pressable, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 

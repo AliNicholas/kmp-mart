@@ -1,6 +1,6 @@
 import RegistrationModal from '@/components/registration-modal';
 import { useApp } from '@/contexts/AppContext';
-import { SymbolView } from 'expo-symbols';
+import { SymbolView } from '@/components/app-symbol';
 import * as React from 'react';
 import {
   ActivityIndicator,

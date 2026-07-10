@@ -3,7 +3,7 @@ import OpenStreetMapView from "@/components/open-street-map";
 import { useApp } from "@/contexts/AppContext";
 import { dbService } from "@/utils/db";
 import type { SFSymbol } from "expo-symbols";
-import { SymbolView } from "expo-symbols";
+import { SymbolView } from "@/components/app-symbol";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,

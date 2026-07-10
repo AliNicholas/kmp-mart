@@ -1,7 +1,7 @@
 import { View, ActivityIndicator, Text, Pressable, Modal, ScrollView, Alert, Platform } from 'react-native';
 import { useState } from 'react';
 import { useApp } from '@/contexts/AppContext';
-import { SymbolView } from 'expo-symbols';
+import { SymbolView } from '@/components/app-symbol';
 import Header from '@/components/Header';
 import AuthGateway from '@/components/auth-gateway';
 import CitizenPortal from '@/components/portals/CitizenPortal';
