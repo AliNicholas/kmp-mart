@@ -147,20 +147,6 @@ export default function HomeScreen() {
                 </View>
               </Pressable>
 
-              {/* Pak Budi - Warung Partner (USER role) */}
-              <Pressable
-                onPress={() => handleSwitchRole('user-budi', 'USER', 'Pak Budi')}
-                className="flex-row items-center gap-3 p-3 rounded-xl bg-stone-800 border border-stone-700 mb-2 active:bg-stone-700"
-              >
-                <View className="bg-amber-900/50 p-2 rounded-lg border border-amber-800">
-                  <SymbolView name="house.fill" size={16} tintColor="#f59e0b" />
-                </View>
-                <View className="flex-1">
-                  <Text className="text-white font-bold text-xs">Pak Budi (Warung Mitra)</Text>
-                  <Text className="text-stone-400 text-[9px] mt-0.5">Role: USER (Mitra B2B) • Pemilik warung desa, belanja grosir harga B2B.</Text>
-                </View>
-              </Pressable>
-
               {/* Mas Arif - ADMIN */}
               <Pressable
                 onPress={() => handleSwitchRole('user-arif', 'ADMIN', 'Mas Arif')}

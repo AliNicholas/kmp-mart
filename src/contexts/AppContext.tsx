@@ -1118,7 +1118,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const updateUserField = async (userId: string, field: string, value: any) => {
-    const allowed = ['is_warung_partner', 'is_pickup_point', 'points'];
+    const allowed = ['is_pickup_point', 'points'];
     if (!allowed.includes(field)) throw new Error('Unsupported field');
     await dbService.run(
       `UPDATE users SET ${field} = ? WHERE id = ?`,

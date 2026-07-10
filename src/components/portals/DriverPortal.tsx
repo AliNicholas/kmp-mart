@@ -2,7 +2,25 @@ import { useApp } from "@/contexts/AppContext";
 import { DeliveryStatus, DeliveryTask } from "@/utils/db";
 import { SymbolView } from "expo-symbols";
 import React from "react";
-import { Alert, Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import { Alert, Pressable, ScrollView, Text, TextInput, View, Modal, Platform, Linking } from "react-native";
+import OpenStreetMapView from "../open-street-map";
+
+// Conditional native maps import
+let MapView: any = null;
+let Marker: any = null;
+let Polyline: any = null;
+
+if (Platform.OS !== 'web') {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const RNMaps = require('react-native-maps');
+    MapView = RNMaps.default || RNMaps;
+    Marker = RNMaps.Marker;
+    Polyline = RNMaps.Polyline;
+  } catch {
+    console.warn("react-native-maps not available in DriverPortal");
+  }
+}
 
 const statusMeta: Record<DeliveryStatus, { label: string; color: string }> = {
   PENDING_DISPATCH: { label: "Menunggu Dispatch", color: "bg-stone-100 text-stone-700 border-stone-200" },
@@ -42,6 +60,27 @@ export default function DriverPortal() {
   const [codInputs, setCodInputs] = React.useState<Record<string, string>>({});
   const [packageInputs, setPackageInputs] = React.useState<Record<string, string>>({});
   const [reasonInputs, setReasonInputs] = React.useState<Record<string, string>>({});
+  const [activeMapTask, setActiveMapTask] = React.useState<DeliveryTask | null>(null);
+  const [mapProvider, setMapProvider] = React.useState<'google' | 'osm'>('google');
+
+  const COOP_COORD = { latitude: -8.409512, longitude: 115.188912 };
+  
+  const getDestinationCoordinates = (task: DeliveryTask) => {
+    if (task.delivery_type === "RT_BATCH_DELIVERY") {
+      // Drop to Pos RT 03
+      return { latitude: -8.407500, longitude: 115.191500 };
+    }
+    // citizen home
+    if (task.recipient_name?.toLowerCase().includes("dinda")) {
+      return { latitude: -8.404000, longitude: 115.194800 };
+    } else if (task.recipient_name?.toLowerCase().includes("rina")) {
+      return { latitude: -8.404800, longitude: 115.195200 };
+    } else if (task.recipient_name?.toLowerCase().includes("sari")) {
+      return { latitude: -8.403500, longitude: 115.193900 };
+    }
+    // default
+    return { latitude: -8.405000, longitude: 115.193400 };
+  };
 
   const profile = driverProfiles.find((driver) => driver.user_id === activeUser?.id);
   const myTasks = deliveryTasks.filter((task) => task.driver_id === profile?.id);
@@ -238,6 +277,13 @@ export default function DriverPortal() {
                     </Text>
                   </View>
                   <View className="items-end">
+                    <Pressable
+                      onPress={() => setActiveMapTask(task)}
+                      className="bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-lg flex-row items-center gap-1 active:bg-emerald-100 mb-1"
+                    >
+                      <SymbolView name="map.fill" size={8} tintColor="#047857" />
+                      <Text className="text-emerald-700 text-[8px] font-bold">Rute Peta</Text>
+                    </Pressable>
                     <Text className="text-stone-400 text-[9px]">Insentif</Text>
                     <Text className="text-emerald-800 font-black text-xs">{formatRp(task.driver_incentive)}</Text>
                   </View>
@@ -279,6 +325,112 @@ export default function DriverPortal() {
           })
         )}
       </ScrollView>
+
+      {/* Driver Map Modal */}
+      {activeMapTask && (() => {
+        const dest = getDestinationCoordinates(activeMapTask);
+        const region = {
+          latitude: (COOP_COORD.latitude + dest.latitude) / 2,
+          longitude: (COOP_COORD.longitude + dest.longitude) / 2,
+          latitudeDelta: 0.015,
+          longitudeDelta: 0.015,
+        };
+        const markers = [
+          { coordinate: COOP_COORD, title: "Koperasi Sukamaju", description: "Titik Pengambilan Paket", type: "cooperative" as const, color: "#059669" },
+          { coordinate: dest, title: activeMapTask.recipient_name, description: activeMapTask.destination_address, type: "home" as const, color: "#dc2626" }
+        ];
+        const polylines = [
+          { coordinates: [COOP_COORD, dest], color: "#059669", width: 5 }
+        ];
+
+        return (
+          <Modal
+            visible={!!activeMapTask}
+            transparent={true}
+            animationType="fade"
+            onRequestClose={() => setActiveMapTask(null)}
+          >
+            <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+              <View style={{ width: '100%', height: '70%', backgroundColor: '#fff', borderRadius: 24, overflow: 'hidden', borderWidth: 1, borderColor: '#e7e5e4' }}>
+                {/* Header */}
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: '#e7e5e4' }}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 13, fontWeight: 'bold', color: '#064e3b' }}>Peta Rute Pengantaran</Text>
+                    <Text style={{ fontSize: 10, color: '#78716c', marginTop: 2 }} numberOfLines={1}>{activeMapTask.recipient_name} • {activeMapTask.destination_address}</Text>
+                  </View>
+                  <Pressable onPress={() => setActiveMapTask(null)} style={{ padding: 6, borderRadius: 9999, backgroundColor: '#e7e5e4' }}>
+                    <SymbolView name="xmark" size={12} tintColor="#555" />
+                  </Pressable>
+                </View>
+
+                {/* Provider switcher */}
+                <View style={{ flexDirection: 'row', backgroundColor: '#f5f5f4', padding: 4, borderBottomWidth: 1, borderBottomColor: '#e7e5e4' }}>
+                  <Pressable
+                    onPress={() => setMapProvider('google')}
+                    style={{ flex: 1, paddingVertical: 8, alignItems: 'center', borderRadius: 8, backgroundColor: mapProvider === 'google' ? '#059669' : '#fff', borderWidth: 0.5, borderColor: '#d6d3d1', marginRight: 4 }}
+                  >
+                    <Text style={{ fontSize: 9.5, fontWeight: 'bold', color: mapProvider === 'google' ? '#fff' : '#44403c' }}>Google / Apple Maps</Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={() => setMapProvider('osm')}
+                    style={{ flex: 1, paddingVertical: 8, alignItems: 'center', borderRadius: 8, backgroundColor: mapProvider === 'osm' ? '#059669' : '#fff', borderWidth: 0.5, borderColor: '#d6d3d1' }}
+                  >
+                    <Text style={{ fontSize: 9.5, fontWeight: 'bold', color: mapProvider === 'osm' ? '#fff' : '#44403c' }}>OpenStreetMap</Text>
+                  </Pressable>
+                </View>
+
+                {/* Map Display area */}
+                <View style={{ flex: 1, backgroundColor: '#cbd5e1' }}>
+                  {mapProvider === 'osm' ? (
+                    <OpenStreetMapView
+                      region={region}
+                      markers={markers}
+                      polylines={polylines}
+                    />
+                  ) : (
+                    Platform.OS === 'web' ? (
+                      <iframe
+                        src={`https://maps.google.com/maps?q=${dest.latitude},${dest.longitude}&t=&z=15&ie=UTF8&iwloc=&output=embed`}
+                        style={{ width: '100%', height: '100%', border: 0 }}
+                      />
+                    ) : (
+                      MapView && Marker ? (
+                        <MapView
+                          style={{ flex: 1 }}
+                          initialRegion={region}
+                        >
+                          <Marker coordinate={COOP_COORD} title="Koperasi Sukamaju" pinColor="green" />
+                          <Marker coordinate={dest} title={activeMapTask.recipient_name} pinColor="red" />
+                          {Polyline && <Polyline coordinates={[COOP_COORD, dest]} strokeColor="#059669" strokeWidth={5} />}
+                        </MapView>
+                      ) : (
+                        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+                          <Text style={{ fontSize: 12, color: '#666' }}>Peta tidak dapat dimuat</Text>
+                        </View>
+                      )
+                    )
+                  )}
+                </View>
+
+                {/* Footer action */}
+                <View style={{ padding: 12, backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: '#e7e5e4', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Text style={{ fontSize: 9, color: '#78716c', fontWeight: 'bold' }}>Rute: 1.2 km dari Koperasi</Text>
+                  <Pressable
+                    onPress={() => {
+                      const url = `https://www.google.com/maps/search/?api=1&query=${dest.latitude},${dest.longitude}`;
+                      Linking.openURL(url).catch(() => Alert.alert("Gagal", "Aplikasi peta tidak dapat dibuka"));
+                    }}
+                    style={{ backgroundColor: '#ea580c', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, flexDirection: 'row', alignItems: 'center', gap: 4 }}
+                  >
+                    <SymbolView name="safari" size={10} tintColor="#fff" />
+                    <Text style={{ color: '#fff', fontSize: 9, fontWeight: 'bold' }}>Buka Navigasi</Text>
+                  </Pressable>
+                </View>
+              </View>
+            </View>
+          </Modal>
+        );
+      })()}
     </View>
   );
 }

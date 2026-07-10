@@ -40,7 +40,6 @@ export default function CitizenPortal() {
     clearCart,
     checkout,
     applyReferralCode,
-    updateUserField,
     refreshData,
   } = useApp();
 
