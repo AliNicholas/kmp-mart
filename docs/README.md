@@ -28,6 +28,11 @@ Silakan pilih panduan detail yang Anda butuhkan melalui tautan berikut:
   * WebView OpenStreetMap Leaflet untuk driver.
 * **Pola Desain Kode**: Penerapan *Derived State*, transaksi SQL atomik, dan kepatuhan compiler murni (*Purity Compliance*).
 
+### 4. [⚙️ Panduan Cara Kerja Sistem (System Mechanics)](file:///Users/gustam/Developer/hackathon/kopmart/docs/HOW_IT_WORKS.md)
+* **Arsitektur Data**: Alur offline-first terenkapsulasi dari UI React ke SQLite/LocalStorage.
+* **Siklus Logistik E2E**: Alur pergerakan barang dan uang dari pengadaan hulu (Supplier), pembagian tengah (Cooperative & RT Agent), hingga ke hilir (Driver & Citizen).
+* **Ledger Anti-Fraud**: Cara kalkulasi laba/rugi koperasi secara runtime dan pencatatan ledger keuangan transparan yang tidak dapat dimanipulasi.
+
 ---
 
 > [!TIP]

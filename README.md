@@ -140,6 +140,10 @@ graph TD
     I -->|Web| K[WebAssembly wa-sqlite]
 ```
 
+> [!TIP]
+> Detail alur data teknis, siklus hulu-ke-hilir pengiriman logistik, serta mekanisme Ledger Keuangan dapat Anda pelajari di **[⚙️ Panduan Lengkap Cara Kerja Sistem](file:///Users/gustam/Developer/hackathon/kopmart/docs/HOW_IT_WORKS.md)**.
+
+
 ### 📂 Struktur Direktori Proyek
 * **`src/app/`**: Kontainer routing navigasi aplikasi, mendefinisikan layout tab, halaman detail, dan explorer.
 * **`src/components/`**: Komponen UI global seperti gateway login (`auth-gateway`), registrasi warga (`registration-modal`), dan laci demo juri (`user-menu`).
