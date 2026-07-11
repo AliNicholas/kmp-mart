@@ -29,19 +29,46 @@ export function getOrderStatusLabel(status: string) {
     case "PAID":
       return "Sudah Dibayar";
     case "CONFIRMED":
-      return "Dikonfirmasi Koperasi";
+      return "Pesanan Dikonfirmasi";
     case "PACKED":
-      return "Sedang Dikemas";
+      return "Pesanan Disiapkan";
     case "READY_FOR_PICKUP":
-      return "Siap Diambil";
+      return "Siap untuk Diambil";
     case "DELIVERED_TO_RT":
       return "Tiba di Agen Transit";
     case "PICKED_UP":
-      return "Sudah Diambil";
+      return "Dalam Pengiriman";
     case "COMPLETED":
-      return "Selesai";
+      return "Pesanan Selesai";
+    case "CANCELLED":
+      return "Pesanan Dibatalkan";
     default:
-      return "Dibatalkan";
+      return "Dalam Proses";
+  }
+}
+
+export function getFulfillmentLabel(fulfillment: string) {
+  switch (fulfillment) {
+    case "DELIVERY_TO_HOME":
+      return "Kirim ke Rumah";
+    case "RT_PICKUP_POINT":
+      return "Ambil di Titik RT";
+    case "PICKUP_AT_COOP":
+    default:
+      return "Ambil di Koperasi";
+  }
+}
+
+export function getPaymentStatusLabel(status: string) {
+  switch (status) {
+    case "PAID":
+      return "Lunas";
+    case "UNPAID":
+      return "Belum Dibayar";
+    case "WAITING_VERIFICATION":
+      return "Menunggu Verifikasi";
+    default:
+      return "Dalam Proses";
   }
 }
 

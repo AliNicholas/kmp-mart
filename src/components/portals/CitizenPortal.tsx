@@ -1,5 +1,10 @@
 import { useApp } from "@/contexts/AppContext";
-import { formatWibDateTime, getOrderStatusLabel } from "@/lib/utils";
+import {
+  formatWibDateTime,
+  getFulfillmentLabel,
+  getOrderStatusLabel,
+  getPaymentStatusLabel,
+} from "@/lib/utils";
 import { dbService, OrderStatusHistory } from "@/utils/db";
 import { SymbolView } from "@/components/app-symbol";
 import { OrderStatusHistoryCards } from "@/components/order-status-history-cards";
@@ -50,6 +55,7 @@ export default function CitizenPortal() {
   const [selectedCategory, setSelectedCategory] = useState("Semua");
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [checkoutModalOpen, setCheckoutModalOpen] = useState(false);
+  const [qrisPaymentOpen, setQrisPaymentOpen] = useState(false);
   const [selectedFulfillment, setSelectedFulfillment] = useState<
     "PICKUP_AT_COOP" | "DELIVERY_TO_HOME"
   >("DELIVERY_TO_HOME");
@@ -332,7 +338,7 @@ export default function CitizenPortal() {
       : logisticsSurcharge;
   const total = subtotal - discount + deliveryFee;
 
-  const handleCheckout = async () => {
+  const completeCheckout = async (isQrisPayment = false) => {
     if (cart.length === 0) return;
 
     const res = await checkout(
@@ -341,18 +347,22 @@ export default function CitizenPortal() {
       pointsToRedeem,
       null,
       undefined,
-      paymentMethod === "QRIS",
+      isQrisPayment,
     );
 
     if (res.success) {
       setCheckoutModalOpen(false);
+      setQrisPaymentOpen(false);
       setIsCartOpen(false);
       setUsePoints(false);
       setPaymentMethod("CASH");
       setSubTab(1); // Switch to orders tab
 
-      if (paymentMethod === "QRIS") {
-        Alert.alert("Pembayaran Berhasil", "Pembayaran QRIS terverifikasi! Pesanan Anda sedang diproses.");
+      if (isQrisPayment) {
+        Alert.alert(
+          "Pembayaran Berhasil",
+          "Pembayaran QRIS terverifikasi. Pesanan Anda sedang diproses.",
+        );
       } else if (selectedFulfillment === "DELIVERY_TO_HOME") {
         setActiveDeliveryOrderId(res.orderId || null);
       } else {
@@ -361,6 +371,16 @@ export default function CitizenPortal() {
     } else {
       Alert.alert("Gagal", res.error || "Gagal melakukan checkout.");
     }
+  };
+
+  const handleCheckoutConfirmation = () => {
+    if (paymentMethod === "QRIS") {
+      setCheckoutModalOpen(false);
+      setQrisPaymentOpen(true);
+      return;
+    }
+
+    void completeCheckout();
   };
 
   const handleApplyReferral = async () => {
@@ -741,7 +761,7 @@ export default function CitizenPortal() {
         contentContainerClassName="p-3 pb-28"
       >
         <Text className="text-stone-900 font-black text-lg mb-3">
-          Pesanan Aktif & Riwayat
+          Pesanan Saya
         </Text>
 
         {myOrders.length === 0 ? (
@@ -792,10 +812,7 @@ export default function CitizenPortal() {
                       : "Belanja Mandiri"}
                   </Text>
                   <Text className="text-stone-500 text-[10px] mt-0.5">
-                    Fulfillment:{" "}
-                    {o.fulfillment === "DELIVERY_TO_HOME"
-                      ? "Kirim ke Rumah"
-                      : "Ambil di Koperasi"}
+                    Penerimaan: {getFulfillmentLabel(o.fulfillment)}
                   </Text>
                 </View>
                 <View className="items-end">
@@ -1373,7 +1390,7 @@ export default function CitizenPortal() {
           >
             <View className="flex-row justify-between items-center border-b border-stone-200 pb-3 mb-4">
               <Text className="text-emerald-950 font-black text-lg">
-                Metode & Alamat Pengiriman
+                Konfirmasi Pesanan
               </Text>
               <Pressable
                 onPress={() => {
@@ -1555,32 +1572,6 @@ export default function CitizenPortal() {
                 </Pressable>
               </View>
 
-              {/* Show QRIS Code if QRIS is selected */}
-              {paymentMethod === "QRIS" && (
-                <View className="bg-stone-50 border border-stone-200 p-4 rounded-xl mb-4 items-center">
-                  <Text className="text-stone-700 font-bold text-xs mb-2">
-                    Scan QRIS Koperasi Desa
-                  </Text>
-                  <View className="bg-white p-3 rounded-xl border border-stone-200 shadow-sm items-center justify-center w-40 h-40 mb-2 relative">
-                    <View className="absolute top-2 left-2 w-4 h-4 border-t-2 border-l-2 border-emerald-800" />
-                    <View className="absolute top-2 right-2 w-4 h-4 border-t-2 border-r-2 border-emerald-800" />
-                    <View className="absolute bottom-2 left-2 w-4 h-4 border-b-2 border-l-2 border-emerald-800" />
-                    <View className="absolute bottom-2 right-2 w-4 h-4 border-b-2 border-r-2 border-emerald-800" />
-                    <View className="w-32 h-32 flex-wrap flex-row gap-0.5 justify-center items-center opacity-85">
-                      {Array.from({ length: 9 }).map((_, i) => (
-                        <View key={i} className={`w-8 h-8 rounded ${i % 3 === 0 ? "bg-emerald-950" : i % 2 === 0 ? "bg-stone-900" : "bg-emerald-850/10"}`} />
-                      ))}
-                    </View>
-                  </View>
-                  <Text className="text-[10px] text-emerald-800 font-black tracking-widest uppercase mb-1">
-                    GPN - KMP MART
-                  </Text>
-                  <Text className="text-[9px] text-stone-500 text-center">
-                    Total: <Text className="font-extrabold text-stone-700">Rp{total.toLocaleString("id-ID")}</Text>
-                  </Text>
-                </View>
-              )}
-
               {/* Point Loyalty Redeem Option */}
               <View className="bg-stone-50 border border-stone-200 p-3.5 rounded-xl mb-4">
                 <View className="flex-row justify-between items-center">
@@ -1672,11 +1663,126 @@ export default function CitizenPortal() {
 
               {/* Submit Checkout */}
               <Pressable
-                onPress={handleCheckout}
+                onPress={handleCheckoutConfirmation}
                 className="bg-emerald-700 border border-emerald-800 py-3 rounded-xl items-center justify-center mt-2 mb-4 active:bg-emerald-950"
               >
                 <Text className="text-white font-black text-xs">
-                  Konfirmasi & Buat Pesanan
+                  {paymentMethod === "QRIS"
+                    ? "Konfirmasi Pesanan"
+                    : "Konfirmasi & Buat Pesanan"}
+                </Text>
+              </Pressable>
+            </ScrollView>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      {/* QRIS payment screen */}
+      <Modal
+        visible={qrisPaymentOpen}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => {
+          setQrisPaymentOpen(false);
+          setCheckoutModalOpen(true);
+        }}
+      >
+        <Pressable
+          onPress={() => {
+            setQrisPaymentOpen(false);
+            setCheckoutModalOpen(true);
+          }}
+          className="flex-1 justify-end bg-black/60"
+        >
+          <Pressable
+            onPress={() => {}}
+            className="bg-white rounded-t-3xl p-5 max-h-[84%]"
+          >
+            <View className="flex-row justify-between items-center border-b border-stone-200 pb-3 mb-5">
+              <View>
+                <Text className="text-emerald-950 font-black text-lg">
+                  Bayar dengan QRIS
+                </Text>
+                <Text className="text-stone-500 text-[10px] mt-0.5">
+                  Langkah 2 dari 2 · Selesaikan pembayaran
+                </Text>
+              </View>
+              <Pressable
+                onPress={() => {
+                  setQrisPaymentOpen(false);
+                  setCheckoutModalOpen(true);
+                }}
+                className="p-1 rounded-full bg-stone-100"
+              >
+                <SymbolView name="xmark" size={16} tintColor="#555" />
+              </Pressable>
+            </View>
+
+            <ScrollView contentContainerClassName="pb-2">
+              <View className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 items-center">
+                <Text className="text-emerald-950 font-black text-sm mb-1">
+                  Scan QRIS Koperasi Desa
+                </Text>
+                <Text className="text-stone-600 text-[10px] text-center mb-4">
+                  Pindai kode berikut dari aplikasi pembayaran Anda.
+                </Text>
+
+                <View className="bg-white p-3 rounded-2xl border border-stone-200 shadow-sm items-center justify-center w-52 h-52 mb-3 relative">
+                  <View className="absolute top-3 left-3 w-5 h-5 border-t-2 border-l-2 border-emerald-800" />
+                  <View className="absolute top-3 right-3 w-5 h-5 border-t-2 border-r-2 border-emerald-800" />
+                  <View className="absolute bottom-3 left-3 w-5 h-5 border-b-2 border-l-2 border-emerald-800" />
+                  <View className="absolute bottom-3 right-3 w-5 h-5 border-b-2 border-r-2 border-emerald-800" />
+                  <View className="w-40 h-40 flex-wrap flex-row gap-0.5 justify-center items-center opacity-85">
+                    {Array.from({ length: 16 }).map((_, index) => (
+                      <View
+                        key={index}
+                        className={`w-8 h-8 rounded-sm ${
+                          index % 5 === 0 || index % 3 === 0
+                            ? "bg-emerald-950"
+                            : index % 2 === 0
+                              ? "bg-stone-900"
+                              : "bg-emerald-850/10"
+                        }`}
+                      />
+                    ))}
+                  </View>
+                </View>
+
+                <Text className="text-emerald-800 font-black text-xs tracking-widest">
+                  GPN · KMP MART
+                </Text>
+              </View>
+
+              <View className="mt-4 border border-stone-200 rounded-xl p-4">
+                <Text className="text-stone-500 text-[10px]">
+                  Total pembayaran
+                </Text>
+                <Text className="text-emerald-950 font-black text-2xl mt-1">
+                  Rp{total.toLocaleString("id-ID")}
+                </Text>
+                <Text className="text-stone-500 text-[10px] mt-2 leading-relaxed">
+                  Setelah pembayaran berhasil, kembali ke halaman ini lalu
+                  konfirmasikan pembayaran Anda.
+                </Text>
+              </View>
+
+              <Pressable
+                onPress={() => void completeCheckout(true)}
+                className="bg-emerald-700 border border-emerald-800 py-3.5 rounded-xl items-center justify-center mt-5 active:bg-emerald-950"
+              >
+                <Text className="text-white font-black text-xs">
+                  Saya Sudah Membayar
+                </Text>
+              </Pressable>
+              <Pressable
+                onPress={() => {
+                  setQrisPaymentOpen(false);
+                  setCheckoutModalOpen(true);
+                }}
+                className="py-3 items-center justify-center"
+              >
+                <Text className="text-stone-600 font-bold text-xs">
+                  Kembali ke Konfirmasi
                 </Text>
               </Pressable>
             </ScrollView>
@@ -1702,7 +1808,7 @@ export default function CitizenPortal() {
             >
               <View className="flex-row justify-between items-center border-b border-stone-200 pb-3 mb-4">
                 <Text className="text-emerald-950 font-black text-sm">
-                  Rincian Transaksi
+                  Detail Pesanan
                 </Text>
                 <Pressable
                   onPress={() => setDetailOrder(null)}
@@ -1719,18 +1825,18 @@ export default function CitizenPortal() {
 
               <View className="flex-row justify-between py-1">
                 <Text className="text-stone-500 text-[10px]">
-                  Pesanan dibuat
+                  Dibuat pada
                 </Text>
                 <Text className="text-stone-700 text-[10px]">
                   {formatWibDateTime(detailOrder.created_at)}
                 </Text>
               </View>
               <View className="flex-row justify-between py-1">
-                <Text className="text-stone-500 text-[10px]">Fulfillment</Text>
+                <Text className="text-stone-500 text-[10px]">
+                  Metode Penerimaan
+                </Text>
                 <Text className="text-stone-700 text-[10px]">
-                  {detailOrder.fulfillment === "DELIVERY_TO_HOME"
-                    ? "Kirim ke Rumah"
-                    : "Ambil Mandiri Koperasi"}
+                  {getFulfillmentLabel(detailOrder.fulfillment)}
                 </Text>
               </View>
               <View className="flex-row justify-between py-1 border-b border-stone-100 pb-2 mb-2">
@@ -1747,7 +1853,7 @@ export default function CitizenPortal() {
               </View>
 
               <Text className="text-stone-500 text-[10px] font-bold mb-1">
-                Daftar Produk:
+                Produk dalam Pesanan
               </Text>
               <View className="bg-stone-50 p-2.5 rounded-lg border border-stone-200 mb-3 max-h-[120px] overflow-scroll">
                 {detailOrderItems.length === 0 ? (
@@ -1795,7 +1901,7 @@ export default function CitizenPortal() {
               )}
               <View className="flex-row justify-between py-2 border-t border-stone-200 mt-2">
                 <Text className="text-stone-900 font-bold text-xs">
-                  Total Akhir
+                  Total Pembayaran
                 </Text>
                 <Text className="text-emerald-950 font-black text-sm">
                   Rp{detailOrder.total.toLocaleString("id-ID")}
@@ -1807,16 +1913,15 @@ export default function CitizenPortal() {
                   Status Pembayaran
                 </Text>
                 <Text className="text-stone-800 text-[10px] font-bold">
-                  {detailOrder.payment_status}
+                  {getPaymentStatusLabel(detailOrder.payment_status)}
                 </Text>
               </View>
 
               {detailOrder.payment_status === "UNPAID" && (
                 <View className="mt-3 bg-amber-50 p-2.5 rounded-lg border border-amber-200">
                   <Text className="text-[9px] text-amber-850 font-bold leading-tight">
-                    💡 Silakan lakukan pembayaran tunai (COD) sebesar Rp
-                    {detailOrder.total.toLocaleString("id-ID")} kepada Agen
-                    Transit Anda (Pak Budi) saat mengambil barang.
+                    Bayar tunai Rp{detailOrder.total.toLocaleString("id-ID")}
+                    saat pengambilan kepada agen transit Anda.
                   </Text>
                 </View>
               )}
@@ -1834,7 +1939,7 @@ export default function CitizenPortal() {
                       });
                       Alert.alert(
                         "Berhasil",
-                        "Terima kasih! Pesanan Anda telah ditandai sebagai Selesai.",
+                        "Pesanan telah dikonfirmasi selesai.",
                       );
                     } catch (err) {
                       console.error("Failed to confirm receipt:", err);
@@ -1849,7 +1954,7 @@ export default function CitizenPortal() {
                     tintColor="#fff"
                   />
                   <Text className="text-white font-bold text-xs">
-                    Pesanan Sudah Diterima
+                    Konfirmasi Penerimaan
                   </Text>
                 </Pressable>
               )}
@@ -1861,7 +1966,7 @@ export default function CitizenPortal() {
               >
                 <SymbolView name="arrow.clockwise" size={12} tintColor="#fff" />
                 <Text className="text-white font-bold text-xs">
-                  Beli Lagi (Reorder)
+                  Pesan Kembali
                 </Text>
               </Pressable>
             </Pressable>

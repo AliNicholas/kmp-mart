@@ -224,7 +224,7 @@ export default function AdminPortal() {
       await refreshData();
       Alert.alert(
         "Sukses",
-        `Status pesanan berhasil diperbarui menjadi: ${status === "COMPLETED" ? "Sudah Diambil" : "Siap Diambil"}`,
+        `Status pesanan diperbarui menjadi ${getOrderStatusLabel(status)}.`,
       );
     } catch (err) {
       console.error(err);
@@ -259,13 +259,7 @@ export default function AdminPortal() {
       await refreshData();
       Alert.alert(
         "Sukses",
-        `Status pesanan berhasil diperbarui menjadi: ${
-          status === "COMPLETED"
-            ? "Selesai Dikirim"
-            : status === "PICKED_UP"
-              ? "Dalam Pengiriman"
-              : "Sedang Dikemas"
-        }`,
+        `Status pesanan diperbarui menjadi ${getOrderStatusLabel(status)}.`,
       );
     } catch (err) {
       console.error(err);
@@ -339,17 +333,17 @@ export default function AdminPortal() {
   );
 
   const deliveryStatusLabels: Record<string, string> = {
-    PENDING_DISPATCH: "Menunggu Dispatch",
+    PENDING_DISPATCH: "Menunggu Penugasan",
     ASSIGNED: "Ditugaskan",
     ACCEPTED: "Diterima",
     REJECTED: "Ditolak",
     PREPARING_PICKUP: "Disiapkan",
-    READY_FOR_PICKUP: "Siap Pickup",
-    PICKED_UP: "Sudah Pickup",
+    READY_FOR_PICKUP: "Siap Diambil Kurir",
+    PICKED_UP: "Telah Diambil Kurir",
     IN_TRANSIT: "Dalam Perjalanan",
-    ARRIVED_AT_RT: "Tiba di Dropoff",
+    ARRIVED_AT_RT: "Tiba di Titik Antar",
     ARRIVED_AT_USER: "Tiba di Warga",
-    DELIVERED: "Selesai",
+    DELIVERED: "Pengiriman Selesai",
     FAILED: "Gagal",
     RETURNED: "Dikembalikan",
     CANCELLED: "Dibatalkan",
@@ -544,15 +538,15 @@ export default function AdminPortal() {
         className="flex-1 bg-stone-50"
         contentContainerClassName="p-4 pb-28"
       >
-        {/* Antrean Kirim ke Rumah */}
+        {/* Pesanan untuk dikirim */}
         <Text className="text-stone-900 font-black text-lg mb-3">
-          Antrean Kirim ke Rumah (Home Delivery)
+          Antrean Pengiriman ke Rumah
         </Text>
         {homeDeliveryOrders.length === 0 ? (
           <View className="bg-white p-6 rounded-xl border border-stone-200 items-center justify-center mb-5">
             <SymbolView name="shippingbox.fill" size={32} tintColor="#10b981" />
             <Text className="text-stone-500 text-xs mt-2 text-center">
-              Tidak ada antrean kirim ke rumah saat ini.
+              Belum ada pesanan untuk dikirim.
             </Text>
           </View>
         ) : (
@@ -565,45 +559,19 @@ export default function AdminPortal() {
                 className="bg-white p-4 rounded-xl border border-stone-200 mb-3 shadow-sm active:bg-stone-100 flex-row justify-between items-center"
               >
                 <View className="flex-1 pr-2">
-                  <View className="flex-row items-center gap-2">
-                    <Text className="text-stone-955 font-bold text-sm">
-                      {user?.name || "Warga"}
-                    </Text>
-                    <View className="bg-blue-100 px-2 py-0.5 rounded border border-blue-200">
-                      <Text className="text-blue-800 text-[8px] font-bold">
-                        KIRIM
-                      </Text>
-                    </View>
-                  </View>
+                  <Text className="text-stone-955 font-bold text-sm">
+                    {user?.name || "Warga"}
+                  </Text>
                   <Text className="text-stone-400 text-[10px] mt-0.5">
                     ID: {o.id.substring(0, 12)}... • Telp: {user?.phone || "—"}
                   </Text>
                   <Text className="text-stone-500 text-[10px] mt-1.5 font-bold">
                     Total: Rp{o.total.toLocaleString("id-ID")} •{" "}
-                    {o.payment_status === "PAID" ? "💳 Lunas" : "💵 Bayar COD"}
+                    {o.payment_status === "PAID" ? "Pembayaran lunas" : "Bayar saat diterima"}
                   </Text>
                 </View>
 
                 <View className="items-end gap-2">
-                  <Badge
-                    variant="outline"
-                    className={
-                      o.order_status === "PICKED_UP"
-                        ? "bg-amber-100 border-amber-200"
-                        : o.order_status === "PACKED"
-                          ? "bg-emerald-100 border-emerald-250"
-                          : "bg-blue-50 border-blue-200"
-                    }
-                  >
-                    <Text className="text-stone-700 text-[8px] font-bold">
-                      {o.order_status === "PICKED_UP"
-                        ? "DI JALAN"
-                        : o.order_status === "PACKED"
-                          ? "SIAP KIRIM"
-                          : o.order_status}
-                    </Text>
-                  </Badge>
-
                   {o.order_status === "PENDING_PAYMENT" || o.order_status === "PAID" || o.order_status === "CONFIRMED" ? (
                     <Button
                       onPress={() =>
@@ -612,7 +580,7 @@ export default function AdminPortal() {
                       className="bg-emerald-700 active:bg-emerald-950 px-3 h-8"
                     >
                       <Text className="text-white text-[9px] font-bold">
-                        Mulai Kemas
+                        Siapkan Pesanan
                       </Text>
                     </Button>
                   ) : o.order_status === "PACKED" ? (
@@ -623,7 +591,7 @@ export default function AdminPortal() {
                       className="bg-blue-600 active:bg-blue-800 px-3 h-8"
                     >
                       <Text className="text-white text-[9px] font-bold">
-                        Serahkan ke Kurir
+                        Serahkan kepada Kurir
                       </Text>
                     </Button>
                   ) : (
@@ -634,7 +602,7 @@ export default function AdminPortal() {
                       className="bg-emerald-700 active:bg-emerald-950 px-3 h-8"
                     >
                       <Text className="text-white text-[9px] font-bold">
-                        Pesanan Diterima
+                        Konfirmasi Penerimaan
                       </Text>
                     </Button>
                   )}
@@ -644,9 +612,9 @@ export default function AdminPortal() {
           })
         )}
 
-        {/* Antrean Ambil Mandiri */}
+        {/* Pesanan yang diambil di koperasi */}
         <Text className="text-stone-900 font-black text-lg mt-6 mb-3">
-          Antrean Ambil Mandiri di Koperasi
+          Antrean Pengambilan di Koperasi
         </Text>
         {selfPickupOrders.length === 0 ? (
           <View className="bg-white p-6 rounded-xl border border-stone-200 items-center justify-center mb-5">
@@ -656,7 +624,7 @@ export default function AdminPortal() {
               tintColor="#10b981"
             />
             <Text className="text-stone-500 text-xs mt-2 text-center">
-              Tidak ada antrean ambil mandiri saat ini.
+              Belum ada pesanan untuk diambil.
             </Text>
           </View>
         ) : (
@@ -669,43 +637,21 @@ export default function AdminPortal() {
                 className="bg-white p-4 rounded-xl border border-stone-200 mb-3 shadow-sm active:bg-stone-100 flex-row justify-between items-center"
               >
                 <View className="flex-1 pr-2">
-                  <View className="flex-row items-center gap-2">
-                    <Text className="text-stone-955 font-bold text-sm">
-                      {user?.name || "Warga"}
-                    </Text>
-                    <View className="bg-emerald-100 px-2 py-0.5 rounded border border-emerald-200">
-                      <Text className="text-emerald-800 text-[8px] font-bold">
-                        MANDIRI
-                      </Text>
-                    </View>
-                  </View>
+                  <Text className="text-stone-955 font-bold text-sm">
+                    {user?.name || "Warga"}
+                  </Text>
                   <Text className="text-stone-400 text-[10px] mt-0.5">
                     ID: {o.id.substring(0, 12)}... • Telp: {user?.phone || "—"}
                   </Text>
                   <Text className="text-stone-500 text-[10px] mt-1.5 font-bold">
                     Total: Rp{o.total.toLocaleString("id-ID")} •{" "}
                     {o.payment_status === "PAID"
-                      ? "💳 Lunas"
-                      : "💵 Siapkan Bayar COD"}
+                      ? "Pembayaran lunas"
+                      : "Bayar saat pengambilan"}
                   </Text>
                 </View>
 
                 <View className="items-end gap-2">
-                  <Badge
-                    variant="outline"
-                    className={
-                      o.order_status === "READY_FOR_PICKUP"
-                        ? "bg-amber-100 border-amber-200"
-                        : "bg-blue-50 border-blue-200"
-                    }
-                  >
-                    <Text className="text-stone-700 text-[8px] font-bold">
-                      {o.order_status === "READY_FOR_PICKUP"
-                        ? "SIAP DIAMBIL"
-                        : o.order_status}
-                    </Text>
-                  </Badge>
-
                   {o.order_status === "READY_FOR_PICKUP" ? (
                     <Button
                       onPress={() =>
@@ -714,7 +660,7 @@ export default function AdminPortal() {
                       className="bg-emerald-700 px-3 h-8 active:bg-emerald-950"
                     >
                       <Text className="text-white text-[9px] font-bold">
-                        Sudah Diambil
+                        Konfirmasi Pengambilan
                       </Text>
                     </Button>
                   ) : (
@@ -728,7 +674,7 @@ export default function AdminPortal() {
                       className="bg-blue-600 px-3 h-8 active:bg-blue-800"
                     >
                       <Text className="text-white text-[9px] font-bold">
-                        Siap Diambil
+                        Pesanan Siap Diambil
                       </Text>
                     </Button>
                   )}
@@ -738,9 +684,9 @@ export default function AdminPortal() {
           })
         )}
 
-        {/* Riwayat Transaksi Selesai */}
+        {/* Pesanan yang telah selesai */}
         <Text className="text-stone-900 font-black text-lg mt-6 mb-3">
-          Riwayat Transaksi Selesai (Selesai Pickup & Delivery)
+          Pesanan Selesai
         </Text>
         {completedOrders.length === 0 ? (
           <View className="bg-white p-6 rounded-xl border border-stone-200 items-center justify-center mb-5">
@@ -750,7 +696,7 @@ export default function AdminPortal() {
               tintColor="#a8a29e"
             />
             <Text className="text-stone-500 text-xs mt-2 text-center">
-              Belum ada riwayat transaksi selesai.
+              Belum ada pesanan yang selesai.
             </Text>
           </View>
         ) : (
@@ -763,33 +709,20 @@ export default function AdminPortal() {
                 className="bg-white p-4 rounded-xl border border-stone-200 mb-3 shadow-sm active:bg-stone-100 flex-row justify-between items-center"
               >
                 <View className="flex-1 pr-2">
-                  <View className="flex-row items-center gap-2">
-                    <Text className="text-stone-955 font-bold text-sm">
-                      {user?.name || "Warga"}
-                    </Text>
-                    <View className={`px-2 py-0.5 rounded border ${o.fulfillment === "DELIVERY_TO_HOME" ? "bg-blue-100 border-blue-200" : "bg-emerald-100 border-emerald-200"}`}>
-                      <Text className={`${o.fulfillment === "DELIVERY_TO_HOME" ? "text-blue-800" : "text-emerald-800"} text-[8px] font-bold`}>
-                        {o.fulfillment === "DELIVERY_TO_HOME" ? "KIRIM" : "MANDIRI"}
-                      </Text>
-                    </View>
-                  </View>
+                  <Text className="text-stone-955 font-bold text-sm">
+                    {user?.name || "Warga"}
+                  </Text>
                   <Text className="text-stone-400 text-[10px] mt-0.5">
                     ID: {o.id.substring(0, 12)}... • Telp: {user?.phone || "—"}
                   </Text>
                   <Text className="text-stone-500 text-[10px] mt-1.5 font-bold">
-                    Total: Rp{o.total.toLocaleString("id-ID")} • 💳 Lunas
+                    Total: Rp{o.total.toLocaleString("id-ID")} • Pembayaran lunas
                   </Text>
                 </View>
 
-                <View className="items-end gap-1">
-                  <View className="bg-emerald-50 border border-emerald-200 px-2 py-1 rounded-lg flex-row items-center gap-1">
-                    <SymbolView name="checkmark.circle.fill" size={10} tintColor="#047857" />
-                    <Text className="text-emerald-700 text-[8px] font-bold">SELESAI</Text>
-                  </View>
-                  <Text className="text-stone-400 text-[8px] mt-1">
-                    {new Date(o.created_at).toLocaleDateString("id-ID", { day: 'numeric', month: 'short' })}
-                  </Text>
-                </View>
+                <Text className="text-stone-400 text-[8px]">
+                  Dibuat {formatWibDateTime(o.created_at)}
+                </Text>
               </Pressable>
             );
           })
@@ -1984,7 +1917,7 @@ export default function AdminPortal() {
         </Pressable>
       </Modal>
 
-      {/* Self-Pickup details Modal */}
+      {/* Detail pesanan */}
       {activeSelfOrder && (
         <Modal
           visible={!!activeSelfOrder}
@@ -2000,7 +1933,7 @@ export default function AdminPortal() {
               <View className="flex-row justify-between items-center border-b border-stone-200 pb-3 mb-4">
                 <View>
                   <Text className="text-emerald-950 font-black text-lg">
-                    Detail Pesanan Mandiri
+                    Detail Pesanan
                   </Text>
                   <Text className="text-stone-400 text-[10px]">
                     Pembeli:{" "}
@@ -2019,7 +1952,7 @@ export default function AdminPortal() {
               <ScrollView className="space-y-4">
                 <View className="bg-stone-50 border border-stone-200 p-3.5 rounded-xl flex-row justify-between items-center mb-3">
                   <Text className="text-stone-500 text-[10px]">
-                    Status Pesanan:
+                    Status Pesanan
                   </Text>
                   <Text className="text-emerald-800 font-extrabold text-xs">
                     {getOrderStatusLabel(activeSelfOrder.order_status)}
@@ -2028,7 +1961,7 @@ export default function AdminPortal() {
 
                 <View className="bg-amber-50 border border-amber-100 p-3 rounded-xl mb-3">
                   <Text className="text-amber-800 text-[10px] font-bold">
-                    Pesanan dibuat
+                    Dibuat pada
                   </Text>
                   <Text className="text-stone-600 text-[10px] mt-0.5">
                     {formatWibDateTime(activeSelfOrder.created_at)}
@@ -2038,7 +1971,7 @@ export default function AdminPortal() {
                 <OrderStatusHistoryCards history={selfOrderStatusHistory} />
 
                 <Text className="text-stone-900 font-black text-xs mb-1.5">
-                  Daftar Barang Belanja
+                  Produk dalam Pesanan
                 </Text>
                 <View className="bg-stone-100 border border-stone-200 rounded-xl p-3 mb-4">
                   {selfOrderItems.length === 0 ? (
@@ -2067,7 +2000,7 @@ export default function AdminPortal() {
                 <View className="border-t border-stone-200 pt-3">
                   <View className="flex-row justify-between py-1">
                     <Text className="text-stone-500 text-[10px]">
-                      Subtotal Produk
+                      Subtotal
                     </Text>
                     <Text className="text-stone-700 text-xs">
                       Rp{activeSelfOrder.subtotal.toLocaleString("id-ID")}
@@ -2112,7 +2045,7 @@ export default function AdminPortal() {
                           className="bg-amber-600 border border-amber-700 py-3.5 rounded-xl items-center justify-center active:bg-amber-700"
                         >
                           <Text className="text-white font-black text-xs">
-                          Kemas Pesanan
+                          Siapkan Pesanan
                           </Text>
                         </Pressable>
                       ) : activeSelfOrder.order_status === "PACKED" ? (
@@ -2126,7 +2059,7 @@ export default function AdminPortal() {
                           className="bg-blue-600 border border-blue-700 py-3.5 rounded-xl items-center justify-center active:bg-blue-850"
                         >
                           <Text className="text-white font-black text-xs">
-                            Serahkan ke Kurir
+                            Serahkan kepada Kurir
                           </Text>
                         </Pressable>
                       ) : (
@@ -2140,7 +2073,7 @@ export default function AdminPortal() {
                           className="bg-emerald-700 border border-emerald-800 py-3.5 rounded-xl items-center justify-center active:bg-emerald-950"
                         >
                           <Text className="text-white font-black text-xs">
-                            Pesanan Diterima
+                            Konfirmasi Penerimaan
                           </Text>
                         </Pressable>
                       )
@@ -2156,7 +2089,7 @@ export default function AdminPortal() {
                         className="bg-emerald-700 border border-emerald-800 py-3.5 rounded-xl items-center justify-center active:bg-emerald-950"
                       >
                         <Text className="text-white font-black text-xs">
-                          Sudah Diambil
+                          Konfirmasi Pengambilan
                         </Text>
                       </Pressable>
                     ) : (
@@ -2170,7 +2103,7 @@ export default function AdminPortal() {
                         className="bg-blue-600 border border-blue-700 py-3.5 rounded-xl items-center justify-center active:bg-blue-850"
                       >
                         <Text className="text-white font-black text-xs">
-                          Siap Diambil
+                          Pesanan Siap Diambil
                         </Text>
                       </Pressable>
                     )}

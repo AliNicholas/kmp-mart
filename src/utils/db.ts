@@ -13,7 +13,7 @@ export interface User {
   id: string;
   name: string;
   phone: string;
-  role: "USER" | "RT_AGENT" | "ADMIN" | "DRIVER" | "AGENT" | "OPERASIONAL" | "SUPPLIER";
+  role: "USER" | "RT_AGENT" | "ADMIN" | "DRIVER" | "OPERASIONAL" | "SUPPLIER";
   rt_id: string | null;
   cooperative_id: string;
   points: number;
@@ -26,7 +26,6 @@ export interface User {
   card_token?: string | null;
   account_status?: "ACTIVE" | "SUSPENDED" | "PENDING" | null;
   created_at?: string | null;
-  is_warung_partner?: number;
   is_pickup_point?: number;
 }
 
@@ -64,7 +63,7 @@ export interface Order {
   id: string;
   user_id: string;
   rt_batch_id: string | null;
-  channel: "SELF_ORDER" | "RT_ASSISTED" | "CARD_PURCHASE" | "B2B_AGENT";
+  channel: "SELF_ORDER" | "RT_ASSISTED" | "CARD_PURCHASE";
   fulfillment: "PICKUP_AT_COOP" | "DELIVERY_TO_HOME" | "RT_PICKUP_POINT";
   subtotal: number;
   discount: number;
@@ -373,6 +372,10 @@ class WebDatabase {
       });
     }
 
+    if (this.removePartnerAgentData(db)) {
+      changed = true;
+    }
+
     if (this.ensureDemoLogistics(db)) {
       changed = true;
     }
@@ -580,6 +583,78 @@ class WebDatabase {
     if (updated || changed) {
       this.setStorage(db);
     }
+  }
+
+  private removePartnerAgentData(db: { [table: string]: any[] }) {
+    let changed = false;
+    const removedOrderIds = new Set(
+      (db["orders"] || [])
+        .filter((order: any) => order.channel === "B2B_AGENT")
+        .map((order: any) => order.id),
+    );
+
+    if (removedOrderIds.size > 0) {
+      const removedTaskIds = new Set(
+        (db["delivery_tasks"] || [])
+          .filter((task: any) => removedOrderIds.has(task.order_id))
+          .map((task: any) => task.id),
+      );
+      db["orders"] = (db["orders"] || []).filter(
+        (order: any) => !removedOrderIds.has(order.id),
+      );
+      db["order_items"] = (db["order_items"] || []).filter(
+        (item: any) => !removedOrderIds.has(item.order_id),
+      );
+      db["order_status_history"] = (db["order_status_history"] || []).filter(
+        (history: any) => !removedOrderIds.has(history.order_id),
+      );
+      db["point_transactions"] = (db["point_transactions"] || []).filter(
+        (transaction: any) => !removedOrderIds.has(transaction.reference_id),
+      );
+      db["delivery_tasks"] = (db["delivery_tasks"] || []).filter(
+        (task: any) => !removedTaskIds.has(task.id),
+      );
+      db["delivery_proofs"] = (db["delivery_proofs"] || []).filter(
+        (proof: any) => !removedTaskIds.has(proof.delivery_task_id),
+      );
+      db["cash_collections"] = (db["cash_collections"] || []).filter(
+        (cash: any) => !removedTaskIds.has(cash.delivery_task_id),
+      );
+      changed = true;
+    }
+
+    const auditLogsBefore = (db["audit_logs"] || []).length;
+    db["audit_logs"] = (db["audit_logs"] || []).filter((log: any) => {
+      const details = String(log.details || "");
+      const actor = String(log.actor || "");
+      return !details.includes("B2B Mitra") && !actor.includes("(AGENT)");
+    });
+    if (db["audit_logs"].length !== auditLogsBefore) changed = true;
+
+    if (db["users"]) {
+      db["users"].forEach((user: any) => {
+        if (user.role === "AGENT") {
+          user.role = "USER";
+          changed = true;
+        }
+        if ("is_warung_partner" in user) {
+          delete user.is_warung_partner;
+          changed = true;
+        }
+      });
+    }
+
+    const removedProductIds = new Set([
+      "prod-beras-grosir",
+      "prod-minyak-grosir",
+    ]);
+    const productsBefore = (db["products"] || []).length;
+    db["products"] = (db["products"] || []).filter(
+      (product: any) => !removedProductIds.has(product.id),
+    );
+    if (db["products"].length !== productsBefore) changed = true;
+
+    return changed;
   }
 
   private ensureDemoLogistics(db: { [table: string]: any[] }) {
@@ -860,7 +935,6 @@ class WebDatabase {
         referral_code: "BUDIAJAK",
         referred_by: null,
         pin: "654321",
-        is_warung_partner: 0,
         is_pickup_point: 1,
       },
       {
@@ -1225,30 +1299,6 @@ class WebDatabase {
 
     db["purchase_orders"] = [];
 
-    const b2bOrderId = "order-b2b-demo";
-    db["orders"].push({
-      id: b2bOrderId,
-      user_id: "user-sari",
-      rt_batch_id: null,
-      channel: "B2B_AGENT",
-      fulfillment: "DELIVERY_TO_HOME",
-      subtotal: 550000,
-      discount: 0,
-      points_redeemed: 0,
-      total: 560000,
-      payment_status: "UNPAID",
-      order_status: "READY_FOR_PICKUP",
-      created_at: new Date(Date.now() - 6 * 3600 * 1000).toISOString(),
-    });
-    db["order_items"].push({
-      id: "item-b2b-1",
-      order_id: b2bOrderId,
-      product_id: "prod-beras",
-      name: "Beras Premium 5kg",
-      price: 55000,
-      quantity: 10,
-    });
-
     this.setStorage(db);
   }
 
@@ -1601,9 +1651,11 @@ let sqliteDbInstance: any = null;
 
 const getNativeDb = () => {
   if (!sqliteDbInstance) {
+    // Metro resolves this to native-sqlite.web.ts on web, so the WASM-backed
+    // Expo SQLite web worker is never included in the web bundle.
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const SQLite = require("expo-sqlite");
-    sqliteDbInstance = SQLite.openDatabaseSync("kopmart.db");
+    const { openNativeDatabase } = require("./native-sqlite");
+    sqliteDbInstance = openNativeDatabase("kopmart.db");
     initNativeSchema(sqliteDbInstance);
   }
   return sqliteDbInstance;
@@ -1617,7 +1669,6 @@ const ensureUserIdentityColumns = (db: any) => {
     "ALTER TABLE users ADD COLUMN card_token TEXT;",
     "ALTER TABLE users ADD COLUMN account_status TEXT DEFAULT 'ACTIVE';",
     "ALTER TABLE users ADD COLUMN created_at TEXT;",
-    "ALTER TABLE users ADD COLUMN is_warung_partner INTEGER DEFAULT 0;",
     "ALTER TABLE users ADD COLUMN is_pickup_point INTEGER DEFAULT 0;",
   ];
 
@@ -1631,7 +1682,7 @@ const ensureUserIdentityColumns = (db: any) => {
 
   try {
     db.execSync(
-      "UPDATE users SET role = 'USER', is_warung_partner = 0, is_pickup_point = 1 WHERE id = 'user-budi';",
+      "UPDATE users SET role = 'USER', is_pickup_point = 1 WHERE id = 'user-budi';",
     );
     db.execSync(
       "UPDATE users SET points = 12000 WHERE id = 'user-dinda' AND points = 120;",
@@ -1647,6 +1698,39 @@ const ensureUserIdentityColumns = (db: any) => {
     );
   } catch {
     // Ignore migration issues
+  }
+};
+
+const removePartnerAgentData = (db: any) => {
+  try {
+    db.execSync(`
+      DELETE FROM delivery_proofs
+      WHERE delivery_task_id IN (
+        SELECT id FROM delivery_tasks
+        WHERE order_id IN (SELECT id FROM orders WHERE channel = 'B2B_AGENT')
+      );
+      DELETE FROM cash_collections
+      WHERE delivery_task_id IN (
+        SELECT id FROM delivery_tasks
+        WHERE order_id IN (SELECT id FROM orders WHERE channel = 'B2B_AGENT')
+      );
+      DELETE FROM delivery_tasks
+      WHERE order_id IN (SELECT id FROM orders WHERE channel = 'B2B_AGENT');
+      DELETE FROM order_status_history
+      WHERE order_id IN (SELECT id FROM orders WHERE channel = 'B2B_AGENT');
+      DELETE FROM point_transactions
+      WHERE reference_id IN (SELECT id FROM orders WHERE channel = 'B2B_AGENT');
+      DELETE FROM order_items
+      WHERE order_id IN (SELECT id FROM orders WHERE channel = 'B2B_AGENT');
+      DELETE FROM orders WHERE channel = 'B2B_AGENT';
+      DELETE FROM audit_logs
+      WHERE details LIKE '%B2B Mitra%' OR actor LIKE '%(AGENT)%';
+      DELETE FROM products
+      WHERE id IN ('prod-beras-grosir', 'prod-minyak-grosir');
+      UPDATE users SET role = 'USER' WHERE role = 'AGENT';
+    `);
+  } catch (error) {
+    console.error("Failed to remove retired partner-agent data:", error);
   }
 };
 
@@ -1942,7 +2026,6 @@ const initNativeSchema = (db: any) => {
       card_token TEXT UNIQUE,
       account_status TEXT DEFAULT 'ACTIVE',
       created_at TEXT,
-      is_warung_partner INTEGER DEFAULT 0,
       is_pickup_point INTEGER DEFAULT 0
     );
     CREATE TABLE IF NOT EXISTS products (
@@ -2691,35 +2774,6 @@ const initNativeSchema = (db: any) => {
         "https://images.unsplash.com/photo-1607613009820-a29f7bb81c04?w=400",
       ],
     );
-    db.runSync(
-      `INSERT OR IGNORE INTO products (id, cooperative_id, name, price, cost_price, stock, unit, is_local, image_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        "prod-beras-grosir",
-        "tenant-1",
-        "Beras Premium 25kg (Grosir)",
-        340000,
-        310000,
-        10,
-        "karung",
-        0,
-        "https://images.unsplash.com/photo-1586201375761-83865001e31c?w=400",
-      ],
-    );
-    db.runSync(
-      `INSERT OR IGNORE INTO products (id, cooperative_id, name, price, cost_price, stock, unit, is_local, image_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        "prod-minyak-grosir",
-        "tenant-1",
-        "Minyak Goreng 1 Dus (Grosir)",
-        205000,
-        185000,
-        8,
-        "dus",
-        0,
-        "https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?w=400",
-      ],
-    );
-
     // Seed Products (Sukasari - tenant-2)
     db.runSync(
       `INSERT OR IGNORE INTO products (id, cooperative_id, name, price, cost_price, stock, unit, is_local, image_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -2946,31 +3000,9 @@ const initNativeSchema = (db: any) => {
       ["req-2", "user-sari", "Beras Premium 5kg", 1, "PENDING", new Date().toISOString()]
     );
 
-    // Seed B2B Order for Agent Bu Sari
-    const b2bOrderId = "order-b2b-demo";
-    db.runSync(
-      `INSERT OR IGNORE INTO orders (id, user_id, rt_batch_id, channel, fulfillment, subtotal, discount, points_redeemed, total, payment_status, order_status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        b2bOrderId,
-        "user-sari",
-        null,
-        "B2B_AGENT",
-        "DELIVERY_TO_HOME",
-        550000,
-        0,
-        0,
-        560000,
-        "UNPAID",
-        "READY_FOR_PICKUP",
-        new Date(Date.now() - 6 * 3600 * 1000).toISOString(),
-      ],
-    );
-    db.runSync(
-      `INSERT OR IGNORE INTO order_items (id, order_id, product_id, name, price, quantity) VALUES (?, ?, ?, ?, ?, ?)`,
-      ["item-b2b-1", b2bOrderId, "prod-beras", "Beras Premium 5kg", 55000, 10]
-    );
   }
 
+  removePartnerAgentData(db);
   ensureNativeSeedUserIdentity(db);
   ensureNativeDemoLogistics(db);
 };

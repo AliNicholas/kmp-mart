@@ -34,7 +34,7 @@ export interface CartItem {
   quantity: number;
 }
 
-export type AppRole = "USER" | "ADMIN" | "DRIVER" | "AGENT" | "OPERASIONAL" | "SUPPLIER";
+export type AppRole = "USER" | "ADMIN" | "DRIVER" | "OPERASIONAL" | "SUPPLIER";
 
 export interface RegisterCitizenInput {
   fullName: string;
@@ -134,12 +134,11 @@ interface AppContextType {
   // Checkout & Order Actions
   checkout: (
     fulfillment: "PICKUP_AT_COOP" | "DELIVERY_TO_HOME" | "RT_PICKUP_POINT",
-    channel: "SELF_ORDER" | "RT_ASSISTED" | "CARD_PURCHASE" | "B2B_AGENT",
+    channel: "SELF_ORDER" | "RT_ASSISTED" | "CARD_PURCHASE",
     pointsRedeemed: number,
     rtBatchId: string | null,
     overrideUserId?: string, // used for assisted checkout
     isQris?: boolean,
-    cartOverride?: CartItem[],
   ) => Promise<{ success: boolean; error?: string; orderId?: string }>;
 
 
@@ -1520,15 +1519,14 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   // Checkout
   const checkout = async (
     fulfillment: "PICKUP_AT_COOP" | "DELIVERY_TO_HOME" | "RT_PICKUP_POINT",
-    channel: "SELF_ORDER" | "RT_ASSISTED" | "CARD_PURCHASE" | "B2B_AGENT",
+    channel: "SELF_ORDER" | "RT_ASSISTED" | "CARD_PURCHASE",
     pointsRedeemed: number,
     rtBatchId: string | null,
     overrideUserId?: string,
     isQris?: boolean,
-    cartOverride?: CartItem[],
   ) => {
     const targetUserId = overrideUserId || activeUser?.id;
-    const checkoutCart = cartOverride || cart;
+    const checkoutCart = cart;
     if (!targetUserId)
       return { success: false, error: "No active user found." };
     if (checkoutCart.length === 0)
@@ -1688,12 +1686,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         });
       }
 
-      if (!cartOverride) {
-        writes.push({
-          query: "DELETE FROM cart_items WHERE user_id = ?",
-          params: [activeUser?.id || targetUserId],
-        });
-      }
+      writes.push({
+        query: "DELETE FROM cart_items WHERE user_id = ?",
+        params: [activeUser?.id || targetUserId],
+      });
 
       await dbService.transaction(writes);
 
@@ -1704,9 +1700,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           ? "Kartu Kopdes"
           : channel === "RT_ASSISTED"
             ? "RT-Assisted"
-            : channel === "B2B_AGENT"
-              ? "B2B Mitra"
-              : "Self-Order";
+            : "Self-Order";
       await logAudit(
         `${actorName} (${activeRole})`,
         "CHECKOUT",
@@ -1717,7 +1711,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         await createDeliveryTaskFromOrder(orderId);
       }
 
-      if (!cartOverride) setCart([]);
+      setCart([]);
       await refreshData();
       return { success: true, orderId };
     } catch (err: any) {

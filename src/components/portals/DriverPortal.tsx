@@ -23,17 +23,17 @@ if (Platform.OS !== 'web') {
 }
 
 const statusMeta: Record<DeliveryStatus, { label: string; color: string }> = {
-  PENDING_DISPATCH: { label: "Menunggu Dispatch", color: "bg-stone-100 text-stone-700 border-stone-200" },
+  PENDING_DISPATCH: { label: "Menunggu Penugasan", color: "bg-stone-100 text-stone-700 border-stone-200" },
   ASSIGNED: { label: "Ditugaskan", color: "bg-blue-50 text-blue-800 border-blue-200" },
   ACCEPTED: { label: "Diterima", color: "bg-emerald-50 text-emerald-800 border-emerald-200" },
   REJECTED: { label: "Ditolak", color: "bg-rose-50 text-rose-700 border-rose-200" },
   PREPARING_PICKUP: { label: "Disiapkan", color: "bg-amber-50 text-amber-800 border-amber-200" },
-  READY_FOR_PICKUP: { label: "Siap Pickup", color: "bg-amber-50 text-amber-800 border-amber-200" },
-  PICKED_UP: { label: "Sudah Pickup", color: "bg-indigo-50 text-indigo-800 border-indigo-200" },
+  READY_FOR_PICKUP: { label: "Siap Diambil Kurir", color: "bg-amber-50 text-amber-800 border-amber-200" },
+  PICKED_UP: { label: "Telah Diambil Kurir", color: "bg-indigo-50 text-indigo-800 border-indigo-200" },
   IN_TRANSIT: { label: "Dalam Perjalanan", color: "bg-cyan-50 text-cyan-800 border-cyan-200" },
-  ARRIVED_AT_RT: { label: "Tiba di Dropoff", color: "bg-emerald-50 text-emerald-800 border-emerald-200" },
+  ARRIVED_AT_RT: { label: "Tiba di Titik Antar", color: "bg-emerald-50 text-emerald-800 border-emerald-200" },
   ARRIVED_AT_USER: { label: "Tiba di Warga", color: "bg-emerald-50 text-emerald-800 border-emerald-200" },
-  DELIVERED: { label: "Selesai", color: "bg-emerald-100 text-emerald-900 border-emerald-200" },
+  DELIVERED: { label: "Pengiriman Selesai", color: "bg-emerald-100 text-emerald-900 border-emerald-200" },
   FAILED: { label: "Gagal", color: "bg-rose-100 text-rose-800 border-rose-200" },
   RETURNED: { label: "Dikembalikan", color: "bg-stone-100 text-stone-700 border-stone-200" },
   CANCELLED: { label: "Dibatalkan", color: "bg-stone-100 text-stone-500 border-stone-200" },
@@ -153,7 +153,7 @@ export default function DriverPortal() {
               onPress={() => runAction("Pickup terkonfirmasi.", () => confirmDeliveryPickup(task.id, packageCount))}
               className="flex-1 bg-amber-400 border border-amber-500 rounded-xl py-2.5 items-center"
             >
-              <Text className="text-emerald-950 text-xs font-black">Scan Pickup QR</Text>
+              <Text className="text-emerald-950 text-xs font-black">Pindai Kode Pengambilan</Text>
             </Pressable>
           </View>
         </View>
@@ -194,7 +194,7 @@ export default function DriverPortal() {
               onPress={() => runAction("Pengiriman selesai.", () => completeDeliveryTask(task.id, proof || "CONFIRMED", cod))}
               className="flex-1 bg-emerald-700 border border-emerald-800 rounded-xl py-2.5 items-center"
             >
-              <Text className="text-white text-xs font-black">Selesaikan</Text>
+              <Text className="text-white text-xs font-black">Selesaikan Pengiriman</Text>
             </Pressable>
             <Pressable
               onPress={() => runAction("Gagal antar dicatat.", () => failDeliveryTask(task.id, reason || "Penerima tidak dapat dihubungi"))}

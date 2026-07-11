@@ -16,7 +16,7 @@ export function OrderStatusHistoryCards({
   if (history.length === 0) {
     return (
       <Text className="text-stone-400 text-[9px] italic mb-3">
-        Belum ada perubahan status setelah pesanan dibuat.
+        Belum ada pembaruan status.
       </Text>
     );
   }

@@ -5,7 +5,6 @@ import AuthGateway from '@/components/auth-gateway';
 import CitizenPortal from '@/components/portals/CitizenPortal';
 import AdminPortal from '@/components/portals/AdminPortal';
 import DriverPortal from '@/components/portals/DriverPortal';
-import AgentPortal from '@/components/portals/AgentPortal';
 import SupplierPortal from '@/components/portals/SupplierPortal';
 
 export default function HomeScreen() {
@@ -37,7 +36,6 @@ export default function HomeScreen() {
             {activeRole === 'USER' && <CitizenPortal />}
             {(activeRole === 'ADMIN' || activeRole === 'OPERASIONAL') && <AdminPortal />}
             {activeRole === 'DRIVER' && <DriverPortal />}
-            {activeRole === 'AGENT' && <AgentPortal />}
             {activeRole === 'SUPPLIER' && <SupplierPortal />}
           </View>
         </View>
