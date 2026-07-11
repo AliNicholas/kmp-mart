@@ -33,7 +33,7 @@ export function AnimatedSplashOverlay() {
     },
   });
 
-  const image = <Image className="w-[76px] h-[71px]" source={require('@/assets/images/expo-logo.png')} />;
+  const image = <Image className="w-20 h-20" source={require('@/assets/images/expo-logo.png')} />;
 
   return animate ? (
     <Animated.View
@@ -43,7 +43,7 @@ export function AnimatedSplashOverlay() {
           scheduleOnRN(setVisible, false);
         }
       })}
-      className="absolute inset-0 bg-[#208AEF] items-center justify-center z-[1000]">
+      className="absolute inset-0 bg-[#064e3b] items-center justify-center z-[1000]">
       {image}
     </Animated.View>
   ) : (
@@ -53,7 +53,7 @@ export function AnimatedSplashOverlay() {
           setAnimate(true);
         });
       }}
-      className="absolute inset-0 bg-[#208AEF] items-center justify-center z-[1000]">
+      className="absolute inset-0 bg-[#064e3b] items-center justify-center z-[1000]">
       {image}
     </View>
   );
@@ -102,9 +102,13 @@ export function AnimatedIcon() {
         <Image className="w-[201px] h-[201px] absolute" source={require('@/assets/images/logo-glow.png')} />
       </Animated.View>
 
-      <Animated.View entering={keyframe.duration(DURATION)} className="rounded-[40px] w-32 h-32 absolute" style={{ experimental_backgroundImage: 'linear-gradient(180deg, #3C9FFE, #0274DF)' } as any} />
+      <Animated.View 
+        entering={keyframe.duration(DURATION)} 
+        className="rounded-[40px] w-32 h-32 absolute bg-[#047857]" 
+        style={{ experimental_backgroundImage: 'linear-gradient(180deg, #10b981, #064e3b)' } as any} 
+      />
       <Animated.View className="justify-center items-center" entering={logoKeyframe.duration(DURATION)}>
-        <Image className="w-[76px] h-[71px]" source={require('@/assets/images/expo-logo.png')} />
+        <Image className="w-20 h-20" source={require('@/assets/images/expo-logo.png')} />
       </Animated.View>
     </View>
   );
