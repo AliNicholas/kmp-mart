@@ -17,6 +17,11 @@ KMP Mart adalah platform digitalisasi koperasi inklusif desa yang berfungsi seba
 > Coba langsung aplikasi KMP Mart di handphone Android Anda! Unduh berkas APK versi build terbaru kami di sini:
 > **[Download KMP Mart APK (Versi EAS Build)](https://expo.dev/artifacts/eas/XmnP5I3QboCnbQJrrPmtsGPXPM385FBaTv0oofjZZ48.apk)**
 
+> [!TIP]
+> **🎬 Video Demo Aplikasi**:
+> Tonton rekaman video demo lengkap seluruh fitur dan alur kerja KMP Mart di Google Drive:
+> **[📂 Tonton Video Demo KMP Mart](https://drive.google.com/drive/folders/1FJQcxif9ZDJtOhBV4_5EX2_HeHZlGlqf?usp=sharing)**
+
 ---
 
 ## 📖 Dokumentasi Lengkap Projek (Folder [docs/](file:///Users/gustam/Developer/hackathon/kopmart/docs))
