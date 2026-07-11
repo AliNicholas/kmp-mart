@@ -5,7 +5,7 @@ Dokumen ini menjelaskan langkah-langkah detail untuk menyiapkan lingkungan penge
 > [!IMPORTANT]
 > **📲 Download Langsung Aplikasi Android (APK)**:
 > Apabila Anda hanya ingin mencoba aplikasi di HP Android tanpa perlu meng-compile kode sumber, silakan unduh berkas instalasi APK di sini:
-> **[Download KMP Mart APK (Versi EAS Build)](https://expo.dev/artifacts/eas/SBdQpb-DEns_EafZ27rzw2WiIIHeEnaZHTYVwL96CwE.apk)**
+> **[Download KMP Mart APK (Versi EAS Build)](https://expo.dev/artifacts/eas/XmnP5I3QboCnbQJrrPmtsGPXPM385FBaTv0oofjZZ48.apk)**
 
 ---
 

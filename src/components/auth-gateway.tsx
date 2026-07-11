@@ -1,8 +1,9 @@
+import { AppModal } from "@/components/app-modal";
 import { SymbolView } from "@/components/app-symbol";
 import RegistrationModal from "@/components/registration-modal";
-import { useApp } from "@/contexts/AppContext";
 import { Button } from "@/components/ui/button";
 import { Text as UiText } from "@/components/ui/text";
+import { useApp } from "@/contexts/AppContext";
 import { Image } from "expo-image";
 import * as React from "react";
 import {
@@ -17,7 +18,6 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { AppModal } from "@/components/app-modal";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 const fieldClass =
@@ -205,7 +205,11 @@ export default function AuthGateway() {
                   onPress={() => setDownloadPopupOpen(true)}
                   className="mt-3 flex-row items-center justify-center gap-2 py-3 rounded-xl"
                 >
-                  <SymbolView name={"arrow.down.app.fill" as any} size={16} tintColor="#047857" />
+                  <SymbolView
+                    name={"arrow.down.app.fill" as any}
+                    size={16}
+                    tintColor="#047857"
+                  />
                   <UiText className="text-emerald-800 text-sm font-black">
                     Unduh APK Android
                   </UiText>
@@ -313,18 +317,6 @@ export default function AuthGateway() {
                 >
                   Download Aplikasi Android
                 </Text>
-                <Text
-                  style={{
-                    fontSize: 10,
-                    fontWeight: "bold",
-                    color: "#b45309",
-                    textTransform: "uppercase",
-                    marginTop: 2,
-                    letterSpacing: 0.5,
-                  }}
-                >
-                  Versi APK Expo (SIMKOPDES)
-                </Text>
               </View>
 
               {/* Description */}
@@ -345,7 +337,7 @@ export default function AuthGateway() {
               <Pressable
                 onPress={() => {
                   Linking.openURL(
-                    "https://expo.dev/artifacts/eas/SBdQpb-DEns_EafZ27rzw2WiIIHeEnaZHTYVwL96CwE.apk",
+                    "https://expo.dev/artifacts/eas/XmnP5I3QboCnbQJrrPmtsGPXPM385FBaTv0oofjZZ48.apk",
                   ).catch(() =>
                     Alert.alert("Gagal", "Tautan tidak dapat dibuka"),
                   );
