@@ -245,6 +245,8 @@ interface AppContextType {
   applyReferralCode: (
     code: string,
   ) => Promise<{ success: boolean; error?: string }>;
+  devToolsOpen: boolean;
+  setDevToolsOpen: (open: boolean) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -253,6 +255,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [activeRole, setActiveRoleState] = useState<AppRole>("USER");
   const [activeUser, setActiveUserState] = useState<User | null>(null);
   const [allUsers, setAllUsers] = useState<User[]>([]);
+  const [devToolsOpen, setDevToolsOpen] = useState<boolean>(false);
   const [products, setProducts] = useState<Product[]>([]);
   const [batches, setBatches] = useState<RTBatch[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
@@ -2240,6 +2243,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         receiveGoods,
         createKopRequest,
         resolveKopRequest,
+        devToolsOpen,
+        setDevToolsOpen,
       }}
     >
       {children}

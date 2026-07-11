@@ -439,14 +439,12 @@ export default function AuthGateway() {
         animationType="slide"
         onRequestClose={() => setDevToolsOpen(false)}
       >
-        <Pressable
-          onPress={() => setDevToolsOpen(false)}
-          className="flex-1 justify-end bg-black/60"
-        >
+        <View className="flex-1 justify-end">
           <Pressable
-            onPress={() => {}}
-            className="bg-stone-900 rounded-t-3xl p-5 w-full border-t border-stone-800"
-          >
+            onPress={() => setDevToolsOpen(false)}
+            className="absolute inset-0 bg-black/60"
+          />
+          <View className="bg-stone-900 rounded-t-3xl p-5 w-full border-t border-stone-800 z-10">
             <View className="flex-row justify-between items-center border-b border-stone-800 pb-3 mb-4">
               <View className="flex-row items-center gap-2">
                 <SymbolView name="hammer.fill" size={14} tintColor="#fbbf24" />
@@ -652,8 +650,8 @@ export default function AuthGateway() {
                 <Text className="text-white font-bold text-xs">Tutup</Text>
               </Pressable>
             </View>
-          </Pressable>
-        </Pressable>
+          </View>
+        </View>
       </AppModal>
     </SafeAreaView>
   );

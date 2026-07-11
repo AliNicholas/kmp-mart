@@ -812,14 +812,12 @@ export default function AgentPortal() {
         animationType="slide"
         transparent={true}
       >
-        <Pressable
-          onPress={() => setShowB2bCartModal(false)}
-          className="flex-1 bg-black/60 justify-end"
-        >
+        <View className="flex-1 justify-end">
           <Pressable
-            onPress={() => {}}
-            className="bg-white rounded-t-3xl p-5 max-h-[85%] border-t border-stone-200 w-full"
-          >
+            onPress={() => setShowB2bCartModal(false)}
+            className="absolute inset-0 bg-black/60"
+          />
+          <View className="bg-white rounded-t-3xl p-5 max-h-[85%] border-t border-stone-200 w-full z-10">
             <View className="flex-row justify-between items-center border-b border-stone-100 pb-3 mb-3">
               <Text className="text-stone-900 font-black text-sm">
                 Keranjang Grosir B2B
@@ -1013,20 +1011,18 @@ export default function AgentPortal() {
                 </Pressable>
               </View>
             )}
-          </Pressable>
-        </Pressable>
+          </View>
+        </View>
       </AppModal>
 
       {/* --- MODAL MOCKUP QRIS B2B --- */}
       <AppModal visible={showQrisB2bModal} transparent={true} animationType="fade">
-        <Pressable
-          onPress={() => setShowQrisB2bModal(false)}
-          className="flex-1 bg-black/75 justify-center items-center p-5"
-        >
+        <View className="flex-1 justify-center items-center p-5">
           <Pressable
-            onPress={() => {}}
-            className="bg-white rounded-3xl p-5 items-center w-full max-w-sm"
-          >
+            onPress={() => setShowQrisB2bModal(false)}
+            className="absolute inset-0 bg-black/75"
+          />
+          <View className="bg-white rounded-3xl p-5 items-center w-full max-w-sm z-10">
             <View className="flex-row justify-between items-center w-full border-b border-stone-100 pb-2 mb-3">
               <Text className="text-stone-900 font-black text-sm">
                 QRIS Lintas Koperasi (B2B)
@@ -1081,8 +1077,8 @@ export default function AgentPortal() {
                 Simulasi Pembayaran Sukses
               </Text>
             </Pressable>
-          </Pressable>
-        </Pressable>
+          </View>
+        </View>
       </AppModal>
 
       {/* --- MODAL REPORT DISCREPANCY (LAPOR SELISIH) --- */}
@@ -1091,14 +1087,12 @@ export default function AgentPortal() {
         transparent={true}
         animationType="slide"
       >
-        <Pressable
-          onPress={() => setShowDiscrepancyModal(false)}
-          className="flex-1 bg-black/60 justify-end"
-        >
+        <View className="flex-1 justify-end">
           <Pressable
-            onPress={() => {}}
-            className="bg-white rounded-t-3xl p-5 border-t border-stone-200 w-full max-h-[85%]"
-          >
+            onPress={() => setShowDiscrepancyModal(false)}
+            className="absolute inset-0 bg-black/60"
+          />
+          <View className="bg-white rounded-t-3xl p-5 border-t border-stone-200 w-full max-h-[85%] z-10">
             <View className="flex-row justify-between items-center border-b border-stone-100 pb-3 mb-3">
               <Text className="text-stone-955 font-black text-sm">
                 Lapor Selisih & Kerusakan Barang
@@ -1178,8 +1172,8 @@ export default function AgentPortal() {
                 )}
               </Pressable>
             </ScrollView>
-          </Pressable>
-        </Pressable>
+          </View>
+        </View>
       </AppModal>
     </View>
   );
