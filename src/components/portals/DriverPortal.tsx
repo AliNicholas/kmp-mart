@@ -2,7 +2,8 @@ import { useApp } from "@/contexts/AppContext";
 import { DeliveryStatus, DeliveryTask } from "@/utils/db";
 import { SymbolView } from "@/components/app-symbol";
 import React from "react";
-import { Alert, Pressable, ScrollView, Text, TextInput, View, Modal, Platform, Linking } from "react-native";
+import { Alert, Pressable, ScrollView, Text, TextInput, View, Platform, Linking } from "react-native";
+import { AppModal } from "@/components/app-modal";
 import OpenStreetMapView from "../open-street-map";
 
 // Conditional native maps import
@@ -344,7 +345,7 @@ export default function DriverPortal() {
         ];
 
         return (
-          <Modal
+          <AppModal
             visible={!!activeMapTask}
             transparent={true}
             animationType="fade"
@@ -428,7 +429,7 @@ export default function DriverPortal() {
                 </View>
               </View>
             </View>
-          </Modal>
+          </AppModal>
         );
       })()}
     </View>

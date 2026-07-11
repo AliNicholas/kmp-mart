@@ -9,16 +9,8 @@ import {
 import { dbService, OrderStatusHistory } from "@/utils/db";
 import { OrderStatusHistoryCards } from "@/components/order-status-history-cards";
 import React, { useState } from "react";
-import {
-  Alert,
-  Image,
-  Modal,
-  Pressable,
-  ScrollView,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
+import { Alert, Image, Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import { AppModal } from "@/components/app-modal";
 import CoopSelectorModal from "../CoopSelectorModal";
 import DeliveryTrackerModal from "../DeliveryTrackerModal";
 
@@ -1338,7 +1330,7 @@ export default function CitizenPortal() {
       </View>
 
       {/* Cart Drawer Modal */}
-      <Modal
+      <AppModal
         visible={isCartOpen}
         transparent={true}
         animationType="slide"
@@ -1480,10 +1472,10 @@ export default function CitizenPortal() {
             )}
           </View>
         </View>
-      </Modal>
+      </AppModal>
 
       {/* Checkout Screen Modal */}
-      <Modal
+      <AppModal
         visible={checkoutModalOpen}
         transparent={true}
         animationType="slide"
@@ -1804,11 +1796,11 @@ export default function CitizenPortal() {
             )}
           </View>
         </View>
-      </Modal>
+      </AppModal>
 
       {/* Order Detail Modal */}
       {detailOrder && (
-        <Modal
+        <AppModal
           visible={!!detailOrder}
           transparent={true}
           animationType="fade"
@@ -1985,7 +1977,7 @@ export default function CitizenPortal() {
               </Pressable>
             </View>
           </View>
-        </Modal>
+        </AppModal>
       )}
 
       <DeliveryTrackerModal
@@ -1996,7 +1988,7 @@ export default function CitizenPortal() {
 
       {/* Product Detail Modal */}
       {selectedDetailProduct && (
-        <Modal
+        <AppModal
           visible={!!selectedDetailProduct}
           transparent={true}
           animationType="slide"
@@ -2134,7 +2126,7 @@ export default function CitizenPortal() {
               </View>
             </View>
           </View>
-        </Modal>
+        </AppModal>
       )}
 
       <CoopSelectorModal

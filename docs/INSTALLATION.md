@@ -2,6 +2,11 @@
 
 Dokumen ini menjelaskan langkah-langkah detail untuk menyiapkan lingkungan pengembangan (environment setup), memasang dependensi, menjalankan dev server Metro, serta memecahkan masalah (troubleshooting) saat menjalankan KMP Mart (SIMKOPDES).
 
+> [!IMPORTANT]
+> **📲 Download Langsung Aplikasi Android (APK)**:
+> Apabila Anda hanya ingin mencoba aplikasi di HP Android tanpa perlu meng-compile kode sumber, silakan unduh berkas instalasi APK di sini:
+> **[Download KMP Mart APK (Versi EAS Build)](https://expo.dev/artifacts/eas/SBdQpb-DEns_EafZ27rzw2WiIIHeEnaZHTYVwL96CwE.apk)**
+
 ---
 
 ## 📋 1. Prasyarat Sistem

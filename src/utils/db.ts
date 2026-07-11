@@ -3056,11 +3056,11 @@ export const dbService = {
    */
   async transaction(
     writes: DatabaseWrite[],
-  ): Promise<Array<{ insertId?: string; rowsAffected: number }>> {
+  ): Promise<{ insertId?: string; rowsAffected: number }[]> {
     if (Platform.OS === "web") {
       const snapshot = localStorage.getItem(WEB_DATABASE_STORAGE_KEY);
       try {
-        const results: Array<{ insertId?: string; rowsAffected: number }> = [];
+        const results: { insertId?: string; rowsAffected: number }[] = [];
         for (const write of writes) {
           const result = await getWebDb().executeSql(
             write.query,
@@ -3087,7 +3087,7 @@ export const dbService = {
     }
 
     const db = getNativeDb();
-    const results: Array<{ insertId?: string; rowsAffected: number }> = [];
+    const results: { insertId?: string; rowsAffected: number }[] = [];
     db.withTransactionSync(() => {
       for (const write of writes) {
         const result = db.runSync(write.query, write.params || []);

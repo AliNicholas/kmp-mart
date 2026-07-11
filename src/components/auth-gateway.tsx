@@ -1,21 +1,23 @@
-import RegistrationModal from '@/components/registration-modal';
-import { useApp } from '@/contexts/AppContext';
-import { SymbolView } from '@/components/app-symbol';
-import { Image } from 'expo-image';
-import * as React from 'react';
+import { SymbolView } from "@/components/app-symbol";
+import RegistrationModal from "@/components/registration-modal";
+import { useApp } from "@/contexts/AppContext";
+import { Button } from "@/components/ui/button";
+import { Text as UiText } from "@/components/ui/text";
+import { Image } from "expo-image";
+import * as React from "react";
 import {
   ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
-  Modal,
+  Linking,
   Platform,
   Pressable,
   ScrollView,
   Text,
   TextInput,
   View,
-  Linking,
 } from "react-native";
+import { AppModal } from "@/components/app-modal";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 const fieldClass =
@@ -29,7 +31,9 @@ export default function AuthGateway() {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [registrationOpen, setRegistrationOpen] = React.useState(false);
   const [devToolsOpen, setDevToolsOpen] = React.useState(false);
-  const [downloadPopupOpen, setDownloadPopupOpen] = React.useState(Platform.OS === 'web');
+  const [downloadPopupOpen, setDownloadPopupOpen] = React.useState(
+    Platform.OS === "web",
+  );
 
   const handleLogin = async () => {
     setIsSubmitting(true);
@@ -58,7 +62,7 @@ export default function AuthGateway() {
                 <View className="flex-row items-center gap-2.5">
                   <View className="bg-white size-11 rounded-2xl items-center justify-center overflow-hidden shadow-sm">
                     <Image
-                      source={require('../../kmp-mart-logo.png')}
+                      source={require("../../kmp-mart-logo.png")}
                       contentFit="contain"
                       className="size-full"
                       accessibilityLabel="Logo KMP Mart"
@@ -194,6 +198,20 @@ export default function AuthGateway() {
                 </Text>
               </Pressable>
 
+              {/* Ghost Button to manually trigger APK download popup */}
+              {Platform.OS === "web" && (
+                <Button
+                  variant="ghost"
+                  onPress={() => setDownloadPopupOpen(true)}
+                  className="mt-3 flex-row items-center justify-center gap-2 py-3 rounded-xl"
+                >
+                  <SymbolView name={"arrow.down.app.fill" as any} size={16} tintColor="#047857" />
+                  <UiText className="text-emerald-800 text-sm font-black">
+                    Unduh APK Android
+                  </UiText>
+                </Button>
+              )}
+
               <View className="mt-5 bg-stone-100 rounded-xl px-3.5 py-3 flex-row gap-2.5">
                 <SymbolView
                   name="info.circle.fill"
@@ -216,76 +234,175 @@ export default function AuthGateway() {
         onClose={() => setRegistrationOpen(false)}
       />
 
-      {/* Android Download Popup Modal - Web Only */}
-      {Platform.OS === 'web' && downloadPopupOpen && (
-        <Modal
+      {/* Android Download Popup Modal */}
+      {Platform.OS === "web" && downloadPopupOpen && (
+        <AppModal
           visible={downloadPopupOpen}
           transparent={true}
           animationType="fade"
           onRequestClose={() => setDownloadPopupOpen(false)}
         >
-          <View style={{ flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.65)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
-            <View style={{ width: '100%', maxWidth: 360, backgroundColor: '#ffffff', borderRadius: 24, padding: 24, shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.25, shadowRadius: 15, elevation: 10, position: 'relative' }}>
-              
+          <View
+            style={{
+              flex: 1,
+              backgroundColor: "rgba(0, 0, 0, 0.65)",
+              justifyContent: "center",
+              alignItems: "center",
+              padding: 20,
+            }}
+          >
+            <View
+              style={{
+                width: "100%",
+                maxWidth: 360,
+                backgroundColor: "#ffffff",
+                borderRadius: 24,
+                padding: 24,
+                shadowColor: "#000",
+                shadowOffset: { width: 0, height: 10 },
+                shadowOpacity: 0.25,
+                shadowRadius: 15,
+                elevation: 10,
+                position: "relative",
+              }}
+            >
               {/* Close Button Cross */}
-              <Pressable 
+              <Pressable
                 onPress={() => setDownloadPopupOpen(false)}
-                style={{ position: 'absolute', top: 16, right: 16, padding: 6, borderRadius: 9999, backgroundColor: '#f5f5f4', zIndex: 10 }}
+                style={{
+                  position: "absolute",
+                  top: 16,
+                  right: 16,
+                  padding: 6,
+                  borderRadius: 9999,
+                  backgroundColor: "#f5f5f4",
+                  zIndex: 10,
+                }}
               >
                 <SymbolView name="xmark" size={12} tintColor="#57534e" />
               </Pressable>
 
               {/* Icon & Title */}
-              <View style={{ alignItems: 'center', marginBottom: 16, marginTop: 8 }}>
-                <View style={{ width: 56, height: 56, borderRadius: 16, backgroundColor: '#ecfdf5', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
-                  <SymbolView name={"arrow.down.app.fill" as any} size={28} tintColor="#059669" />
+              <View
+                style={{ alignItems: "center", marginBottom: 16, marginTop: 8 }}
+              >
+                <View
+                  style={{
+                    width: 56,
+                    height: 56,
+                    borderRadius: 16,
+                    backgroundColor: "#ecfdf5",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    marginBottom: 12,
+                  }}
+                >
+                  <SymbolView
+                    name={"arrow.down.app.fill" as any}
+                    size={28}
+                    tintColor="#059669"
+                  />
                 </View>
-                <Text style={{ fontSize: 16, fontWeight: '900', color: '#064e3b', textAlign: 'center' }}>
+                <Text
+                  style={{
+                    fontSize: 16,
+                    fontWeight: "900",
+                    color: "#064e3b",
+                    textAlign: "center",
+                  }}
+                >
                   Download Aplikasi Android
                 </Text>
-                <Text style={{ fontSize: 10, fontWeight: 'bold', color: '#b45309', textTransform: 'uppercase', marginTop: 2, letterSpacing: 0.5 }}>
+                <Text
+                  style={{
+                    fontSize: 10,
+                    fontWeight: "bold",
+                    color: "#b45309",
+                    textTransform: "uppercase",
+                    marginTop: 2,
+                    letterSpacing: 0.5,
+                  }}
+                >
                   Versi APK Expo (SIMKOPDES)
                 </Text>
               </View>
 
               {/* Description */}
-              <Text style={{ fontSize: 11.5, color: '#57534e', textAlign: 'center', lineHeight: 18, marginBottom: 20 }}>
-                Coba langsung aplikasi KMP Mart di perangkat Android Anda! Klik tombol di bawah untuk mengunduh berkas instalasi APK.
+              <Text
+                style={{
+                  fontSize: 11.5,
+                  color: "#57534e",
+                  textAlign: "center",
+                  lineHeight: 18,
+                  marginBottom: 20,
+                }}
+              >
+                Coba langsung aplikasi KMP Mart di perangkat Android Anda! Klik
+                tombol di bawah untuk mengunduh berkas instalasi APK.
               </Text>
 
               {/* Custom Programmatic "Download for Android" Button */}
               <Pressable
                 onPress={() => {
-                  Linking.openURL("https://expo.dev/artifacts/eas/v4HjdYz0VN2KDx_U907V06ccPGTMQwqMY-t8h8xeirM.apk")
-                    .catch(() => Alert.alert("Gagal", "Tautan tidak dapat dibuka"));
+                  Linking.openURL(
+                    "https://expo.dev/artifacts/eas/SBdQpb-DEns_EafZ27rzw2WiIIHeEnaZHTYVwL96CwE.apk",
+                  ).catch(() =>
+                    Alert.alert("Gagal", "Tautan tidak dapat dibuka"),
+                  );
                 }}
                 style={({ pressed }) => ({
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  backgroundColor: '#1d3d63',
+                  flexDirection: "row",
+                  alignItems: "center",
+                  backgroundColor: "#1d3d63",
                   borderRadius: 14,
                   paddingHorizontal: 20,
                   paddingVertical: 12,
-                  justifyContent: 'center',
+                  justifyContent: "center",
                   gap: 12,
                   opacity: pressed ? 0.85 : 1,
-                  shadowColor: '#1d3d63',
+                  shadowColor: "#1d3d63",
                   shadowOffset: { width: 0, height: 4 },
                   shadowOpacity: 0.3,
                   shadowRadius: 6,
                   elevation: 4,
-                  marginBottom: 12
+                  marginBottom: 12,
                 })}
               >
                 {/* Custom Programmatic Android Green Icon */}
-                <View style={{ width: 32, height: 32, alignItems: 'center', justifyContent: 'center' }}>
-                  <SymbolView name={"logo.android" as any} size={24} tintColor="#a3e635" />
+                <View
+                  style={{
+                    width: 32,
+                    height: 32,
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <SymbolView
+                    name={"logo.android" as any}
+                    size={24}
+                    tintColor="#a3e635"
+                  />
                 </View>
-                <View style={{ alignItems: 'flex-start' }}>
-                  <Text style={{ fontSize: 8.5, color: '#93c5fd', textTransform: 'uppercase', fontWeight: 'bold', letterSpacing: 0.5 }}>
+                <View style={{ alignItems: "flex-start" }}>
+                  <Text
+                    style={{
+                      fontSize: 8.5,
+                      color: "#93c5fd",
+                      textTransform: "uppercase",
+                      fontWeight: "bold",
+                      letterSpacing: 0.5,
+                    }}
+                  >
                     Download for
                   </Text>
-                  <Text style={{ fontSize: 14, color: '#ffffff', fontWeight: '900', marginTop: 0.5 }}>
+                  <Text
+                    style={{
+                      fontSize: 14,
+                      color: "#ffffff",
+                      fontWeight: "900",
+                      marginTop: 0.5,
+                    }}
+                  >
                     Android (APK)
                   </Text>
                 </View>
@@ -296,26 +413,27 @@ export default function AuthGateway() {
                 onPress={() => setDownloadPopupOpen(false)}
                 style={({ pressed }) => ({
                   paddingVertical: 11,
-                  alignItems: 'center',
-                  justifyContent: 'center',
+                  alignItems: "center",
+                  justifyContent: "center",
                   borderRadius: 12,
                   borderWidth: 1,
-                  borderColor: '#e7e5e4',
-                  backgroundColor: pressed ? '#f5f5f4' : 'transparent'
+                  borderColor: "#e7e5e4",
+                  backgroundColor: pressed ? "#f5f5f4" : "transparent",
                 })}
               >
-                <Text style={{ fontSize: 12, color: '#57534e', fontWeight: 'bold' }}>
+                <Text
+                  style={{ fontSize: 12, color: "#57534e", fontWeight: "bold" }}
+                >
                   Nanti Saja
                 </Text>
               </Pressable>
-
             </View>
           </View>
-        </Modal>
+        </AppModal>
       )}
 
       {/* DevTools Modal Sheet */}
-      <Modal
+      <AppModal
         visible={devToolsOpen}
         transparent={true}
         animationType="slide"
@@ -455,7 +573,6 @@ export default function AuthGateway() {
                 </View>
               </Pressable>
 
-
               {/* Bu Sari - AGENT */}
               <Pressable
                 onPress={async () => {
@@ -537,7 +654,7 @@ export default function AuthGateway() {
             </View>
           </Pressable>
         </Pressable>
-      </Modal>
+      </AppModal>
     </SafeAreaView>
   );
 }

@@ -5,7 +5,6 @@ import {
   ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
-  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -13,6 +12,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { AppModal } from '@/components/app-modal';
 
 interface RegistrationModalProps {
   visible: boolean;
@@ -338,7 +338,7 @@ export default function RegistrationModal({ visible, onClose }: RegistrationModa
   );
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={handleClose}>
+    <AppModal visible={visible} transparent animationType="slide" onRequestClose={handleClose}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         className="flex-1"
@@ -379,6 +379,6 @@ export default function RegistrationModal({ visible, onClose }: RegistrationModa
           </View>
         </View>
       </KeyboardAvoidingView>
-    </Modal>
+    </AppModal>
   );
 }

@@ -15,12 +15,12 @@ import React, { useState } from "react";
 import {
   Alert,
   Image,
-  Modal,
   Pressable,
   ScrollView,
   TextInput,
   View,
 } from "react-native";
+import { AppModal } from "@/components/app-modal";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Text } from "@/components/ui/text";
@@ -1777,7 +1777,7 @@ export default function AdminPortal() {
       </View>
 
       {/* Add / Edit Product Modal */}
-      <Modal
+      <AppModal
         visible={productModalOpen}
         transparent={true}
         animationType="slide"
@@ -1916,11 +1916,11 @@ export default function AdminPortal() {
             </ScrollView>
           </View>
         </View>
-      </Modal>
+      </AppModal>
 
       {/* Detail pesanan */}
       {activeSelfOrder && (
-        <Modal
+        <AppModal
           visible={!!activeSelfOrder}
           transparent={true}
           animationType="slide"
@@ -2114,7 +2114,7 @@ export default function AdminPortal() {
               </ScrollView>
             </View>
           </View>
-        </Modal>
+        </AppModal>
       )}
 
 

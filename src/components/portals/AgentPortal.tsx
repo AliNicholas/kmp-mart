@@ -3,16 +3,8 @@ import { useApp } from "@/contexts/AppContext";
 import { getOrderStatusLabel } from "@/lib/utils";
 import { dbService, Order, OrderItem, Product } from "@/utils/db";
 import { useState } from "react";
-import {
-  ActivityIndicator,
-  Alert,
-  Modal,
-  Pressable,
-  ScrollView,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
+import { ActivityIndicator, Alert, Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import { AppModal } from "@/components/app-modal";
 
 // Pure wrapper helpers outside the React component to satisfy strict React purity lint rules
 const generateUniqueId = (prefix: string) => {
@@ -815,7 +807,7 @@ export default function AgentPortal() {
       {/* (B2C Citizen select modal removed) */}
 
       {/* --- MODAL CART B2B (WHOLESALE CHECKOUT) --- */}
-      <Modal
+      <AppModal
         visible={showB2bCartModal}
         animationType="slide"
         transparent={true}
@@ -1023,10 +1015,10 @@ export default function AgentPortal() {
             )}
           </Pressable>
         </Pressable>
-      </Modal>
+      </AppModal>
 
       {/* --- MODAL MOCKUP QRIS B2B --- */}
-      <Modal visible={showQrisB2bModal} transparent={true} animationType="fade">
+      <AppModal visible={showQrisB2bModal} transparent={true} animationType="fade">
         <Pressable
           onPress={() => setShowQrisB2bModal(false)}
           className="flex-1 bg-black/75 justify-center items-center p-5"
@@ -1091,10 +1083,10 @@ export default function AgentPortal() {
             </Pressable>
           </Pressable>
         </Pressable>
-      </Modal>
+      </AppModal>
 
       {/* --- MODAL REPORT DISCREPANCY (LAPOR SELISIH) --- */}
-      <Modal
+      <AppModal
         visible={showDiscrepancyModal}
         transparent={true}
         animationType="slide"
@@ -1188,7 +1180,7 @@ export default function AgentPortal() {
             </ScrollView>
           </Pressable>
         </Pressable>
-      </Modal>
+      </AppModal>
     </View>
   );
 }

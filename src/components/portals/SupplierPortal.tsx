@@ -2,7 +2,8 @@ import { useApp } from "@/contexts/AppContext";
 import { dbService } from "@/utils/db";
 import { SymbolView } from "@/components/app-symbol";
 import React, { useState } from "react";
-import { Alert, Pressable, ScrollView, Text, View, Modal, TextInput } from "react-native";
+import { Alert, Pressable, ScrollView, Text, View, TextInput } from "react-native";
+import { AppModal } from "@/components/app-modal";
 
 const generateSupplierProductId = () => {
   return `sp-${Date.now()}`;
@@ -212,7 +213,7 @@ export default function SupplierPortal() {
       </View>
 
       {/* Add Product Modal */}
-      <Modal
+      <AppModal
         visible={addModalOpen}
         transparent={true}
         animationType="slide"
@@ -328,7 +329,7 @@ export default function SupplierPortal() {
             </Pressable>
           </View>
         </View>
-      </Modal>
+      </AppModal>
     </View>
   );
 }

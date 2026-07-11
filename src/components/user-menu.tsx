@@ -8,7 +8,8 @@ import {
 import { Text } from '@/components/ui/text';
 import type { TriggerRef } from '@rn-primitives/popover';
 import * as React from 'react';
-import { Alert, View, Modal, ScrollView, Pressable } from 'react-native';
+import { Alert, View, ScrollView, Pressable, Platform } from "react-native";
+import { AppModal } from "@/components/app-modal";
 import { useApp } from '@/contexts/AppContext';
 import { SymbolView } from '@/components/app-symbol';
 import RegistrationModal from '@/components/registration-modal';
@@ -39,17 +40,25 @@ export function UserMenu() {
   };
 
   const handleLogout = () => {
-    Alert.alert('Keluar dari akun?', 'Anda perlu login lagi untuk mengakses KMP Mart.', [
-      { text: 'Batal', style: 'cancel' },
-      {
-        text: 'Keluar',
-        style: 'destructive',
-        onPress: () => {
-          popoverTriggerRef.current?.close();
-          logout();
+    if (Platform.OS === 'web') {
+      const confirmLogout = window.confirm("Keluar dari akun?\nAnda perlu login lagi untuk mengakses KMP Mart.");
+      if (confirmLogout) {
+        popoverTriggerRef.current?.close();
+        logout();
+      }
+    } else {
+      Alert.alert('Keluar dari akun?', 'Anda perlu login lagi untuk mengakses KMP Mart.', [
+        { text: 'Batal', style: 'cancel' },
+        {
+          text: 'Keluar',
+          style: 'destructive',
+          onPress: () => {
+            popoverTriggerRef.current?.close();
+            logout();
+          },
         },
-      },
-    ]);
+      ]);
+    }
   };
 
   return (
@@ -155,7 +164,7 @@ export function UserMenu() {
       <RegistrationModal visible={registrationOpen} onClose={() => setRegistrationOpen(false)} />
       
       {/* DevTools Modal Sheet */}
-      <Modal
+      <AppModal
         visible={devToolsOpen}
         transparent={true}
         animationType="slide"
@@ -310,7 +319,7 @@ export function UserMenu() {
             </View>
           </View>
         </View>
-      </Modal>
+      </AppModal>
     </>
   );
 }

@@ -7,12 +7,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Animated,
-  Modal,
   Platform,
   Pressable,
   Text,
   View,
 } from "react-native";
+import { AppModal } from "@/components/app-modal";
 
 // Apple Maps is retained for iOS. Android uses the OpenStreetMap WebView branch below.
 let MapView: any = null;
@@ -539,12 +539,11 @@ export default function DeliveryTrackerModal({
   const stageInfo = STAGE_INFO[stage];
 
   return (
-    <Modal
+    <AppModal
       visible={visible}
       transparent
       animationType="slide"
       onRequestClose={onClose}
-      statusBarTranslucent={true}
     >
       <View className={styles.root}>
         {/* ── REAL GOOGLE MAP (Full Screen Background) ── */}
@@ -723,7 +722,7 @@ export default function DeliveryTrackerModal({
           )}
         </View>
       </View>
-    </Modal>
+    </AppModal>
   );
 }
 

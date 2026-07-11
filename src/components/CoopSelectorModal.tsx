@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { View, Text, Pressable, Modal, ScrollView, Alert, Linking, Platform } from 'react-native';
+import { View, Text, Pressable, ScrollView, Alert, Linking, Platform } from 'react-native';
+import { AppModal } from '@/components/app-modal';
 import { SymbolView } from '@/components/app-symbol';
 import { cn } from '@/lib/utils';
 import OpenStreetMapView from '@/components/open-street-map';
@@ -128,7 +129,7 @@ export default function CoopSelectorModal({ visible, onClose, activeCoopId, onSe
   return (
     <View>
       {/* Cooperative Selector Main Sheet */}
-      <Modal
+      <AppModal
         visible={visible && !mapVisible}
         transparent={true}
         animationType="slide"
@@ -248,11 +249,11 @@ export default function CoopSelectorModal({ visible, onClose, activeCoopId, onSe
 
           </View>
         </View>
-      </Modal>
+      </AppModal>
 
       {/* Real Maps Modal */}
       {selectedCoopForMap && (
-        <Modal
+        <AppModal
           visible={mapVisible}
           transparent={true}
           animationType="fade"
@@ -431,7 +432,7 @@ export default function CoopSelectorModal({ visible, onClose, activeCoopId, onSe
 
             </View>
           </View>
-        </Modal>
+        </AppModal>
       )}
     </View>
   );
