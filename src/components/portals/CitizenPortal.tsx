@@ -365,7 +365,7 @@ export default function CitizenPortal() {
       if (isQrisPayment) {
         if (selectedFulfillment === "DELIVERY_TO_HOME" && res.orderId) {
           // Wait until the press event has finished before mounting another modal.
-          deferUntilTouchEnds(() => setActiveDeliveryOrderId(res.orderId));
+          deferUntilTouchEnds(() => setActiveDeliveryOrderId(res.orderId || null));
           return;
         }
 
@@ -375,7 +375,7 @@ export default function CitizenPortal() {
         );
       } else if (selectedFulfillment === "DELIVERY_TO_HOME" && res.orderId) {
         // Wait until the checkout modal has unmounted before showing tracking.
-        deferUntilTouchEnds(() => setActiveDeliveryOrderId(res.orderId));
+        deferUntilTouchEnds(() => setActiveDeliveryOrderId(res.orderId || null));
       } else {
         Alert.alert("Sukses", "Pesanan berhasil dibuat!");
       }

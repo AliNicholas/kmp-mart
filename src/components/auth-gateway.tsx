@@ -353,27 +353,6 @@ export default function AuthGateway() {
                 </View>
               </Pressable>
 
-              {/* Bu Sari - AGENT */}
-              <Pressable
-                onPress={async () => {
-                  await handleSwitchRole("user-sari", "AGENT", "Bu Sari");
-                  setDevToolsOpen(false);
-                }}
-                className="flex-row items-center gap-3 p-3 rounded-xl bg-stone-800 border border-stone-700 mb-2 active:bg-stone-700"
-              >
-                <View className="bg-amber-900/50 p-2 rounded-lg border border-amber-800">
-                  <SymbolView name="cart.fill" size={16} tintColor="#fbbf24" />
-                </View>
-                <View className="flex-1">
-                  <Text className="text-white font-bold text-xs">
-                    Bu Sari (Mitra Agen/Warung)
-                  </Text>
-                  <Text className="text-stone-400 text-[9px] mt-0.5">
-                    Role: AGENT • Belanja grosir B2B, terima pengiriman, catat
-                    demand warga.
-                  </Text>
-                </View>
-              </Pressable>
 
               {/* Pak Slamet - SUPPLIER */}
               <Pressable
