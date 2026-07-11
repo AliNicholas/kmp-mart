@@ -6,6 +6,51 @@ Untuk beralih peran secara cepat demi kebutuhan demo, gunakan tombol **`Demo (Ha
 
 ---
 
+## 📋 Definisi & Fungsi Masing-Masing Peran
+
+Aplikasi ini mendigitalisasi 5 elemen utama dalam ekosistem koperasi desa:
+
+### 1. Warga (Citizen / USER)
+* **Peran**: Pembeli utama kebutuhan bahan pangan eceran di Koperasi.
+* **Fungsi Utama**:
+  * Menjelajahi katalog sembako koperasi lokal maupun lintas daerah.
+  * Berbelanja secara eceran menggunakan opsi Ambil Mandiri, Kirim ke Rumah (COD), atau Kolektif via RT.
+  * Melacak pengantaran kurir secara langsung (*Live Maps Tracking*).
+  * Mengumpulkan dan membelanjakan Poin Loyalitas Gotong Royong.
+  * Mengajak tetangga bergabung menggunakan program referral.
+
+### 2. RT Agent (RT_AGENT)
+* **Peran**: Koordinator belanja warga satu RT sekaligus penanggung jawab drop-point pengantaran kolektif.
+* **Fungsi Utama**:
+  * Membantu warga yang tidak memiliki smartphone atau lansia untuk memesan sembako secara kolektif (Batch Delivery).
+  * Menampung barang belanjaan warga di Pos RT (Drop Point).
+  * Memverifikasi penerimaan kiriman batch besar dari kurir desa.
+  * Melakukan settlement/penyetoran pembayaran batch ke koperasi.
+
+### 3. Operasional / Superadmin (ADMIN)
+* **Peran**: Pengelola gudang fisik dan pencatatan keuangan internal Koperasi Merah Putih.
+* **Fungsi Utama**:
+  * **Fulfillment**: Memproses antrean pesanan masuk, mengemas paket (`PACKED`), dan menugaskan kurir desa untuk pengiriman.
+  * **Inventori (Stok)**: Memantau stok kritis sembako, mengedit harga eceran, dan membuat pengadaan grosir (Purchase Order) ke pemasok.
+  * **Keuangan & Audit**: Memantau laba rugi real-time, memeriksa ledger pengeluaran/pendapatan, serta mengawasi *Immutable Audit Logs* pencegah korupsi.
+
+### 4. Kurir Desa (DRIVER)
+* **Peran**: Penyedia jasa pengiriman lokal (KopKurir) yang mendistribusikan barang dari Koperasi ke rumah warga/Pos RT.
+* **Fungsi Utama**:
+  * Menerima atau menolak tugas pengantaran barang masuk.
+  * Melihat peta rute jalan desa dengan pilihan Google Maps atau OpenStreetMap.
+  * Mengonfirmasi penyerahan paket dengan validasi PIN keamanan warga.
+  * Mengumpulkan pembayaran COD tunai untuk disetor ke koperasi.
+
+### 5. Pemasok (SUPPLIER)
+* **Peran**: Mitra produsen lokal, UMKM, atau distributor grosir penyedia bahan pokok koperasi.
+* **Fungsi Utama**:
+  * Menerima Purchase Order (PO) grosir dari admin koperasi.
+  * Memproses pengepakan dan pengiriman barang ke gudang koperasi.
+  * Memantau tagihan piutang pembayaran atas pasokan sembako yang dikirim.
+
+---
+
 ## 🔑 Kredensial Akses Akun Demo
 
 | Peran (Role) | Nama | Nomor HP | PIN | Koperasi Asal |

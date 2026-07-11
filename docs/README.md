@@ -1,5 +1,13 @@
 # 📂 Pusat Dokumentasi KMP Mart (SIMKOPDES)
 
+<p align="center">
+  <img src="../assets/images/kmp-mart-social-preview.jpg" width="100%" alt="KMP Mart Social Preview" style="border-radius: 16px;" />
+</p>
+
+<p align="center">
+  <img src="../kmp-mart-logo.png" width="120" alt="KMP Mart App Icon" style="border-radius: 24px;" />
+</p>
+
 Selamat datang di pusat dokumentasi KMP Mart. Di bawah ini adalah panduan lengkap mengenai cara penggunaan, instalasi, dan spesifikasi teknis database aplikasi.
 
 Silakan pilih panduan detail yang Anda butuhkan melalui tautan berikut:

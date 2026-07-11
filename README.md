@@ -1,7 +1,28 @@
 # KMP Mart (Koperasi Merah Putih Mart) 🇮🇩
+
+<p align="center">
+  <img src="./assets/images/kmp-mart-social-preview.jpg" width="100%" alt="KMP Mart Social Preview" style="border-radius: 16px;" />
+</p>
+
+<p align="center">
+  <img src="./kmp-mart-logo.png" width="140" alt="KMP Mart App Icon" style="border-radius: 28px;" />
+</p>
+
 ### Platform Digitalisasi Koperasi Inklusif Desa (SIMKOPDES)
 
 KMP Mart adalah platform digitalisasi koperasi inklusif desa yang berfungsi sebagai pilar ekonomi gotong royong warga desa. Aplikasi ini dibangun secara universal (Multiplatform: Android, iOS, dan Web) untuk mendistribusikan rantai pasok kebutuhan pokok warga secara adil, transparan, dan efisien.
+
+---
+
+## 📖 Dokumentasi Lengkap Projek (Folder [docs/](file:///Users/gustam/Developer/hackathon/kopmart/docs))
+
+Untuk mempermudah pemahaman operasional dan teknis, folder **[docs/](file:///Users/gustam/Developer/hackathon/kopmart/docs)** berisi panduan terpisah yang sangat detail:
+
+1. **[🛠️ Panduan Instalasi & Cara Menjalankan](file:///Users/gustam/Developer/hackathon/kopmart/docs/INSTALLATION.md)**: Langkah setup environment, instalasi dependensi, running simulator/HP fisik, dan troubleshooting.
+2. **[👥 Panduan Akun Demo & Alur Kerja Peran](file:///Users/gustam/Developer/hackathon/kopmart/docs/ROLES_WORKFLOW.md)**: Kredensial akun simulasi dan langkah uji coba 5 peran utama (Warga, Admin, RT Agent, Kurir Desa, Pemasok) dari hulu ke hilir.
+3. **[⚙️ Panduan Cara Kerja Sistem (System Mechanics)](file:///Users/gustam/Developer/hackathon/kopmart/docs/HOW_IT_WORKS.md)**: Alur data offline-first, siklus rantai pasok gotong royong, dan mekanisme pembukuan laba rugi.
+4. **[🧠 Panduan Fitur & Teknis Basis Data](file:///Users/gustam/Developer/hackathon/kopmart/docs/FEATURES_DATABASE.md)**: Skema rinci 19 tabel SQLite, perhitungan surcharge dinamis, dan simulator GPS animasi.
+5. **[📂 Pusat Indeks Panduan](file:///Users/gustam/Developer/hackathon/kopmart/docs/README.md)**: Indeks rangkuman seluruh panduan di dalam folder `docs/`.
 
 ---
 
@@ -127,17 +148,22 @@ KMP Mart menggunakan pola arsitektur **Offline-First Local-State Driven with Mod
 
 ```mermaid
 graph TD
-    A[User & Authentication] --> B{Role Portal Router}
-    B -->|Citizen/Warga| C[CitizenPortal]
-    B -->|Superadmin/Operasional| D[AdminPortal]
-    B -->|KopKurir/Driver| E[DriverPortal]
-    B -->|Mitra Supplier| F[SupplierPortal]
-    B -->|Mitra Agen/Warung| G[AgentPortal]
+    A["User & Authentication"] --> B{"Role Portal Router"}
+    B -->|"Citizen/Warga"| C["CitizenPortal"]
+    B -->|"Superadmin/Operasional"| D["AdminPortal"]
+    B -->|"KopKurir/Driver"| E["DriverPortal"]
+    B -->|"Mitra Supplier"| F["SupplierPortal"]
+    B -->|"Mitra Agen/Warung"| G["AgentPortal"]
     
-    C & D & E & F & G --> H[Global AppContext Provider]
-    H --> I[SQLite Unified Database Wrapper]
-    I -->|Native| J[expo-sqlite]
-    I -->|Web| K[WebAssembly wa-sqlite]
+    C --> H["Global AppContext Provider"]
+    D --> H
+    E --> H
+    F --> H
+    G --> H
+    
+    H --> I["SQLite Unified Database Wrapper"]
+    I -->|"Native"| J["expo-sqlite"]
+    I -->|"Web"| K["WebAssembly wa-sqlite"]
 ```
 
 > [!TIP]
