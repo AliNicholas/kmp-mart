@@ -277,7 +277,7 @@ export default function CitizenPortal() {
                   );
                 }
                 setDetailOrder(null);
-                setIsCartOpen(true);
+                deferUntilTouchEnds(() => setIsCartOpen(true));
                 setSubTab(0);
               } else {
                 Alert.alert(
@@ -1342,14 +1342,12 @@ export default function CitizenPortal() {
         animationType="slide"
         onRequestClose={() => setIsCartOpen(false)}
       >
-        <Pressable
-          onPress={() => setIsCartOpen(false)}
-          className="flex-1 justify-end bg-black/60"
-        >
+        <View className="flex-1 justify-end">
           <Pressable
-            onPress={() => {}}
-            className="bg-white rounded-t-3xl p-4 h-[70%]"
-          >
+            onPress={() => setIsCartOpen(false)}
+            className="absolute inset-0 bg-black/60"
+          />
+          <View className="bg-white rounded-t-3xl p-4 h-[70%]">
             <View className="flex-row justify-between items-center border-b border-stone-200 pb-3 mb-3">
               <Text className="text-emerald-950 font-black text-lg">
                 Keranjang Belanja
@@ -1478,8 +1476,8 @@ export default function CitizenPortal() {
                 </View>
               </View>
             )}
-          </Pressable>
-        </Pressable>
+          </View>
+        </View>
       </Modal>
 
       {/* Checkout Screen Modal */}
@@ -1795,14 +1793,12 @@ export default function CitizenPortal() {
           animationType="fade"
           onRequestClose={() => setDetailOrder(null)}
         >
-          <Pressable
-            onPress={() => setDetailOrder(null)}
-            className="flex-1 justify-center items-center bg-black/60 p-4"
-          >
+          <View className="flex-1 justify-center items-center p-4">
             <Pressable
-              onPress={() => {}}
-              className="bg-white rounded-2xl p-5 w-full max-w-[340px]"
-            >
+              onPress={() => setDetailOrder(null)}
+              className="absolute inset-0 bg-black/60"
+            />
+            <View className="bg-white rounded-2xl p-5 w-full max-w-[340px]">
               <View className="flex-row justify-between items-center border-b border-stone-200 pb-3 mb-4">
                 <Text className="text-emerald-950 font-black text-sm">
                   Detail Pesanan
@@ -1966,8 +1962,8 @@ export default function CitizenPortal() {
                   Pesan Kembali
                 </Text>
               </Pressable>
-            </Pressable>
-          </Pressable>
+            </View>
+          </View>
         </Modal>
       )}
 
@@ -1985,14 +1981,12 @@ export default function CitizenPortal() {
           animationType="slide"
           onRequestClose={() => setSelectedDetailProduct(null)}
         >
-          <Pressable
-            onPress={() => setSelectedDetailProduct(null)}
-            className="flex-1 justify-end bg-black/60"
-          >
+          <View className="flex-1 justify-end">
             <Pressable
-              onPress={() => {}}
-              className="bg-white rounded-t-3xl p-5 w-full"
-            >
+              onPress={() => setSelectedDetailProduct(null)}
+              className="absolute inset-0 bg-black/60"
+            />
+            <View className="bg-white rounded-t-3xl p-5 w-full">
               <View className="flex-row justify-between items-center border-b border-stone-200 pb-3 mb-4">
                 <Text className="text-emerald-950 font-black text-sm">
                   Detail Produk Koperasi
@@ -2117,8 +2111,8 @@ export default function CitizenPortal() {
                   </Pressable>
                 )}
               </View>
-            </Pressable>
-          </Pressable>
+            </View>
+          </View>
         </Modal>
       )}
 

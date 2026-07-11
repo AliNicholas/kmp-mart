@@ -1,5 +1,5 @@
 import { View, Text } from 'react-native';
-import { SymbolView } from '@/components/app-symbol';
+import { Image } from 'expo-image';
 import { UserMenu } from '@/components/user-menu';
 
 export default function Header() {
@@ -7,8 +7,13 @@ export default function Header() {
     <View className="bg-emerald-900 pt-12 pb-4 px-4 border-b border-emerald-800 rounded-b-2xl shadow-sm">
       <View className="flex-row justify-between items-center">
         <View className="flex-row items-center gap-2">
-          <View className="bg-amber-400 p-2 rounded-xl">
-            <SymbolView name="cart.fill" size={18} tintColor="#064e3b" />
+          <View className="size-9 rounded-xl overflow-hidden bg-white">
+            <Image
+              source={require('../../kmp-mart-logo.png')}
+              contentFit="contain"
+              className="size-full"
+              accessibilityLabel="Logo KMP Mart"
+            />
           </View>
           <View>
             <Text className="text-white font-black text-xl">

@@ -218,11 +218,12 @@ export default function SupplierPortal() {
         animationType="slide"
         onRequestClose={() => setAddModalOpen(false)}
       >
-        <Pressable
-          onPress={() => setAddModalOpen(false)}
-          className="flex-1 justify-end bg-black/60"
-        >
-          <Pressable onPress={() => {}} className="bg-white rounded-t-3xl p-5 max-h-[85%]">
+        <View className="flex-1 justify-end">
+          <Pressable
+            onPress={() => setAddModalOpen(false)}
+            className="absolute inset-0 bg-black/60"
+          />
+          <View className="bg-white rounded-t-3xl p-5 max-h-[85%]">
             <View className="flex-row justify-between items-center border-b border-stone-200 pb-3 mb-4">
               <Text className="text-emerald-950 font-black text-lg">
                 Tambah Produk Kontrak
@@ -325,8 +326,8 @@ export default function SupplierPortal() {
                 Simpan & Daftarkan Produk
               </Text>
             </Pressable>
-          </Pressable>
-        </Pressable>
+          </View>
+        </View>
       </Modal>
     </View>
   );

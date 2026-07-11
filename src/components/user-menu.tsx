@@ -107,7 +107,7 @@ export function UserMenu() {
               className="flex-row gap-2 bg-amber-400 active:bg-amber-500 border border-amber-500 w-full"
               onPress={() => {
                 popoverTriggerRef.current?.close();
-                setRegistrationOpen(true);
+                setTimeout(() => setRegistrationOpen(true), 0);
               }}
             >
               <SymbolView name="person.crop.circle.badge.plus" size={14} tintColor="#064e3b" />
@@ -119,7 +119,7 @@ export function UserMenu() {
               className="flex-row gap-2 bg-stone-900 active:bg-stone-850 border border-stone-800 w-full mt-2"
               onPress={() => {
                 popoverTriggerRef.current?.close();
-                setDevToolsOpen(true);
+                setTimeout(() => setDevToolsOpen(true), 0);
               }}
             >
               <SymbolView name="hammer.fill" size={14} tintColor="#fbbf24" />
@@ -160,11 +160,12 @@ export function UserMenu() {
         animationType="slide"
         onRequestClose={() => setDevToolsOpen(false)}
       >
-        <Pressable
-          onPress={() => setDevToolsOpen(false)}
-          className="flex-1 justify-end bg-black/60"
-        >
-          <Pressable onPress={() => {}} className="bg-stone-900 rounded-t-3xl p-5 w-full border-t border-stone-800">
+        <View className="flex-1 justify-end">
+          <Pressable
+            onPress={() => setDevToolsOpen(false)}
+            className="absolute inset-0 bg-black/60"
+          />
+          <View className="bg-stone-900 rounded-t-3xl p-5 w-full border-t border-stone-800">
             <View className="flex-row justify-between items-center border-b border-stone-800 pb-3 mb-4">
               <View className="flex-row items-center gap-2">
                 <SymbolView name="hammer.fill" size={14} tintColor="#fbbf24" />
@@ -289,8 +290,8 @@ export function UserMenu() {
                 <Text className="text-white font-bold text-xs">Tutup</Text>
               </Pressable>
             </View>
-          </Pressable>
-        </Pressable>
+          </View>
+        </View>
       </Modal>
     </>
   );

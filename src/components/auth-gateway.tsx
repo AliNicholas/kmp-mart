@@ -1,6 +1,7 @@
 import RegistrationModal from '@/components/registration-modal';
 import { useApp } from '@/contexts/AppContext';
 import { SymbolView } from '@/components/app-symbol';
+import { Image } from 'expo-image';
 import * as React from 'react';
 import {
   ActivityIndicator,
@@ -48,8 +49,13 @@ export default function AuthGateway() {
           <View className="w-full max-w-md self-center">
             <View className="mb-6">
               <View className="flex-row items-center gap-2.5 mb-4">
-                <View className="bg-amber-400 size-11 rounded-2xl items-center justify-center shadow-sm">
-                  <SymbolView name="cart.fill" size={21} tintColor="#064e3b" />
+                <View className="bg-white size-11 rounded-2xl items-center justify-center overflow-hidden shadow-sm">
+                  <Image
+                    source={require('../../kmp-mart-logo.png')}
+                    contentFit="contain"
+                    className="size-full"
+                    accessibilityLabel="Logo KMP Mart"
+                  />
                 </View>
                 <View>
                   <Text className="text-white text-2xl font-black tracking-tight">

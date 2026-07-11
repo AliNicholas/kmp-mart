@@ -7,6 +7,7 @@ import { scheduleOnRN } from 'react-native-worklets';
 
 const INITIAL_SCALE_FACTOR = Dimensions.get('screen').height / 90;
 const DURATION = 600;
+const logoSource = require('../../kmp-mart-logo.png');
 
 export function AnimatedSplashOverlay() {
   const [animate, setAnimate] = useState(false);
@@ -33,7 +34,7 @@ export function AnimatedSplashOverlay() {
     },
   });
 
-  const image = <Image className="w-[76px] h-[71px]" source={require('@/assets/images/expo-logo.png')} />;
+  const image = <Image className="w-24 h-24" source={logoSource} contentFit="contain" />;
 
   return animate ? (
     <Animated.View
@@ -43,7 +44,7 @@ export function AnimatedSplashOverlay() {
           scheduleOnRN(setVisible, false);
         }
       })}
-      className="absolute inset-0 bg-[#208AEF] items-center justify-center z-[1000]">
+      className="absolute inset-0 bg-white items-center justify-center z-[1000]">
       {image}
     </Animated.View>
   ) : (
@@ -53,7 +54,7 @@ export function AnimatedSplashOverlay() {
           setAnimate(true);
         });
       }}
-      className="absolute inset-0 bg-[#208AEF] items-center justify-center z-[1000]">
+      className="absolute inset-0 bg-white items-center justify-center z-[1000]">
       {image}
     </View>
   );
@@ -86,25 +87,12 @@ const logoKeyframe = new Keyframe({
   },
 });
 
-const glowKeyframe = new Keyframe({
-  0: {
-    transform: [{ rotateZ: '0deg' }],
-  },
-  100: {
-    transform: [{ rotateZ: '7200deg' }],
-  },
-});
-
 export function AnimatedIcon() {
   return (
     <View className="justify-center items-center w-32 h-32 z-[100]">
-      <Animated.View entering={glowKeyframe.duration(60 * 1000 * 4)} className="w-[201px] h-[201px] absolute">
-        <Image className="w-[201px] h-[201px] absolute" source={require('@/assets/images/logo-glow.png')} />
-      </Animated.View>
-
-      <Animated.View entering={keyframe.duration(DURATION)} className="rounded-[40px] w-32 h-32 absolute" style={{ experimental_backgroundImage: 'linear-gradient(180deg, #3C9FFE, #0274DF)' } as any} />
+      <Animated.View entering={keyframe.duration(DURATION)} className="rounded-[36px] w-32 h-32 absolute bg-white" />
       <Animated.View className="justify-center items-center" entering={logoKeyframe.duration(DURATION)}>
-        <Image className="w-[76px] h-[71px]" source={require('@/assets/images/expo-logo.png')} />
+        <Image className="w-24 h-24" source={logoSource} contentFit="contain" />
       </Animated.View>
     </View>
   );

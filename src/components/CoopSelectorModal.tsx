@@ -109,13 +109,13 @@ export default function CoopSelectorModal({ visible, onClose, activeCoopId, onSe
     const isFar = coop.id === 'tenant-4' || coop.id === 'tenant-5' || coop.id === 'tenant-6';
     setSelectedCoopForMap(coop);
     setIsNationalView(isFar);
-    setMapVisible(true);
+    setTimeout(() => setMapVisible(true), 0);
   };
 
   const handleOpenNationalMap = () => {
     setSelectedCoopForMap(cooperatives[0]); // default anchor
     setIsNationalView(true);
-    setMapVisible(true);
+    setTimeout(() => setMapVisible(true), 0);
   };
 
   const handleOpenExternalMap = (coop: CooperativeItem) => {
@@ -134,11 +134,12 @@ export default function CoopSelectorModal({ visible, onClose, activeCoopId, onSe
         animationType="slide"
         onRequestClose={onClose}
       >
-        <Pressable
-          onPress={onClose}
-          className={styles.overlay}
-        >
-          <Pressable onPress={() => {}} className={styles.content}>
+        <View className={styles.overlay}>
+          <Pressable
+            onPress={onClose}
+            className="absolute inset-0 bg-black/60"
+          />
+          <View className={styles.content}>
             
             <View className={styles.header}>
               <View style={{ flex: 1 }}>
@@ -245,8 +246,8 @@ export default function CoopSelectorModal({ visible, onClose, activeCoopId, onSe
               })}
             </ScrollView>
 
-          </Pressable>
-        </Pressable>
+          </View>
+        </View>
       </Modal>
 
       {/* Real Maps Modal */}
@@ -257,11 +258,12 @@ export default function CoopSelectorModal({ visible, onClose, activeCoopId, onSe
           animationType="fade"
           onRequestClose={() => setMapVisible(false)}
         >
-          <Pressable
-            onPress={() => setMapVisible(false)}
-            className={styles.mapOverlay}
-          >
-            <Pressable onPress={() => {}} className={styles.mapWindow}>
+          <View className={styles.mapOverlay}>
+            <Pressable
+              onPress={() => setMapVisible(false)}
+              className="absolute inset-0 bg-black/70"
+            />
+            <View className={styles.mapWindow}>
               
               {/* Map Header */}
               <View className={styles.mapHeader}>
@@ -427,8 +429,8 @@ export default function CoopSelectorModal({ visible, onClose, activeCoopId, onSe
                 </View>
               </View>
 
-            </Pressable>
-          </Pressable>
+            </View>
+          </View>
         </Modal>
       )}
     </View>
@@ -436,7 +438,7 @@ export default function CoopSelectorModal({ visible, onClose, activeCoopId, onSe
 }
 
 const styles = {
-  overlay: 'flex-1 bg-black/60 justify-end',
+  overlay: 'flex-1 justify-end',
   content: 'bg-stone-50 rounded-t-3xl p-5 h-[70%] border-t border-stone-200',
   header: 'flex-row justify-between items-center border-b border-stone-200 pb-3 mb-3',
   title: 'text-emerald-950 font-black text-base',
@@ -463,7 +465,7 @@ const styles = {
   mapBtnText: 'text-emerald-700 text-[9px] font-bold',
   selectedIndicator: 'flex-row items-center gap-1',
   selectedIndicatorText: 'text-emerald-600 text-[9px] font-bold',
-  mapOverlay: 'flex-1 bg-black/70 justify-center items-center p-5',
+  mapOverlay: 'flex-1 justify-center items-center p-5',
   mapWindow: 'w-full h-[70%] bg-stone-50 rounded-3xl border border-stone-200 overflow-hidden',
   mapHeader: 'flex-row justify-between items-center p-4 border-b border-stone-200 bg-white',
   mapTitle: 'text-xs font-black text-emerald-950',

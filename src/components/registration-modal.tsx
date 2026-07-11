@@ -343,12 +343,13 @@ export default function RegistrationModal({ visible, onClose }: RegistrationModa
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         className="flex-1"
       >
-        <Pressable
-          onPress={handleClose}
-          disabled={isSubmitting}
-          className="flex-1 justify-end bg-black/60"
-        >
-          <Pressable onPress={() => {}} className="bg-stone-50 rounded-t-3xl max-h-[92%] w-full">
+        <View className="flex-1 justify-end">
+          <Pressable
+            onPress={handleClose}
+            disabled={isSubmitting}
+            className="absolute inset-0 bg-black/60"
+          />
+          <View className="bg-stone-50 rounded-t-3xl max-h-[92%] w-full">
             <View className="px-5 pt-5 pb-3 border-b border-stone-200 bg-white rounded-t-3xl">
             <View className="flex-row justify-between items-start gap-3">
               <View className="flex-1">
@@ -375,8 +376,8 @@ export default function RegistrationModal({ visible, onClose }: RegistrationModa
             {step === 1 && renderOtpStep()}
             {step === 2 && renderPinStep()}
           </ScrollView>
-          </Pressable>
-        </Pressable>
+          </View>
+        </View>
       </KeyboardAvoidingView>
     </Modal>
   );

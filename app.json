@@ -4,11 +4,11 @@
     "slug": "kmp-mart",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./kmp-mart-logo.png",
     "scheme": "kmpmart",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon",
+      "icon": "./kmp-mart-logo.png",
       "bundleIdentifier": "com.thenotoriousgustav.kmpmart",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
@@ -16,10 +16,8 @@
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
-        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+        "backgroundColor": "#FFFFFF",
+        "foregroundImage": "./kmp-mart-logo.png"
       },
       "predictiveBackGestureEnabled": false,
       "package": "com.anonymous.kmpmart"
@@ -27,16 +25,16 @@
     "web": {
       "bundler": "metro",
       "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./kmp-mart-logo.png"
     },
     "plugins": [
       "expo-router",
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#208AEF",
-          "image": "./assets/images/splash-icon.png",
-          "imageWidth": 76
+          "backgroundColor": "#FFFFFF",
+          "image": "./kmp-mart-logo.png",
+          "imageWidth": 96
         }
       ],
       "expo-sqlite"
@@ -48,7 +46,7 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "dca03486-71ec-45bd-9f64-79c5b11b2fe1"
+        "projectId": "8e9c9b33-d8e6-4267-a52e-586159ddcace"
       }
     },
     "owner": "nicholasali"
