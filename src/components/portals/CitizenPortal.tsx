@@ -359,6 +359,11 @@ export default function CitizenPortal() {
       setSubTab(1); // Switch to orders tab
 
       if (isQrisPayment) {
+        if (selectedFulfillment === "DELIVERY_TO_HOME" && res.orderId) {
+          setActiveDeliveryOrderId(res.orderId);
+          return;
+        }
+
         Alert.alert(
           "Pembayaran Berhasil",
           "Pembayaran QRIS terverifikasi. Pesanan Anda sedang diproses.",
@@ -375,13 +380,109 @@ export default function CitizenPortal() {
 
   const handleCheckoutConfirmation = () => {
     if (paymentMethod === "QRIS") {
-      setCheckoutModalOpen(false);
       setQrisPaymentOpen(true);
       return;
     }
 
     void completeCheckout();
   };
+
+  const closeCheckoutStep = () => {
+    if (qrisPaymentOpen) {
+      setQrisPaymentOpen(false);
+      return;
+    }
+
+    setCheckoutModalOpen(false);
+    setIsCartOpen(true);
+  };
+
+  const renderQrisPaymentStep = () => (
+    <>
+      <View className="flex-row justify-between items-center border-b border-stone-200 pb-3 mb-5">
+        <View>
+          <Text className="text-emerald-950 font-black text-lg">
+            Bayar dengan QRIS
+          </Text>
+          <Text className="text-stone-500 text-[10px] mt-0.5">
+            Langkah 2 dari 2 · Selesaikan pembayaran
+          </Text>
+        </View>
+        <Pressable
+          onPress={closeCheckoutStep}
+          className="p-1 rounded-full bg-stone-100"
+        >
+          <SymbolView name="xmark" size={16} tintColor="#555" />
+        </Pressable>
+      </View>
+
+      <ScrollView contentContainerClassName="pb-2">
+        <View className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 items-center">
+          <Text className="text-emerald-950 font-black text-sm mb-1">
+            Scan QRIS Koperasi Desa
+          </Text>
+          <Text className="text-stone-600 text-[10px] text-center mb-4">
+            Pindai kode berikut dari aplikasi pembayaran Anda.
+          </Text>
+
+          <View className="bg-white p-3 rounded-2xl border border-stone-200 shadow-sm items-center justify-center w-52 h-52 mb-3 relative">
+            <View className="absolute top-3 left-3 w-5 h-5 border-t-2 border-l-2 border-emerald-800" />
+            <View className="absolute top-3 right-3 w-5 h-5 border-t-2 border-r-2 border-emerald-800" />
+            <View className="absolute bottom-3 left-3 w-5 h-5 border-b-2 border-l-2 border-emerald-800" />
+            <View className="absolute bottom-3 right-3 w-5 h-5 border-b-2 border-r-2 border-emerald-800" />
+            <View className="w-40 h-40 flex-wrap flex-row gap-0.5 justify-center items-center opacity-85">
+              {Array.from({ length: 16 }).map((_, index) => (
+                <View
+                  key={index}
+                  className={`w-8 h-8 rounded-sm ${
+                    index % 5 === 0 || index % 3 === 0
+                      ? "bg-emerald-950"
+                      : index % 2 === 0
+                        ? "bg-stone-900"
+                        : "bg-emerald-850/10"
+                  }`}
+                />
+              ))}
+            </View>
+          </View>
+
+          <Text className="text-emerald-800 font-black text-xs tracking-widest">
+            GPN · KMP MART
+          </Text>
+        </View>
+
+        <View className="mt-4 border border-stone-200 rounded-xl p-4">
+          <Text className="text-stone-500 text-[10px]">
+            Total pembayaran
+          </Text>
+          <Text className="text-emerald-950 font-black text-2xl mt-1">
+            Rp{total.toLocaleString("id-ID")}
+          </Text>
+          <Text className="text-stone-500 text-[10px] mt-2 leading-relaxed">
+            Setelah pembayaran berhasil, kembali ke halaman ini lalu
+            konfirmasikan pembayaran Anda.
+          </Text>
+        </View>
+
+        <Pressable
+          onPress={() => void completeCheckout(true)}
+          className="bg-emerald-700 border border-emerald-800 py-3.5 rounded-xl items-center justify-center mt-5 active:bg-emerald-950"
+        >
+          <Text className="text-white font-black text-xs">
+            Saya Sudah Membayar
+          </Text>
+        </Pressable>
+        <Pressable
+          onPress={() => setQrisPaymentOpen(false)}
+          className="py-3 items-center justify-center"
+        >
+          <Text className="text-stone-600 font-bold text-xs">
+            Kembali ke Konfirmasi
+          </Text>
+        </Pressable>
+      </ScrollView>
+    </>
+  );
 
   const handleApplyReferral = async () => {
     if (!referralInput.trim()) return;
@@ -1378,25 +1479,24 @@ export default function CitizenPortal() {
         visible={checkoutModalOpen}
         transparent={true}
         animationType="slide"
-        onRequestClose={() => setCheckoutModalOpen(false)}
+        onRequestClose={closeCheckoutStep}
       >
-        <Pressable
-          onPress={() => setCheckoutModalOpen(false)}
-          className="flex-1 justify-end bg-black/60"
-        >
+        <View className="flex-1 justify-end">
           <Pressable
-            onPress={() => {}}
-            className="bg-white rounded-t-3xl p-5 h-[80%]"
-          >
+            onPress={closeCheckoutStep}
+            className="absolute inset-0 bg-black/60"
+          />
+          <View className="bg-white rounded-t-3xl p-5 h-[80%]">
+            {qrisPaymentOpen ? (
+              renderQrisPaymentStep()
+            ) : (
+              <>
             <View className="flex-row justify-between items-center border-b border-stone-200 pb-3 mb-4">
               <Text className="text-emerald-950 font-black text-lg">
                 Konfirmasi Pesanan
               </Text>
               <Pressable
-                onPress={() => {
-                  setCheckoutModalOpen(false);
-                  setIsCartOpen(true);
-                }}
+                onPress={closeCheckoutStep}
                 className="p-1 rounded-full bg-stone-100"
               >
                 <SymbolView name="xmark" size={16} tintColor="#555" />
@@ -1673,121 +1773,10 @@ export default function CitizenPortal() {
                 </Text>
               </Pressable>
             </ScrollView>
-          </Pressable>
-        </Pressable>
-      </Modal>
-
-      {/* QRIS payment screen */}
-      <Modal
-        visible={qrisPaymentOpen}
-        transparent={true}
-        animationType="slide"
-        onRequestClose={() => {
-          setQrisPaymentOpen(false);
-          setCheckoutModalOpen(true);
-        }}
-      >
-        <Pressable
-          onPress={() => {
-            setQrisPaymentOpen(false);
-            setCheckoutModalOpen(true);
-          }}
-          className="flex-1 justify-end bg-black/60"
-        >
-          <Pressable
-            onPress={() => {}}
-            className="bg-white rounded-t-3xl p-5 max-h-[84%]"
-          >
-            <View className="flex-row justify-between items-center border-b border-stone-200 pb-3 mb-5">
-              <View>
-                <Text className="text-emerald-950 font-black text-lg">
-                  Bayar dengan QRIS
-                </Text>
-                <Text className="text-stone-500 text-[10px] mt-0.5">
-                  Langkah 2 dari 2 · Selesaikan pembayaran
-                </Text>
-              </View>
-              <Pressable
-                onPress={() => {
-                  setQrisPaymentOpen(false);
-                  setCheckoutModalOpen(true);
-                }}
-                className="p-1 rounded-full bg-stone-100"
-              >
-                <SymbolView name="xmark" size={16} tintColor="#555" />
-              </Pressable>
-            </View>
-
-            <ScrollView contentContainerClassName="pb-2">
-              <View className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 items-center">
-                <Text className="text-emerald-950 font-black text-sm mb-1">
-                  Scan QRIS Koperasi Desa
-                </Text>
-                <Text className="text-stone-600 text-[10px] text-center mb-4">
-                  Pindai kode berikut dari aplikasi pembayaran Anda.
-                </Text>
-
-                <View className="bg-white p-3 rounded-2xl border border-stone-200 shadow-sm items-center justify-center w-52 h-52 mb-3 relative">
-                  <View className="absolute top-3 left-3 w-5 h-5 border-t-2 border-l-2 border-emerald-800" />
-                  <View className="absolute top-3 right-3 w-5 h-5 border-t-2 border-r-2 border-emerald-800" />
-                  <View className="absolute bottom-3 left-3 w-5 h-5 border-b-2 border-l-2 border-emerald-800" />
-                  <View className="absolute bottom-3 right-3 w-5 h-5 border-b-2 border-r-2 border-emerald-800" />
-                  <View className="w-40 h-40 flex-wrap flex-row gap-0.5 justify-center items-center opacity-85">
-                    {Array.from({ length: 16 }).map((_, index) => (
-                      <View
-                        key={index}
-                        className={`w-8 h-8 rounded-sm ${
-                          index % 5 === 0 || index % 3 === 0
-                            ? "bg-emerald-950"
-                            : index % 2 === 0
-                              ? "bg-stone-900"
-                              : "bg-emerald-850/10"
-                        }`}
-                      />
-                    ))}
-                  </View>
-                </View>
-
-                <Text className="text-emerald-800 font-black text-xs tracking-widest">
-                  GPN · KMP MART
-                </Text>
-              </View>
-
-              <View className="mt-4 border border-stone-200 rounded-xl p-4">
-                <Text className="text-stone-500 text-[10px]">
-                  Total pembayaran
-                </Text>
-                <Text className="text-emerald-950 font-black text-2xl mt-1">
-                  Rp{total.toLocaleString("id-ID")}
-                </Text>
-                <Text className="text-stone-500 text-[10px] mt-2 leading-relaxed">
-                  Setelah pembayaran berhasil, kembali ke halaman ini lalu
-                  konfirmasikan pembayaran Anda.
-                </Text>
-              </View>
-
-              <Pressable
-                onPress={() => void completeCheckout(true)}
-                className="bg-emerald-700 border border-emerald-800 py-3.5 rounded-xl items-center justify-center mt-5 active:bg-emerald-950"
-              >
-                <Text className="text-white font-black text-xs">
-                  Saya Sudah Membayar
-                </Text>
-              </Pressable>
-              <Pressable
-                onPress={() => {
-                  setQrisPaymentOpen(false);
-                  setCheckoutModalOpen(true);
-                }}
-                className="py-3 items-center justify-center"
-              >
-                <Text className="text-stone-600 font-bold text-xs">
-                  Kembali ke Konfirmasi
-                </Text>
-              </Pressable>
-            </ScrollView>
-          </Pressable>
-        </Pressable>
+              </>
+            )}
+          </View>
+        </View>
       </Modal>
 
       {/* Order Detail Modal */}

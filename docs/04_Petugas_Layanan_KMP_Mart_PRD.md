@@ -1,10 +1,10 @@
 <!--
-KopMart RT PRD Package v2.0
+KMP Mart PRD Package v2.0
 Updated concept: Omni-channel Assisted Cooperative Marketplace + Local Logistics + Misi Gotong Royong
 Prepared for SIMPKOPDES Hackathon 2026 development planning
 -->
 
-# PRD — Petugas Layanan KopMart
+# PRD — Petugas Layanan KMP Mart
 
 ## 1. Objective
 
@@ -12,7 +12,7 @@ Create an official assisted-commerce role so non-digital citizens can transact w
 
 ## 2. Role definition
 
-**Petugas Layanan KopMart** is a verified cooperative/community operator who helps citizens create orders, scan Kartu Kopdes, input paper forms, process voice notes, explain points, generate receipts, and record all actions digitally.
+**Petugas Layanan KMP Mart** is a verified cooperative/community operator who helps citizens create orders, scan Kartu Kopdes, input paper forms, process voice notes, explain points, generate receipts, and record all actions digitally.
 
 ## 3. Why this module exists
 
@@ -69,7 +69,7 @@ RT is useful for community trust, but RT should not carry all operational load. 
 
 ### US-PETUGAS-001 — Assisted order for non-smartphone citizen
 
-As a citizen without smartphone, I want to be assisted by Petugas Layanan KopMart to create an order so I can still buy from the cooperative and collect points.
+As a citizen without smartphone, I want to be assisted by Petugas Layanan KMP Mart to create an order so I can still buy from the cooperative and collect points.
 
 **Acceptance criteria**
 

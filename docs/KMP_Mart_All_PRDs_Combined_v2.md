@@ -1,22 +1,22 @@
 <!--
-KopMart RT PRD Package v2.0
+KMP Mart PRD Package v2.0
 Updated concept: Omni-channel Assisted Cooperative Marketplace + Local Logistics + Misi Gotong Royong
 Prepared for SIMPKOPDES Hackathon 2026 development planning
 -->
 
-# KopMart RT — All Updated PRDs Combined v2.0
+# KMP Mart — All Updated PRDs Combined v2.0
 
 
 
 ---
 
-<!-- Source: 00_MASTER_PRD_KopMart_RT_v2.md -->
+<!-- Source: 00_MASTER_PRD_KMP_Mart_v2.md -->
 
-# PRD — KopMart RT v2.0
+# PRD — KMP Mart v2.0
 
 ## 1. Product summary
 
-**Product name:** KopMart RT  
+**Product name:** KMP Mart  
 **Product type:** Omni-channel Assisted Cooperative Marketplace  
 **Target:** KDKMP / koperasi desa, warga desa, RT/kader, warung lokal, kurir lokal, admin koperasi, pemdes/auditor  
 **Main hackathon pillar:** Pilar 1 — Peningkatan Volume Usaha Koperasi  
@@ -24,13 +24,13 @@ Prepared for SIMPKOPDES Hackathon 2026 development planning
 
 ## 2. Updated product statement
 
-> **KopMart RT adalah marketplace koperasi inklusif yang membuat semua warga bisa belanja di koperasi melalui aplikasi, Kartu Kopdes QR, RT Group Order, Petugas Layanan KopMart, Mitra Warung, katalog kertas, voice note, atau kios desa, sementara seluruh transaksi tetap tercatat digital untuk meningkatkan volume usaha, cashflow, auditability, dan dampak ekonomi koperasi.**
+> **KMP Mart adalah marketplace koperasi inklusif yang membuat semua warga bisa belanja di koperasi melalui aplikasi, Kartu Kopdes QR, RT Group Order, Petugas Layanan KMP Mart, Mitra Warung, katalog kertas, voice note, atau kios desa, sementara seluruh transaksi tetap tercatat digital untuk meningkatkan volume usaha, cashflow, auditability, dan dampak ekonomi koperasi.**
 
 ## 3. Core insight
 
 Masalah utama bukan hanya koperasi belum memiliki aplikasi. Masalah utamanya adalah banyak koperasi sudah terdaftar, tetapi belum menjadi kanal transaksi harian warga.
 
-Karena itu, KopMart RT tidak boleh menjadi app-only solution. Solusi harus cocok untuk kondisi desa yang beragam:
+Karena itu, KMP Mart tidak boleh menjadi app-only solution. Solusi harus cocok untuk kondisi desa yang beragam:
 
 - ada warga digital yang nyaman pakai aplikasi,
 - ada warga punya HP tetapi hanya nyaman WhatsApp/voice note,
@@ -119,12 +119,12 @@ Examples:
 | Self-order App | Digital user marketplace | P0 |
 | Kartu Kopdes QR | Identity and purchase card | P0 |
 | RT Group Order | Community batch order | P0 |
-| Petugas Layanan KopMart | Assisted commerce staff | P0 |
+| Petugas Layanan KMP Mart | Assisted commerce staff | P0 |
 | Admin Koperasi Dashboard | Operational control | P0 |
 | Poin Gotong Royong | Retention and reward | P0 |
 | Referral/KopAjak | Active buyer acquisition | P0 |
 | Driver & Local Logistics | Pickup/delivery/settlement | P0/P1 |
-| Mitra Warung KopMart | Warung B2B2C channel | P1 |
+| Mitra Warung KMP Mart | Warung B2B2C channel | P1 |
 | Paper-to-Digital Catalog | Offline physical order channel | P1 |
 | Misi Gotong Royong | Gamified national-value engagement | P1 |
 | Voice-to-Digital Order | Voice note ordering | P1 |
@@ -265,7 +265,7 @@ Admin creates national/local mission
 
 ## 12. Hackathon scoring optimization
 
-| Judging concern | KopMart RT answer |
+| Judging concern | KMP Mart answer |
 |---|---|
 | Problem relevance | Directly targets inactive transaction gap in KDKMP |
 | Innovation | Omni-channel assisted marketplace, not app-only marketplace |
@@ -307,7 +307,7 @@ Admin creates national/local mission
 
 ## 15. Final product narrative
 
-> **KopMart RT tidak membangun marketplace yang hanya bisa dipakai warga digital. KopMart RT membangun sistem transaksi koperasi yang bisa diakses lewat banyak pintu: aplikasi, Kartu Kopdes, RT, Petugas Layanan, Warung Mitra, katalog kertas, voice note, kios, dan kurir lokal. Dengan begitu, warga paling digital sampai warga paling awam tetap bisa bertransaksi, sementara koperasi mendapatkan volume usaha, data demand, cashflow, audit trail, dan dampak ekonomi yang terukur.**
+> **KMP Mart tidak membangun marketplace yang hanya bisa dipakai warga digital. KMP Mart membangun sistem transaksi koperasi yang bisa diakses lewat banyak pintu: aplikasi, Kartu Kopdes, RT, Petugas Layanan, Warung Mitra, katalog kertas, voice note, kios, dan kurir lokal. Dengan begitu, warga paling digital sampai warga paling awam tetap bisa bertransaksi, sementara koperasi mendapatkan volume usaha, data demand, cashflow, audit trail, dan dampak ekonomi yang terukur.**
 
 
 ---
@@ -535,7 +535,7 @@ MissionProgress
 
 ## 1. Objective
 
-Enable citizens without smartphones to transact in KopMart RT using a physical or printable QR card, while orders, points, missions, and audit records remain digital.
+Enable citizens without smartphones to transact in KMP Mart using a physical or printable QR card, while orders, points, missions, and audit records remain digital.
 
 ## 2. Product principle
 
@@ -710,7 +710,7 @@ Enable community-based collective orders so small individual demand becomes larg
 ## 2. Target users
 
 - Ketua RT / kader.
-- Petugas Layanan KopMart.
+- Petugas Layanan KMP Mart.
 - Warga digital joining RT batch.
 - Warga non-digital assisted by RT/Petugas.
 - Admin koperasi.
@@ -902,9 +902,9 @@ RTIncentive
 
 ---
 
-<!-- Source: 04_Petugas_Layanan_KopMart_PRD.md -->
+<!-- Source: 04_Petugas_Layanan_KMP_Mart_PRD.md -->
 
-# PRD — Petugas Layanan KopMart
+# PRD — Petugas Layanan KMP Mart
 
 ## 1. Objective
 
@@ -912,7 +912,7 @@ Create an official assisted-commerce role so non-digital citizens can transact w
 
 ## 2. Role definition
 
-**Petugas Layanan KopMart** is a verified cooperative/community operator who helps citizens create orders, scan Kartu Kopdes, input paper forms, process voice notes, explain points, generate receipts, and record all actions digitally.
+**Petugas Layanan KMP Mart** is a verified cooperative/community operator who helps citizens create orders, scan Kartu Kopdes, input paper forms, process voice notes, explain points, generate receipts, and record all actions digitally.
 
 ## 3. Why this module exists
 
@@ -969,7 +969,7 @@ RT is useful for community trust, but RT should not carry all operational load. 
 
 ### US-PETUGAS-001 — Assisted order for non-smartphone citizen
 
-As a citizen without smartphone, I want to be assisted by Petugas Layanan KopMart to create an order so I can still buy from the cooperative and collect points.
+As a citizen without smartphone, I want to be assisted by Petugas Layanan KMP Mart to create an order so I can still buy from the cooperative and collect points.
 
 **Acceptance criteria**
 
@@ -1098,7 +1098,7 @@ Each assisted action must record:
 
 <!-- Source: 05_Mitra_Agen_Warung_PRD_v4.md -->
 
-# PRD — Mitra Agen & Warung KopMart v4.0
+# PRD — Mitra Agen & Warung KMP Mart v4.0
 
 ## 1. Objective
 
@@ -1704,7 +1704,7 @@ Support pickup and delivery for individual orders, RT batch orders, warung stock
 
 ## 2. Product principle
 
-KopMart RT should not depend fully on Gojek/Grab/JNE/J&T/Shopee Express. Koperasi must be able to operate with local courier first, while external providers remain optional based on availability, API/partnership, distance, SLA, and cost.
+KMP Mart should not depend fully on Gojek/Grab/JNE/J&T/Shopee Express. Koperasi must be able to operate with local courier first, while external providers remain optional based on availability, API/partnership, distance, SLA, and cost.
 
 ## 3. Logistics modes
 
@@ -2206,7 +2206,7 @@ Give koperasi and program stakeholders a clear, auditable dashboard for business
 
 ## 2. Why this module matters
 
-KopMart RT should not only generate orders. It must help koperasi answer:
+KMP Mart should not only generate orders. It must help koperasi answer:
 
 - Are we increasing GMV?
 - Are we profitable or losing money?
@@ -2401,7 +2401,7 @@ ImpactMetric
 
 ## 1. Purpose
 
-This document defines shared entities, statuses, permissions, and cross-module rules for all KopMart RT PRDs.
+This document defines shared entities, statuses, permissions, and cross-module rules for all KMP Mart PRDs.
 
 ## 2. Shared roles
 
@@ -2409,7 +2409,7 @@ This document defines shared entities, statuses, permissions, and cross-module r
 |---|---|
 | USER | Citizen/warga |
 | RT_AGENT | RT/kader who manages group order |
-| SERVICE_STAFF | Petugas Layanan KopMart |
+| SERVICE_STAFF | Petugas Layanan KMP Mart |
 | WARUNG_PARTNER | Mitra Warung owner/operator |
 | DRIVER | KopKurir/local courier |
 | ADMIN_KOPERASI | Cooperative admin |
@@ -3064,11 +3064,11 @@ A citizen can purchase or request a product through a familiar local operator wi
 
 <!-- Source: README_INDEX.md -->
 
-# KopMart RT — Updated PRD Package v2.0
+# KMP Mart — Updated PRD Package v2.0
 
 ## Product positioning
 
-**KopMart RT** is now positioned as an **Omni-channel Assisted Cooperative Marketplace** for KDKMP / koperasi desa.
+**KMP Mart** is now positioned as an **Omni-channel Assisted Cooperative Marketplace** for KDKMP / koperasi desa.
 
 The main idea is no longer limited to only “marketplace + RT agent”. The updated concept is:
 
@@ -3079,8 +3079,8 @@ This means warga can access cooperative commerce through multiple channels:
 1. **Self-order app** untuk warga digital.
 2. **Kartu Kopdes QR** untuk warga tanpa smartphone.
 3. **RT Group Order** untuk order kolektif berbasis komunitas.
-4. **Petugas Layanan KopMart** untuk warga non-digital.
-5. **Mitra Warung KopMart** untuk warga yang tetap belanja offline di warung.
+4. **Petugas Layanan KMP Mart** untuk warga non-digital.
+5. **Mitra Warung KMP Mart** untuk warga yang tetap belanja offline di warung.
 6. **Paper-to-Digital Catalog** untuk warga yang terbiasa dengan katalog/formulir fisik.
 7. **Voice-to-Digital Order** untuk warga yang bisa berbicara tetapi tidak nyaman mengetik.
 8. **Kiosk Mode** untuk balai desa/koperasi/pos layanan yang sudah siap perangkat.
@@ -3095,11 +3095,11 @@ This means warga can access cooperative commerce through multiple channels:
 | 1 | Shared Core Platform | Tenant, user, role, product, inventory, order, audit foundation |
 | 2 | Self-order App | Main digital buying flow |
 | 3 | Kartu Kopdes QR | Non-smartphone identity/access layer |
-| 4 | Petugas Layanan KopMart | Assisted order without overloading RT |
+| 4 | Petugas Layanan KMP Mart | Assisted order without overloading RT |
 | 5 | RT Group Order | Community batch order for higher volume and cheaper logistics |
 | 6 | Admin Koperasi Dashboard | Product, stock, order, fulfillment, finance |
 | 7 | Poin + Referral + Misi Gotong Royong | Retention and engagement layer |
-| 8 | Mitra Warung KopMart | B2B2C local commerce channel |
+| 8 | Mitra Warung KMP Mart | B2B2C local commerce channel |
 | 9 | Paper-to-Digital Catalog | Low-tech fallback for offline users |
 | 10 | Driver & Local Logistics | Delivery/pickup operation |
 | 11 | Voice-to-Digital Order | Voice + operator validation |
@@ -3110,11 +3110,11 @@ This means warga can access cooperative commerce through multiple channels:
 
 | File | Description |
 |---|---|
-| `00_MASTER_PRD_KopMart_RT_v2.md` | Main updated PRD across the whole product |
+| `00_MASTER_PRD_KMP_Mart_v2.md` | Main updated PRD across the whole product |
 | `01_Self_Order_App_PRD.md` | PRD for citizen digital marketplace app |
 | `02_Kartu_Kopdes_QR_PRD.md` | PRD for QR card identity and purchase assistance |
 | `03_RT_Group_Order_PRD.md` | PRD for RT/community batch order |
-| `04_Petugas_Layanan_KopMart_PRD.md` | PRD for official assisted-commerce staff role |
+| `04_Petugas_Layanan_KMP_Mart_PRD.md` | PRD for official assisted-commerce staff role |
 | `05_Mitra_Agen_Warung_PRD_v4.md` | PRD for local warung as B2B2C hub |
 | `06_Paper_to_Digital_Catalog_PRD.md` | PRD for physical catalog and paper order forms |
 | `07_Voice_to_Digital_Order_PRD.md` | PRD for WhatsApp/voice order with operator validation |
@@ -3123,8 +3123,8 @@ This means warga can access cooperative commerce through multiple channels:
 | `10_Misi_Gotong_Royong_PRD.md` | PRD for gamified national-value missions |
 | `11_Financial_Audit_Impact_Dashboard_PRD.md` | PRD for financial, audit, and impact reporting |
 | `12_Shared_Data_Model_API_Contracts.md` | Shared entities, statuses, APIs, and permissions |
-| `KopMart_RT_All_PRDs_Combined_v2.md` | Combined full Markdown document |
+| `KMP_Mart_All_PRDs_Combined_v2.md` | Combined full Markdown document |
 
 ## Core product principle
 
-> **KopMart RT tidak memaksa semua warga menjadi digital-native. KopMart RT membuat koperasi menjadi transaction-native: semua transaksi, stok, pembayaran, poin, pengiriman, dan laporan tercatat digital, meskipun warga masuk dari aplikasi, kartu, RT, warung, voice note, katalog kertas, kios, atau petugas layanan.**
+> **KMP Mart tidak memaksa semua warga menjadi digital-native. KMP Mart membuat koperasi menjadi transaction-native: semua transaksi, stok, pembayaran, poin, pengiriman, dan laporan tercatat digital, meskipun warga masuk dari aplikasi, kartu, RT, warung, voice note, katalog kertas, kios, atau petugas layanan.**

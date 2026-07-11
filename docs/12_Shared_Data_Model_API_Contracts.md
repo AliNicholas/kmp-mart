@@ -1,5 +1,5 @@
 <!--
-KopMart RT PRD Package v2.0
+KMP Mart PRD Package v2.0
 Updated concept: Omni-channel Assisted Cooperative Marketplace + Local Logistics + Misi Gotong Royong
 Prepared for SIMPKOPDES Hackathon 2026 development planning
 -->
@@ -8,7 +8,7 @@ Prepared for SIMPKOPDES Hackathon 2026 development planning
 
 ## 1. Purpose
 
-This document defines shared entities, statuses, permissions, and cross-module rules for all KopMart RT PRDs.
+This document defines shared entities, statuses, permissions, and cross-module rules for all KMP Mart PRDs.
 
 ## 2. Shared roles
 
@@ -16,7 +16,7 @@ This document defines shared entities, statuses, permissions, and cross-module r
 |---|---|
 | USER | Citizen/warga |
 | RT_AGENT | RT/kader who manages group order |
-| SERVICE_STAFF | Petugas Layanan KopMart |
+| SERVICE_STAFF | Petugas Layanan KMP Mart |
 | WARUNG_PARTNER | Mitra Warung owner/operator |
 | DRIVER | KopKurir/local courier |
 | ADMIN_KOPERASI | Cooperative admin |

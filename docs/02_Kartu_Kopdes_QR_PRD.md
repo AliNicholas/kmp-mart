@@ -1,5 +1,5 @@
 <!--
-KopMart RT PRD Package v2.0
+KMP Mart PRD Package v2.0
 Updated concept: Omni-channel Assisted Cooperative Marketplace + Local Logistics + Misi Gotong Royong
 Prepared for SIMPKOPDES Hackathon 2026 development planning
 -->
@@ -8,7 +8,7 @@ Prepared for SIMPKOPDES Hackathon 2026 development planning
 
 ## 1. Objective
 
-Enable citizens without smartphones to transact in KopMart RT using a physical or printable QR card, while orders, points, missions, and audit records remain digital.
+Enable citizens without smartphones to transact in KMP Mart using a physical or printable QR card, while orders, points, missions, and audit records remain digital.
 
 ## 2. Product principle
 

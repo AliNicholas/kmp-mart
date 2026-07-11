@@ -259,21 +259,23 @@ export interface DatabaseWrite {
 // DATABASE WEB FALLBACK IMPLEMENTATION (localStorage)
 // ----------------------------------------------------
 
+const WEB_DATABASE_STORAGE_KEY = "kmp_mart_db";
+
 class WebDatabase {
   private getStorage(): { [table: string]: any[] } {
-    const data = localStorage.getItem("kopmart_db");
+    const data = localStorage.getItem(WEB_DATABASE_STORAGE_KEY);
     if (!data) return {};
 
     try {
       return JSON.parse(data);
     } catch {
-      localStorage.removeItem("kopmart_db");
+      localStorage.removeItem(WEB_DATABASE_STORAGE_KEY);
       return {};
     }
   }
 
   private setStorage(data: { [table: string]: any[] }) {
-    localStorage.setItem("kopmart_db", JSON.stringify(data));
+    localStorage.setItem(WEB_DATABASE_STORAGE_KEY, JSON.stringify(data));
   }
 
   constructor() {
@@ -1655,7 +1657,7 @@ const getNativeDb = () => {
     // Expo SQLite web worker is never included in the web bundle.
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { openNativeDatabase } = require("./native-sqlite");
-    sqliteDbInstance = openNativeDatabase("kopmart.db");
+    sqliteDbInstance = openNativeDatabase("kmp-mart.db");
     initNativeSchema(sqliteDbInstance);
   }
   return sqliteDbInstance;
@@ -3056,7 +3058,7 @@ export const dbService = {
     writes: DatabaseWrite[],
   ): Promise<Array<{ insertId?: string; rowsAffected: number }>> {
     if (Platform.OS === "web") {
-      const snapshot = localStorage.getItem("kopmart_db");
+      const snapshot = localStorage.getItem(WEB_DATABASE_STORAGE_KEY);
       try {
         const results: Array<{ insertId?: string; rowsAffected: number }> = [];
         for (const write of writes) {
@@ -3076,9 +3078,9 @@ export const dbService = {
         return results;
       } catch (error) {
         if (snapshot === null) {
-          localStorage.removeItem("kopmart_db");
+          localStorage.removeItem(WEB_DATABASE_STORAGE_KEY);
         } else {
-          localStorage.setItem("kopmart_db", snapshot);
+          localStorage.setItem(WEB_DATABASE_STORAGE_KEY, snapshot);
         }
         throw error;
       }
@@ -3137,7 +3139,7 @@ export const dbService = {
    */
   async resetDatabase(): Promise<void> {
     if (Platform.OS === "web") {
-      localStorage.removeItem("kopmart_db");
+      localStorage.removeItem(WEB_DATABASE_STORAGE_KEY);
       webDbInstance = null;
       getWebDb(); // This triggers re-initialization and seeding
     } else {
