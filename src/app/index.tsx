@@ -6,6 +6,7 @@ import CitizenPortal from '@/components/portals/CitizenPortal';
 import AdminPortal from '@/components/portals/AdminPortal';
 import DriverPortal from '@/components/portals/DriverPortal';
 import SupplierPortal from '@/components/portals/SupplierPortal';
+import AgentPortal from '@/components/portals/AgentPortal';
 
 export default function HomeScreen() {
   const { 
@@ -37,6 +38,7 @@ export default function HomeScreen() {
             {(activeRole === 'ADMIN' || activeRole === 'OPERASIONAL') && <AdminPortal />}
             {activeRole === 'DRIVER' && <DriverPortal />}
             {activeRole === 'SUPPLIER' && <SupplierPortal />}
+            {activeRole === 'AGENT' && <AgentPortal />}
           </View>
         </View>
       ) : (

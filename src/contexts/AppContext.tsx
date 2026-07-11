@@ -34,7 +34,7 @@ export interface CartItem {
   quantity: number;
 }
 
-export type AppRole = "USER" | "ADMIN" | "DRIVER" | "OPERASIONAL" | "SUPPLIER";
+export type AppRole = "USER" | "ADMIN" | "DRIVER" | "OPERASIONAL" | "SUPPLIER" | "AGENT";
 
 export interface RegisterCitizenInput {
   fullName: string;

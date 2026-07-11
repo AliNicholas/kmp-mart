@@ -13,7 +13,7 @@ export interface User {
   id: string;
   name: string;
   phone: string;
-  role: "USER" | "RT_AGENT" | "ADMIN" | "DRIVER" | "OPERASIONAL" | "SUPPLIER";
+  role: "USER" | "RT_AGENT" | "ADMIN" | "DRIVER" | "AGENT" | "OPERASIONAL" | "SUPPLIER";
   rt_id: string | null;
   cooperative_id: string;
   points: number;
@@ -63,7 +63,7 @@ export interface Order {
   id: string;
   user_id: string;
   rt_batch_id: string | null;
-  channel: "SELF_ORDER" | "RT_ASSISTED" | "CARD_PURCHASE";
+  channel: "SELF_ORDER" | "RT_ASSISTED" | "CARD_PURCHASE" | "B2B_AGENT";
   fulfillment: "PICKUP_AT_COOP" | "DELIVERY_TO_HOME" | "RT_PICKUP_POINT";
   subtotal: number;
   discount: number;
