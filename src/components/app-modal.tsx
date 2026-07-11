@@ -14,7 +14,18 @@ export function AppModal({ visible, children, onRequestClose, animationType = 's
   
   if (Platform.OS === 'web') {
     return (
-      <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9999, elevation: 10 }}>
+      <View style={{ 
+        position: 'fixed' as any, 
+        top: 0, 
+        bottom: 0, 
+        left: '50%' as any,
+        transform: [{ translateX: '-50%' }] as any,
+        width: '100%',
+        maxWidth: 460,
+        zIndex: 9999, 
+        elevation: 10,
+        overflow: 'hidden'
+      }}>
         {children}
       </View>
     );
