@@ -34,6 +34,10 @@ interface Mission {
   isCompleted: boolean;
 }
 
+const deferUntilTouchEnds = (callback: () => void) => {
+  setTimeout(callback, 0);
+};
+
 export default function CitizenPortal() {
   const {
     activeUser,
@@ -360,7 +364,8 @@ export default function CitizenPortal() {
 
       if (isQrisPayment) {
         if (selectedFulfillment === "DELIVERY_TO_HOME" && res.orderId) {
-          setActiveDeliveryOrderId(res.orderId);
+          // Wait until the press event has finished before mounting another modal.
+          deferUntilTouchEnds(() => setActiveDeliveryOrderId(res.orderId));
           return;
         }
 
@@ -368,8 +373,9 @@ export default function CitizenPortal() {
           "Pembayaran Berhasil",
           "Pembayaran QRIS terverifikasi. Pesanan Anda sedang diproses.",
         );
-      } else if (selectedFulfillment === "DELIVERY_TO_HOME") {
-        setActiveDeliveryOrderId(res.orderId || null);
+      } else if (selectedFulfillment === "DELIVERY_TO_HOME" && res.orderId) {
+        // Wait until the checkout modal has unmounted before showing tracking.
+        deferUntilTouchEnds(() => setActiveDeliveryOrderId(res.orderId));
       } else {
         Alert.alert("Sukses", "Pesanan berhasil dibuat!");
       }
@@ -394,7 +400,8 @@ export default function CitizenPortal() {
     }
 
     setCheckoutModalOpen(false);
-    setIsCartOpen(true);
+    // Avoid switching two modals while React Native Web is resolving a touch.
+    deferUntilTouchEnds(() => setIsCartOpen(true));
   };
 
   const renderQrisPaymentStep = () => (
@@ -1458,7 +1465,8 @@ export default function CitizenPortal() {
                     <Pressable
                       onPress={() => {
                         setIsCartOpen(false);
-                        setCheckoutModalOpen(true);
+                        // Mount checkout after this press event completes.
+                        deferUntilTouchEnds(() => setCheckoutModalOpen(true));
                       }}
                       className="flex-1 bg-emerald-700 border border-emerald-800 py-2.5 rounded-xl items-center justify-center active:bg-emerald-950"
                     >

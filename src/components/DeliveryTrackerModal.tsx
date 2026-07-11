@@ -169,12 +169,12 @@ function DeliveryMap({
         Animated.timing(pulseAnim, {
           toValue: 1.4,
           duration: 700,
-          useNativeDriver: true,
+          useNativeDriver: Platform.OS !== "web",
         }),
         Animated.timing(pulseAnim, {
           toValue: 1.0,
           duration: 700,
-          useNativeDriver: true,
+          useNativeDriver: Platform.OS !== "web",
         }),
       ]),
     );
