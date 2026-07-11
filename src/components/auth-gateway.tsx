@@ -29,6 +29,7 @@ export default function AuthGateway() {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [registrationOpen, setRegistrationOpen] = React.useState(false);
   const [devToolsOpen, setDevToolsOpen] = React.useState(false);
+  const [downloadPopupOpen, setDownloadPopupOpen] = React.useState(Platform.OS === 'web');
 
   const handleLogin = async () => {
     setIsSubmitting(true);
@@ -205,25 +206,7 @@ export default function AuthGateway() {
               </View>
             </View>
 
-            {/* Download Build Banner - Web Only */}
-            {Platform.OS === 'web' && (
-              <View className="mt-5 items-center">
-                <Pressable
-                  onPress={() => {
-                    Linking.openURL("https://expo.dev/accounts/nicholasali/projects/kmp-mart/builds/51982588-a8c7-4b9e-9292-f6479ea2109f")
-                      .catch(() => Alert.alert("Gagal", "Link tidak dapat dibuka"));
-                  }}
-                  className="active:opacity-85"
-                >
-                  <Image
-                    source={require('../../assets/images/download_android.jpeg')}
-                    style={{ width: 220, height: 80, borderRadius: 14 }}
-                    contentFit="contain"
-                    accessibilityLabel="Download for Android"
-                  />
-                </Pressable>
-              </View>
-            )}
+            {/* Removed bottom banner in favor of auto-popup */}
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -232,6 +215,104 @@ export default function AuthGateway() {
         visible={registrationOpen}
         onClose={() => setRegistrationOpen(false)}
       />
+
+      {/* Android Download Popup Modal - Web Only */}
+      {Platform.OS === 'web' && downloadPopupOpen && (
+        <Modal
+          visible={downloadPopupOpen}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={() => setDownloadPopupOpen(false)}
+        >
+          <View style={{ flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.65)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+            <View style={{ width: '100%', maxWidth: 360, backgroundColor: '#ffffff', borderRadius: 24, padding: 24, shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.25, shadowRadius: 15, elevation: 10, position: 'relative' }}>
+              
+              {/* Close Button Cross */}
+              <Pressable 
+                onPress={() => setDownloadPopupOpen(false)}
+                style={{ position: 'absolute', top: 16, right: 16, padding: 6, borderRadius: 9999, backgroundColor: '#f5f5f4', zIndex: 10 }}
+              >
+                <SymbolView name="xmark" size={12} tintColor="#57534e" />
+              </Pressable>
+
+              {/* Icon & Title */}
+              <View style={{ alignItems: 'center', marginBottom: 16, marginTop: 8 }}>
+                <View style={{ width: 56, height: 56, borderRadius: 16, backgroundColor: '#ecfdf5', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
+                  <SymbolView name={"arrow.down.app.fill" as any} size={28} tintColor="#059669" />
+                </View>
+                <Text style={{ fontSize: 16, fontWeight: '900', color: '#064e3b', textAlign: 'center' }}>
+                  Download Aplikasi Android
+                </Text>
+                <Text style={{ fontSize: 10, fontWeight: 'bold', color: '#b45309', textTransform: 'uppercase', marginTop: 2, letterSpacing: 0.5 }}>
+                  Versi APK Expo (SIMKOPDES)
+                </Text>
+              </View>
+
+              {/* Description */}
+              <Text style={{ fontSize: 11.5, color: '#57534e', textAlign: 'center', lineHeight: 18, marginBottom: 20 }}>
+                Coba langsung aplikasi KMP Mart di perangkat Android Anda! Klik tombol di bawah untuk mengunduh berkas instalasi APK.
+              </Text>
+
+              {/* Custom Programmatic "Download for Android" Button */}
+              <Pressable
+                onPress={() => {
+                  Linking.openURL("https://expo.dev/artifacts/eas/v4HjdYz0VN2KDx_U907V06ccPGTMQwqMY-t8h8xeirM.apk")
+                    .catch(() => Alert.alert("Gagal", "Tautan tidak dapat dibuka"));
+                }}
+                style={({ pressed }) => ({
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  backgroundColor: '#1d3d63',
+                  borderRadius: 14,
+                  paddingHorizontal: 20,
+                  paddingVertical: 12,
+                  justifyContent: 'center',
+                  gap: 12,
+                  opacity: pressed ? 0.85 : 1,
+                  shadowColor: '#1d3d63',
+                  shadowOffset: { width: 0, height: 4 },
+                  shadowOpacity: 0.3,
+                  shadowRadius: 6,
+                  elevation: 4,
+                  marginBottom: 12
+                })}
+              >
+                {/* Custom Programmatic Android Green Icon */}
+                <View style={{ width: 32, height: 32, alignItems: 'center', justifyContent: 'center' }}>
+                  <SymbolView name={"logo.android" as any} size={24} tintColor="#a3e635" />
+                </View>
+                <View style={{ alignItems: 'flex-start' }}>
+                  <Text style={{ fontSize: 8.5, color: '#93c5fd', textTransform: 'uppercase', fontWeight: 'bold', letterSpacing: 0.5 }}>
+                    Download for
+                  </Text>
+                  <Text style={{ fontSize: 14, color: '#ffffff', fontWeight: '900', marginTop: 0.5 }}>
+                    Android (APK)
+                  </Text>
+                </View>
+              </Pressable>
+
+              {/* Secondary Close Button */}
+              <Pressable
+                onPress={() => setDownloadPopupOpen(false)}
+                style={({ pressed }) => ({
+                  paddingVertical: 11,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderRadius: 12,
+                  borderWidth: 1,
+                  borderColor: '#e7e5e4',
+                  backgroundColor: pressed ? '#f5f5f4' : 'transparent'
+                })}
+              >
+                <Text style={{ fontSize: 12, color: '#57534e', fontWeight: 'bold' }}>
+                  Nanti Saja
+                </Text>
+              </Pressable>
+
+            </View>
+          </View>
+        </Modal>
+      )}
 
       {/* DevTools Modal Sheet */}
       <Modal

@@ -1,6 +1,10 @@
 import React from 'react';
 import { SymbolView as ExpoSymbolView } from 'expo-symbols';
-import type { SymbolViewProps } from 'expo-symbols';
+import type { SymbolViewProps as ExpoSymbolViewProps } from 'expo-symbols';
+
+export interface SymbolViewProps extends Omit<ExpoSymbolViewProps, 'name'> {
+  name: string | any;
+}
 
 const MAPPING: Record<string, string> = {
   "arrow.clockwise": "refresh",
@@ -58,6 +62,8 @@ const MAPPING: Record<string, string> = {
   "tray.and.arrow.down.fill": "move_to_inbox",
   "xmark": "close",
   "dot.radiowaves.up.forward": "wifi",
+  "arrow.down.app.fill": "install_mobile",
+  "logo.android": "android",
 };
 
 export function SymbolView({ name, ...props }: SymbolViewProps) {
