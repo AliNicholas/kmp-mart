@@ -1,5 +1,5 @@
 <!--
-KopMart RT PRD Package v2.0
+KMP Mart PRD Package v2.0
 Updated concept: Omni-channel Assisted Cooperative Marketplace + Local Logistics + Misi Gotong Royong
 Prepared for SIMPKOPDES Hackathon 2026 development planning
 -->

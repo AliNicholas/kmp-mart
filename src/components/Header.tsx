@@ -1,23 +1,24 @@
 import { View, Text } from 'react-native';
-import { useApp } from '@/contexts/AppContext';
-import { KmpMartLogo } from '@/components/KmpMartLogo';
+import { Image } from 'expo-image';
 import { UserMenu } from '@/components/user-menu';
 
 export default function Header() {
-  const { 
-    activeUser, 
-  } = useApp();
-
   return (
     <View className="bg-emerald-900 pt-12 pb-4 px-4 border-b border-emerald-800 rounded-b-2xl shadow-sm">
       <View className="flex-row justify-between items-center">
         <View className="flex-row items-center gap-2">
-          <KmpMartLogo size={34} />
+          <View className="size-9 rounded-xl overflow-hidden bg-white">
+            <Image
+              source={require('../../kmp-mart-logo.png')}
+              contentFit="contain"
+              className="size-full"
+              accessibilityLabel="Logo KMP Mart"
+            />
+          </View>
           <View>
             <Text className="text-white font-black text-xl">
               KMP <Text className="text-amber-400">Mart</Text>
             </Text>
-            <Text className="text-emerald-200 text-[10px] font-semibold">SIMKOPDES 2026 - Pilar 1</Text>
           </View>
         </View>
 
@@ -27,13 +28,6 @@ export default function Header() {
         </View>
       </View>
 
-      {/* Demo helper banner */}
-      <View className="mt-3 bg-emerald-950/40 px-3 py-1.5 rounded-lg border border-emerald-950/20 flex-row justify-between items-center">
-        <Text className="text-emerald-200 text-[10px]">
-          Demo: <Text className="text-white font-bold">{activeUser?.cooperative_id === 'tenant-1' ? 'Kop. Merah Putih Sukamaju' : 'Koperasi Local'}</Text> 
-          {activeUser?.rt_id ? ` • ${activeUser.rt_id}` : ''}
-        </Text>
-      </View>
     </View>
   );
 }

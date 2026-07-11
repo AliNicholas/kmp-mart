@@ -1,5 +1,5 @@
 <!--
-KopMart RT PRD Package v2.0
+KMP Mart PRD Package v2.0
 Updated concept: Omni-channel Assisted Cooperative Marketplace + Local Logistics + Misi Gotong Royong
 Prepared for SIMPKOPDES Hackathon 2026 development planning
 -->
@@ -12,7 +12,7 @@ Give koperasi and program stakeholders a clear, auditable dashboard for business
 
 ## 2. Why this module matters
 
-KopMart RT should not only generate orders. It must help koperasi answer:
+KMP Mart should not only generate orders. It must help koperasi answer:
 
 - Are we increasing GMV?
 - Are we profitable or losing money?

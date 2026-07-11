@@ -1,8 +1,8 @@
-import { SymbolView } from "@/components/app-symbol";
-import { KmpMartLogo } from "@/components/KmpMartLogo";
-import RegistrationModal from "@/components/registration-modal";
-import { useApp } from "@/contexts/AppContext";
-import * as React from "react";
+import RegistrationModal from '@/components/registration-modal';
+import { useApp } from '@/contexts/AppContext';
+import { SymbolView } from '@/components/app-symbol';
+import { Image } from 'expo-image';
+import * as React from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -54,7 +54,14 @@ export default function AuthGateway() {
             <View className="mb-6">
               <View className="flex-row justify-between items-center mb-4">
                 <View className="flex-row items-center gap-2.5">
-                  <KmpMartLogo size={44} />
+                  <View className="bg-white size-11 rounded-2xl items-center justify-center overflow-hidden shadow-sm">
+                    <Image
+                      source={require('../../kmp-mart-logo.png')}
+                      contentFit="contain"
+                      className="size-full"
+                      accessibilityLabel="Logo KMP Mart"
+                    />
+                  </View>
                   <View>
                     <Text className="text-white text-2xl font-black tracking-tight">
                       KMP <Text className="text-amber-400">Mart</Text>

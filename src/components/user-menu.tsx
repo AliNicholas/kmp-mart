@@ -32,7 +32,6 @@ export function UserMenu() {
       case 'ADMIN': return 'Superadmin';
       case 'OPERASIONAL': return 'Operasional Koperasi';
       case 'DRIVER': return 'KopKurir';
-      case 'AGENT': return 'Mitra Agen/Warung';
       case 'SUPPLIER': return 'Mitra Supplier';
       default: return 'Warga Digital';
     }
@@ -108,7 +107,7 @@ export function UserMenu() {
               className="flex-row gap-2 bg-amber-400 active:bg-amber-500 border border-amber-500 w-full"
               onPress={() => {
                 popoverTriggerRef.current?.close();
-                setRegistrationOpen(true);
+                setTimeout(() => setRegistrationOpen(true), 0);
               }}
             >
               <SymbolView name="person.crop.circle.badge.plus" size={14} tintColor="#064e3b" />
@@ -120,7 +119,7 @@ export function UserMenu() {
               className="flex-row gap-2 bg-stone-900 active:bg-stone-850 border border-stone-800 w-full mt-2"
               onPress={() => {
                 popoverTriggerRef.current?.close();
-                setDevToolsOpen(true);
+                setTimeout(() => setDevToolsOpen(true), 0);
               }}
             >
               <SymbolView name="hammer.fill" size={14} tintColor="#fbbf24" />
@@ -161,11 +160,12 @@ export function UserMenu() {
         animationType="slide"
         onRequestClose={() => setDevToolsOpen(false)}
       >
-        <Pressable
-          onPress={() => setDevToolsOpen(false)}
-          className="flex-1 justify-end bg-black/60"
-        >
-          <Pressable onPress={() => {}} className="bg-stone-900 rounded-t-3xl p-5 w-full border-t border-stone-800">
+        <View className="flex-1 justify-end">
+          <Pressable
+            onPress={() => setDevToolsOpen(false)}
+            className="absolute inset-0 bg-black/60"
+          />
+          <View className="bg-stone-900 rounded-t-3xl p-5 w-full border-t border-stone-800">
             <View className="flex-row justify-between items-center border-b border-stone-800 pb-3 mb-4">
               <View className="flex-row items-center gap-2">
                 <SymbolView name="hammer.fill" size={14} tintColor="#fbbf24" />
@@ -252,23 +252,6 @@ export function UserMenu() {
                 </View>
               </Pressable>
 
-              {/* Bu Sari - AGENT */}
-              <Pressable
-                onPress={async () => {
-                  await handleSwitchRole('user-sari', 'AGENT', 'Bu Sari');
-                  setDevToolsOpen(false);
-                }}
-                className="flex-row items-center gap-3 p-3 rounded-xl bg-stone-800 border border-stone-700 mb-2 active:bg-stone-700"
-              >
-                <View className="bg-amber-900/50 p-2 rounded-lg border border-amber-800">
-                  <SymbolView name="cart.fill" size={16} tintColor="#fbbf24" />
-                </View>
-                <View className="flex-1">
-                  <Text className="text-white font-bold text-xs">Bu Sari (Mitra Agen/Warung)</Text>
-                  <Text className="text-stone-400 text-[9px] mt-0.5">Role: AGENT • Belanja grosir B2B, terima pengiriman, catat demand warga.</Text>
-                </View>
-              </Pressable>
-
               {/* Pak Slamet - SUPPLIER */}
               <Pressable
                 onPress={async () => {
@@ -307,8 +290,8 @@ export function UserMenu() {
                 <Text className="text-white font-bold text-xs">Tutup</Text>
               </Pressable>
             </View>
-          </Pressable>
-        </Pressable>
+          </View>
+        </View>
       </Modal>
     </>
   );

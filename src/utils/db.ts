@@ -13,7 +13,7 @@ export interface User {
   id: string;
   name: string;
   phone: string;
-  role: "USER" | "RT_AGENT" | "ADMIN" | "DRIVER" | "AGENT" | "OPERASIONAL" | "SUPPLIER";
+  role: "USER" | "RT_AGENT" | "ADMIN" | "DRIVER" | "OPERASIONAL" | "SUPPLIER";
   rt_id: string | null;
   cooperative_id: string;
   points: number;
@@ -26,7 +26,6 @@ export interface User {
   card_token?: string | null;
   account_status?: "ACTIVE" | "SUSPENDED" | "PENDING" | null;
   created_at?: string | null;
-  is_warung_partner?: number;
   is_pickup_point?: number;
 }
 
@@ -64,7 +63,7 @@ export interface Order {
   id: string;
   user_id: string;
   rt_batch_id: string | null;
-  channel: "SELF_ORDER" | "RT_ASSISTED" | "CARD_PURCHASE" | "B2B_AGENT";
+  channel: "SELF_ORDER" | "RT_ASSISTED" | "CARD_PURCHASE";
   fulfillment: "PICKUP_AT_COOP" | "DELIVERY_TO_HOME" | "RT_PICKUP_POINT";
   subtotal: number;
   discount: number;
@@ -82,6 +81,13 @@ export interface Order {
     | "COMPLETED"
     | "CANCELLED";
   created_at: string;
+}
+
+export interface OrderStatusHistory {
+  id: string;
+  order_id: string;
+  status: Order["order_status"];
+  changed_at: string;
 }
 
 export interface OrderItem {
@@ -243,18 +249,33 @@ export interface KopRequest {
   created_at: string;
 }
 
+export interface DatabaseWrite {
+  query: string;
+  params?: any[];
+  requireRowsAffected?: boolean;
+}
+
 // ----------------------------------------------------
 // DATABASE WEB FALLBACK IMPLEMENTATION (localStorage)
 // ----------------------------------------------------
 
+const WEB_DATABASE_STORAGE_KEY = "kmp_mart_db";
+
 class WebDatabase {
   private getStorage(): { [table: string]: any[] } {
-    const data = localStorage.getItem("kopmart_db");
-    return data ? JSON.parse(data) : {};
+    const data = localStorage.getItem(WEB_DATABASE_STORAGE_KEY);
+    if (!data) return {};
+
+    try {
+      return JSON.parse(data);
+    } catch {
+      localStorage.removeItem(WEB_DATABASE_STORAGE_KEY);
+      return {};
+    }
   }
 
   private setStorage(data: { [table: string]: any[] }) {
-    localStorage.setItem("kopmart_db", JSON.stringify(data));
+    localStorage.setItem(WEB_DATABASE_STORAGE_KEY, JSON.stringify(data));
   }
 
   constructor() {
@@ -271,6 +292,7 @@ class WebDatabase {
       "products",
       "rt_batches",
       "orders",
+      "order_status_history",
       "order_items",
       "point_transactions",
       "settlements",
@@ -350,6 +372,10 @@ class WebDatabase {
           changed = true;
         }
       });
+    }
+
+    if (this.removePartnerAgentData(db)) {
+      changed = true;
     }
 
     if (this.ensureDemoLogistics(db)) {
@@ -559,6 +585,78 @@ class WebDatabase {
     if (updated || changed) {
       this.setStorage(db);
     }
+  }
+
+  private removePartnerAgentData(db: { [table: string]: any[] }) {
+    let changed = false;
+    const removedOrderIds = new Set(
+      (db["orders"] || [])
+        .filter((order: any) => order.channel === "B2B_AGENT")
+        .map((order: any) => order.id),
+    );
+
+    if (removedOrderIds.size > 0) {
+      const removedTaskIds = new Set(
+        (db["delivery_tasks"] || [])
+          .filter((task: any) => removedOrderIds.has(task.order_id))
+          .map((task: any) => task.id),
+      );
+      db["orders"] = (db["orders"] || []).filter(
+        (order: any) => !removedOrderIds.has(order.id),
+      );
+      db["order_items"] = (db["order_items"] || []).filter(
+        (item: any) => !removedOrderIds.has(item.order_id),
+      );
+      db["order_status_history"] = (db["order_status_history"] || []).filter(
+        (history: any) => !removedOrderIds.has(history.order_id),
+      );
+      db["point_transactions"] = (db["point_transactions"] || []).filter(
+        (transaction: any) => !removedOrderIds.has(transaction.reference_id),
+      );
+      db["delivery_tasks"] = (db["delivery_tasks"] || []).filter(
+        (task: any) => !removedTaskIds.has(task.id),
+      );
+      db["delivery_proofs"] = (db["delivery_proofs"] || []).filter(
+        (proof: any) => !removedTaskIds.has(proof.delivery_task_id),
+      );
+      db["cash_collections"] = (db["cash_collections"] || []).filter(
+        (cash: any) => !removedTaskIds.has(cash.delivery_task_id),
+      );
+      changed = true;
+    }
+
+    const auditLogsBefore = (db["audit_logs"] || []).length;
+    db["audit_logs"] = (db["audit_logs"] || []).filter((log: any) => {
+      const details = String(log.details || "");
+      const actor = String(log.actor || "");
+      return !details.includes("B2B Mitra") && !actor.includes("(AGENT)");
+    });
+    if (db["audit_logs"].length !== auditLogsBefore) changed = true;
+
+    if (db["users"]) {
+      db["users"].forEach((user: any) => {
+        if (user.role === "AGENT") {
+          user.role = "USER";
+          changed = true;
+        }
+        if ("is_warung_partner" in user) {
+          delete user.is_warung_partner;
+          changed = true;
+        }
+      });
+    }
+
+    const removedProductIds = new Set([
+      "prod-beras-grosir",
+      "prod-minyak-grosir",
+    ]);
+    const productsBefore = (db["products"] || []).length;
+    db["products"] = (db["products"] || []).filter(
+      (product: any) => !removedProductIds.has(product.id),
+    );
+    if (db["products"].length !== productsBefore) changed = true;
+
+    return changed;
   }
 
   private ensureDemoLogistics(db: { [table: string]: any[] }) {
@@ -839,7 +937,6 @@ class WebDatabase {
         referral_code: "BUDIAJAK",
         referred_by: null,
         pin: "654321",
-        is_warung_partner: 0,
         is_pickup_point: 1,
       },
       {
@@ -1204,30 +1301,6 @@ class WebDatabase {
 
     db["purchase_orders"] = [];
 
-    const b2bOrderId = "order-b2b-demo";
-    db["orders"].push({
-      id: b2bOrderId,
-      user_id: "user-sari",
-      rt_batch_id: null,
-      channel: "B2B_AGENT",
-      fulfillment: "DELIVERY_TO_HOME",
-      subtotal: 550000,
-      discount: 0,
-      points_redeemed: 0,
-      total: 560000,
-      payment_status: "UNPAID",
-      order_status: "READY_FOR_PICKUP",
-      created_at: new Date(Date.now() - 6 * 3600 * 1000).toISOString(),
-    });
-    db["order_items"].push({
-      id: "item-b2b-1",
-      order_id: b2bOrderId,
-      product_id: "prod-beras",
-      name: "Beras Premium 5kg",
-      price: 55000,
-      quantity: 10,
-    });
-
     this.setStorage(db);
   }
 
@@ -1235,9 +1308,64 @@ class WebDatabase {
   public async executeSql(query: string, params: any[] = []): Promise<any> {
     const db = this.getStorage();
     const cleanQuery = query.replace(/\s+/g, " ").trim();
+    const normalizedQuery = cleanQuery.toUpperCase();
 
     // 1. SELECT queries
-    if (cleanQuery.toUpperCase().startsWith("SELECT")) {
+    if (normalizedQuery.startsWith("SELECT")) {
+      // Queries below are the only joins/aggregates used by the application.
+      // Keep the localStorage fallback behaviour equivalent to SQLite.
+      if (normalizedQuery.includes("FROM CART_ITEMS CI JOIN PRODUCTS P")) {
+        const userId = params[0];
+        return (db["cart_items"] || [])
+          .filter((cartItem) => String(cartItem.user_id) === String(userId))
+          .map((cartItem) => {
+            const product = (db["products"] || []).find(
+              (item) => item.id === cartItem.product_id,
+            );
+            if (!product) return null;
+
+            return {
+              quantity: cartItem.quantity,
+              product_id: product.id,
+              cooperative_id: product.cooperative_id,
+              name: product.name,
+              price: product.price,
+              cost_price: product.cost_price,
+              stock: product.stock,
+              unit: product.unit,
+              is_local: product.is_local,
+              image_url: product.image_url,
+            };
+          })
+          .filter(Boolean);
+      }
+
+      if (
+        normalizedQuery.includes("SELECT SUM(OI.QUANTITY) AS COUNT") &&
+        normalizedQuery.includes("FROM ORDER_ITEMS OI JOIN ORDERS O")
+      ) {
+        const userId = params[0];
+        const count = (db["order_items"] || []).reduce(
+          (sum, item) => {
+            const order = (db["orders"] || []).find(
+              (candidate) => candidate.id === item.order_id,
+            );
+            const product = (db["products"] || []).find(
+              (candidate) => candidate.id === item.product_id,
+            );
+            if (
+              order?.user_id !== userId ||
+              Number(product?.is_local) !== 1
+            ) {
+              return sum;
+            }
+            return sum + Number(item.quantity || 0);
+          },
+          0,
+        );
+        return [{ count }];
+      }
+
       // Determine table name
       const fromMatch = cleanQuery.match(/FROM\s+(\w+)/i);
       if (!fromMatch) return [];
@@ -1245,7 +1373,9 @@ class WebDatabase {
       let rows = db[tableName] || [];
 
       // Simple WHERE clause parsing
-      const whereMatch = cleanQuery.match(/WHERE\s+(.+)$/i);
+      const whereMatch = cleanQuery.match(
+        /WHERE\s+(.+?)(?:\s+ORDER\s+BY\b|\s+LIMIT\b|$)/i,
+      );
       if (whereMatch) {
         const whereClause = whereMatch[1].split(/AND/i);
         let paramIdx = 0;
@@ -1306,7 +1436,7 @@ class WebDatabase {
     }
 
     // 2. INSERT queries
-    if (cleanQuery.toUpperCase().startsWith("INSERT")) {
+    if (normalizedQuery.startsWith("INSERT")) {
       const intoMatch = cleanQuery.match(
         /INTO\s+(\w+)\s*\(([^)]+)\)\s*VALUES\s*\(([^)]+)\)/i,
       );
@@ -1331,14 +1461,80 @@ class WebDatabase {
       });
 
       if (!db[tableName]) db[tableName] = [];
-      db[tableName].push(newRow);
+
+      const isIgnore = /^INSERT\s+OR\s+IGNORE\b/i.test(cleanQuery);
+      const isReplace = /^INSERT\s+OR\s+REPLACE\b/i.test(cleanQuery);
+      const identityKeys =
+        tableName === "cart_items"
+          ? ["user_id", "product_id"]
+          : newRow.id
+            ? ["id"]
+            : [];
+      const existingIndex = db[tableName].findIndex((row) =>
+        identityKeys.length > 0 &&
+        identityKeys.every((key) => String(row[key]) === String(newRow[key])),
+      );
+
+      if (existingIndex >= 0 && isIgnore) {
+        return { insertId: db[tableName][existingIndex].id, rowsAffected: 0 };
+      }
+
+      if (existingIndex >= 0 && isReplace) {
+        db[tableName][existingIndex] = newRow;
+      } else {
+        db[tableName].push(newRow);
+      }
       this.setStorage(db);
 
       return { insertId: newRow.id, rowsAffected: 1 };
     }
 
     // 3. UPDATE queries
-    if (cleanQuery.toUpperCase().startsWith("UPDATE")) {
+    if (normalizedQuery.startsWith("UPDATE")) {
+      const decrementMatch = cleanQuery.match(
+        /^UPDATE\s+(\w+)\s+SET\s+(\w+)\s*=\s*\2\s*-\s*\?\s+WHERE\s+(\w+)\s*=\s*\?\s+AND\s+(\w+)\s*>=\s*\?$/i,
+      );
+      if (decrementMatch) {
+        const [, tableName, targetColumn, idColumn, minimumColumn] =
+          decrementMatch;
+        const [amount, id, minimum] = params;
+        let affectedCount = 0;
+        db[tableName] = (db[tableName] || []).map((row) => {
+          if (
+            String(row[idColumn]) !== String(id) ||
+            Number(row[minimumColumn]) < Number(minimum)
+          ) {
+            return row;
+          }
+          affectedCount += 1;
+          return {
+            ...row,
+            [targetColumn]: Number(row[targetColumn]) - Number(amount),
+          };
+        });
+        this.setStorage(db);
+        return { rowsAffected: affectedCount };
+      }
+
+      if (
+        /^UPDATE\s+rt_batches\s+SET\s+total_orders\s*=\s*total_orders\s*\+\s*1,\s*total_gmv\s*=\s*total_gmv\s*\+\s*\?\s+WHERE\s+id\s*=\s*\?$/i.test(
+          cleanQuery,
+        )
+      ) {
+        const [amount, id] = params;
+        let affectedCount = 0;
+        db["rt_batches"] = (db["rt_batches"] || []).map((row) => {
+          if (String(row.id) !== String(id)) return row;
+          affectedCount += 1;
+          return {
+            ...row,
+            total_orders: Number(row.total_orders || 0) + 1,
+            total_gmv: Number(row.total_gmv || 0) + Number(amount),
+          };
+        });
+        this.setStorage(db);
+        return { rowsAffected: affectedCount };
+      }
       const updateMatch = cleanQuery.match(
         /UPDATE\s+(\w+)\s+SET\s+(.+?)(?:\s+WHERE\s+(.+))?$/i,
       );
@@ -1457,9 +1653,11 @@ let sqliteDbInstance: any = null;
 
 const getNativeDb = () => {
   if (!sqliteDbInstance) {
+    // Metro resolves this to native-sqlite.web.ts on web, so the WASM-backed
+    // Expo SQLite web worker is never included in the web bundle.
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const SQLite = require("expo-sqlite");
-    sqliteDbInstance = SQLite.openDatabaseSync("kopmart.db");
+    const { openNativeDatabase } = require("./native-sqlite");
+    sqliteDbInstance = openNativeDatabase("kmp-mart.db");
     initNativeSchema(sqliteDbInstance);
   }
   return sqliteDbInstance;
@@ -1473,7 +1671,6 @@ const ensureUserIdentityColumns = (db: any) => {
     "ALTER TABLE users ADD COLUMN card_token TEXT;",
     "ALTER TABLE users ADD COLUMN account_status TEXT DEFAULT 'ACTIVE';",
     "ALTER TABLE users ADD COLUMN created_at TEXT;",
-    "ALTER TABLE users ADD COLUMN is_warung_partner INTEGER DEFAULT 0;",
     "ALTER TABLE users ADD COLUMN is_pickup_point INTEGER DEFAULT 0;",
   ];
 
@@ -1487,7 +1684,7 @@ const ensureUserIdentityColumns = (db: any) => {
 
   try {
     db.execSync(
-      "UPDATE users SET role = 'USER', is_warung_partner = 0, is_pickup_point = 1 WHERE id = 'user-budi';",
+      "UPDATE users SET role = 'USER', is_pickup_point = 1 WHERE id = 'user-budi';",
     );
     db.execSync(
       "UPDATE users SET points = 12000 WHERE id = 'user-dinda' AND points = 120;",
@@ -1503,6 +1700,39 @@ const ensureUserIdentityColumns = (db: any) => {
     );
   } catch {
     // Ignore migration issues
+  }
+};
+
+const removePartnerAgentData = (db: any) => {
+  try {
+    db.execSync(`
+      DELETE FROM delivery_proofs
+      WHERE delivery_task_id IN (
+        SELECT id FROM delivery_tasks
+        WHERE order_id IN (SELECT id FROM orders WHERE channel = 'B2B_AGENT')
+      );
+      DELETE FROM cash_collections
+      WHERE delivery_task_id IN (
+        SELECT id FROM delivery_tasks
+        WHERE order_id IN (SELECT id FROM orders WHERE channel = 'B2B_AGENT')
+      );
+      DELETE FROM delivery_tasks
+      WHERE order_id IN (SELECT id FROM orders WHERE channel = 'B2B_AGENT');
+      DELETE FROM order_status_history
+      WHERE order_id IN (SELECT id FROM orders WHERE channel = 'B2B_AGENT');
+      DELETE FROM point_transactions
+      WHERE reference_id IN (SELECT id FROM orders WHERE channel = 'B2B_AGENT');
+      DELETE FROM order_items
+      WHERE order_id IN (SELECT id FROM orders WHERE channel = 'B2B_AGENT');
+      DELETE FROM orders WHERE channel = 'B2B_AGENT';
+      DELETE FROM audit_logs
+      WHERE details LIKE '%B2B Mitra%' OR actor LIKE '%(AGENT)%';
+      DELETE FROM products
+      WHERE id IN ('prod-beras-grosir', 'prod-minyak-grosir');
+      UPDATE users SET role = 'USER' WHERE role = 'AGENT';
+    `);
+  } catch (error) {
+    console.error("Failed to remove retired partner-agent data:", error);
   }
 };
 
@@ -1798,7 +2028,6 @@ const initNativeSchema = (db: any) => {
       card_token TEXT UNIQUE,
       account_status TEXT DEFAULT 'ACTIVE',
       created_at TEXT,
-      is_warung_partner INTEGER DEFAULT 0,
       is_pickup_point INTEGER DEFAULT 0
     );
     CREATE TABLE IF NOT EXISTS products (
@@ -1835,6 +2064,12 @@ const initNativeSchema = (db: any) => {
       payment_status TEXT,
       order_status TEXT,
       created_at TEXT
+    );
+    CREATE TABLE IF NOT EXISTS order_status_history (
+      id TEXT PRIMARY KEY,
+      order_id TEXT,
+      status TEXT,
+      changed_at TEXT
     );
     CREATE TABLE IF NOT EXISTS order_items (
       id TEXT PRIMARY KEY,
@@ -2541,35 +2776,6 @@ const initNativeSchema = (db: any) => {
         "https://images.unsplash.com/photo-1607613009820-a29f7bb81c04?w=400",
       ],
     );
-    db.runSync(
-      `INSERT OR IGNORE INTO products (id, cooperative_id, name, price, cost_price, stock, unit, is_local, image_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        "prod-beras-grosir",
-        "tenant-1",
-        "Beras Premium 25kg (Grosir)",
-        340000,
-        310000,
-        10,
-        "karung",
-        0,
-        "https://images.unsplash.com/photo-1586201375761-83865001e31c?w=400",
-      ],
-    );
-    db.runSync(
-      `INSERT OR IGNORE INTO products (id, cooperative_id, name, price, cost_price, stock, unit, is_local, image_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        "prod-minyak-grosir",
-        "tenant-1",
-        "Minyak Goreng 1 Dus (Grosir)",
-        205000,
-        185000,
-        8,
-        "dus",
-        0,
-        "https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?w=400",
-      ],
-    );
-
     // Seed Products (Sukasari - tenant-2)
     db.runSync(
       `INSERT OR IGNORE INTO products (id, cooperative_id, name, price, cost_price, stock, unit, is_local, image_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -2796,31 +3002,9 @@ const initNativeSchema = (db: any) => {
       ["req-2", "user-sari", "Beras Premium 5kg", 1, "PENDING", new Date().toISOString()]
     );
 
-    // Seed B2B Order for Agent Bu Sari
-    const b2bOrderId = "order-b2b-demo";
-    db.runSync(
-      `INSERT OR IGNORE INTO orders (id, user_id, rt_batch_id, channel, fulfillment, subtotal, discount, points_redeemed, total, payment_status, order_status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        b2bOrderId,
-        "user-sari",
-        null,
-        "B2B_AGENT",
-        "DELIVERY_TO_HOME",
-        550000,
-        0,
-        0,
-        560000,
-        "UNPAID",
-        "READY_FOR_PICKUP",
-        new Date(Date.now() - 6 * 3600 * 1000).toISOString(),
-      ],
-    );
-    db.runSync(
-      `INSERT OR IGNORE INTO order_items (id, order_id, product_id, name, price, quantity) VALUES (?, ?, ?, ?, ?, ?)`,
-      ["item-b2b-1", b2bOrderId, "prod-beras", "Beras Premium 5kg", 55000, 10]
-    );
   }
 
+  removePartnerAgentData(db);
   ensureNativeSeedUserIdentity(db);
   ensureNativeDemoLogistics(db);
 };
@@ -2867,6 +3051,62 @@ export const dbService = {
   },
 
   /**
+   * Execute related writes atomically. Native uses Expo SQLite's synchronous
+   * transaction API; web restores the localStorage snapshot on failure.
+   */
+  async transaction(
+    writes: DatabaseWrite[],
+  ): Promise<Array<{ insertId?: string; rowsAffected: number }>> {
+    if (Platform.OS === "web") {
+      const snapshot = localStorage.getItem(WEB_DATABASE_STORAGE_KEY);
+      try {
+        const results: Array<{ insertId?: string; rowsAffected: number }> = [];
+        for (const write of writes) {
+          const result = await getWebDb().executeSql(
+            write.query,
+            write.params || [],
+          );
+          const normalizedResult = {
+            insertId: result?.insertId,
+            rowsAffected: result?.rowsAffected || 0,
+          };
+          if (write.requireRowsAffected && normalizedResult.rowsAffected === 0) {
+            throw new Error("Data berubah atau persediaan tidak mencukupi.");
+          }
+          results.push(normalizedResult);
+        }
+        return results;
+      } catch (error) {
+        if (snapshot === null) {
+          localStorage.removeItem(WEB_DATABASE_STORAGE_KEY);
+        } else {
+          localStorage.setItem(WEB_DATABASE_STORAGE_KEY, snapshot);
+        }
+        throw error;
+      }
+    }
+
+    const db = getNativeDb();
+    const results: Array<{ insertId?: string; rowsAffected: number }> = [];
+    db.withTransactionSync(() => {
+      for (const write of writes) {
+        const result = db.runSync(write.query, write.params || []);
+        const normalizedResult = {
+          insertId: result.lastInsertRowId
+            ? String(result.lastInsertRowId)
+            : undefined,
+          rowsAffected: result.changes || 0,
+        };
+        if (write.requireRowsAffected && normalizedResult.rowsAffected === 0) {
+          throw new Error("Data berubah atau persediaan tidak mencukupi.");
+        }
+        results.push(normalizedResult);
+      }
+    });
+    return results;
+  },
+
+  /**
    * Fetch all records matching the query
    */
   async getAll<T = any>(query: string, params: any[] = []): Promise<T[]> {
@@ -2899,7 +3139,8 @@ export const dbService = {
    */
   async resetDatabase(): Promise<void> {
     if (Platform.OS === "web") {
-      localStorage.removeItem("kopmart_db");
+      localStorage.removeItem(WEB_DATABASE_STORAGE_KEY);
+      webDbInstance = null;
       getWebDb(); // This triggers re-initialization and seeding
     } else {
       const db = getNativeDb();
@@ -2909,6 +3150,7 @@ export const dbService = {
         DROP TABLE IF EXISTS products;
         DROP TABLE IF EXISTS rt_batches;
         DROP TABLE IF EXISTS orders;
+        DROP TABLE IF EXISTS order_status_history;
         DROP TABLE IF EXISTS order_items;
         DROP TABLE IF EXISTS point_transactions;
         DROP TABLE IF EXISTS settlements;

@@ -1,5 +1,5 @@
 <!--
-KopMart RT PRD Package v2.0
+KMP Mart PRD Package v2.0
 Updated concept: Omni-channel Assisted Cooperative Marketplace + Local Logistics + Misi Gotong Royong
 Prepared for SIMPKOPDES Hackathon 2026 development planning
 -->
@@ -12,7 +12,7 @@ Support pickup and delivery for individual orders, RT batch orders, warung stock
 
 ## 2. Product principle
 
-KopMart RT should not depend fully on Gojek/Grab/JNE/J&T/Shopee Express. Koperasi must be able to operate with local courier first, while external providers remain optional based on availability, API/partnership, distance, SLA, and cost.
+KMP Mart should not depend fully on Gojek/Grab/JNE/J&T/Shopee Express. Koperasi must be able to operate with local courier first, while external providers remain optional based on availability, API/partnership, distance, SLA, and cost.
 
 ## 3. Logistics modes
 

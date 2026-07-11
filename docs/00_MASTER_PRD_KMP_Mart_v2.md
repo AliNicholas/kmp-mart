@@ -1,14 +1,14 @@
 <!--
-KopMart RT PRD Package v2.0
+KMP Mart PRD Package v2.0
 Updated concept: Omni-channel Assisted Cooperative Marketplace + Local Logistics + Misi Gotong Royong
 Prepared for SIMPKOPDES Hackathon 2026 development planning
 -->
 
-# PRD — KopMart RT v2.0
+# PRD — KMP Mart v2.0
 
 ## 1. Product summary
 
-**Product name:** KopMart RT  
+**Product name:** KMP Mart  
 **Product type:** Omni-channel Assisted Cooperative Marketplace  
 **Target:** KDKMP / koperasi desa, warga desa, RT/kader, warung lokal, kurir lokal, admin koperasi, pemdes/auditor  
 **Main hackathon pillar:** Pilar 1 — Peningkatan Volume Usaha Koperasi  
@@ -16,13 +16,13 @@ Prepared for SIMPKOPDES Hackathon 2026 development planning
 
 ## 2. Updated product statement
 
-> **KopMart RT adalah marketplace koperasi inklusif yang membuat semua warga bisa belanja di koperasi melalui aplikasi, Kartu Kopdes QR, RT Group Order, Petugas Layanan KopMart, Mitra Warung, katalog kertas, voice note, atau kios desa, sementara seluruh transaksi tetap tercatat digital untuk meningkatkan volume usaha, cashflow, auditability, dan dampak ekonomi koperasi.**
+> **KMP Mart adalah marketplace koperasi inklusif yang membuat semua warga bisa belanja di koperasi melalui aplikasi, Kartu Kopdes QR, RT Group Order, Petugas Layanan KMP Mart, Mitra Warung, katalog kertas, voice note, atau kios desa, sementara seluruh transaksi tetap tercatat digital untuk meningkatkan volume usaha, cashflow, auditability, dan dampak ekonomi koperasi.**
 
 ## 3. Core insight
 
 Masalah utama bukan hanya koperasi belum memiliki aplikasi. Masalah utamanya adalah banyak koperasi sudah terdaftar, tetapi belum menjadi kanal transaksi harian warga.
 
-Karena itu, KopMart RT tidak boleh menjadi app-only solution. Solusi harus cocok untuk kondisi desa yang beragam:
+Karena itu, KMP Mart tidak boleh menjadi app-only solution. Solusi harus cocok untuk kondisi desa yang beragam:
 
 - ada warga digital yang nyaman pakai aplikasi,
 - ada warga punya HP tetapi hanya nyaman WhatsApp/voice note,
@@ -111,12 +111,12 @@ Examples:
 | Self-order App | Digital user marketplace | P0 |
 | Kartu Kopdes QR | Identity and purchase card | P0 |
 | RT Group Order | Community batch order | P0 |
-| Petugas Layanan KopMart | Assisted commerce staff | P0 |
+| Petugas Layanan KMP Mart | Assisted commerce staff | P0 |
 | Admin Koperasi Dashboard | Operational control | P0 |
 | Poin Gotong Royong | Retention and reward | P0 |
 | Referral/KopAjak | Active buyer acquisition | P0 |
 | Driver & Local Logistics | Pickup/delivery/settlement | P0/P1 |
-| Mitra Warung KopMart | Warung B2B2C channel | P1 |
+| Mitra Warung KMP Mart | Warung B2B2C channel | P1 |
 | Paper-to-Digital Catalog | Offline physical order channel | P1 |
 | Misi Gotong Royong | Gamified national-value engagement | P1 |
 | Voice-to-Digital Order | Voice note ordering | P1 |
@@ -259,7 +259,7 @@ Admin creates national/local mission
 
 ## 12. Hackathon scoring optimization
 
-| Judging concern | KopMart RT answer |
+| Judging concern | KMP Mart answer |
 |---|---|
 | Problem relevance | Directly targets inactive transaction gap in KDKMP |
 | Innovation | Omni-channel assisted marketplace, not app-only marketplace |
@@ -301,4 +301,4 @@ Admin creates national/local mission
 
 ## 15. Final product narrative
 
-> **KopMart RT tidak membangun marketplace yang hanya bisa dipakai warga digital. KopMart RT membangun sistem transaksi koperasi yang bisa diakses lewat banyak pintu: aplikasi, Kartu Kopdes, RT, Petugas Layanan, Warung Mitra, katalog kertas, voice note, kios, dan kurir lokal. Dengan begitu, warga paling digital sampai warga paling awam tetap bisa bertransaksi, sementara koperasi mendapatkan volume usaha, data demand, cashflow, audit trail, dan dampak ekonomi yang terukur.**
+> **KMP Mart tidak membangun marketplace yang hanya bisa dipakai warga digital. KMP Mart membangun sistem transaksi koperasi yang bisa diakses lewat banyak pintu: aplikasi, Kartu Kopdes, RT, Petugas Layanan, Warung Mitra, katalog kertas, voice note, kios, dan kurir lokal. Dengan begitu, warga paling digital sampai warga paling awam tetap bisa bertransaksi, sementara koperasi mendapatkan volume usaha, data demand, cashflow, audit trail, dan dampak ekonomi yang terukur.**

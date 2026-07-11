@@ -2,8 +2,8 @@ import { Image } from 'expo-image';
 import { View } from 'react-native';
 import Animated, { Keyframe, Easing } from 'react-native-reanimated';
 
-import classes from './animated-icon.module.css';
 const DURATION = 300;
+const logoSource = require('../../kmp-mart-logo.png');
 
 export function AnimatedSplashOverlay() {
   return null;
@@ -39,34 +39,13 @@ const logoKeyframe = new Keyframe({
   },
 });
 
-const glowKeyframe = new Keyframe({
-  0: {
-    transform: [{ rotateZ: '-180deg' }, { scale: 0.8 }],
-    opacity: 0,
-  },
-  [DURATION / 1000]: {
-    transform: [{ rotateZ: '0deg' }, { scale: 1 }],
-    opacity: 1,
-    easing: Easing.elastic(0.7),
-  },
-  100: {
-    transform: [{ rotateZ: '7200deg' }],
-  },
-});
-
 export function AnimatedIcon() {
   return (
     <View className="justify-center items-center w-32 h-32">
-      <Animated.View entering={glowKeyframe.duration(60 * 1000 * 4)} className="w-[201px] h-[201px] absolute">
-        <Image className="w-[201px] h-[201px] absolute" source={require('@/assets/images/logo-glow.png')} />
-      </Animated.View>
-
-      <Animated.View className="w-32 h-32 absolute" entering={keyframe.duration(DURATION)}>
-        <div className={classes.expoLogoBackground} />
-      </Animated.View>
+      <Animated.View className="w-32 h-32 rounded-[36px] bg-white absolute" entering={keyframe.duration(DURATION)} />
 
       <Animated.View className="justify-center items-center" entering={logoKeyframe.duration(DURATION)}>
-        <Image className="absolute w-20 h-20" source={require('@/assets/images/expo-logo.png')} />
+        <Image className="w-24 h-24" source={logoSource} contentFit="contain" />
       </Animated.View>
     </View>
   );

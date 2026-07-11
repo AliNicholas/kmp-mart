@@ -2,7 +2,7 @@
 
 # Product Requirements Document (PRD)
 
-# KopMart RT
+# KMP Mart
 
 ## Marketplace Koperasi Inklusif dengan RT Group Order, Kartu Kopdes, Poin Gotong Royong, Referral, dan Dashboard Keuangan
 
@@ -61,7 +61,7 @@
 
 ## 1.1 Product Summary
 
-**KopMart RT** adalah marketplace koperasi inklusif yang dirancang untuk meningkatkan volume usaha koperasi desa/kelurahan dengan membuat seluruh warga dapat bertransaksi di koperasi melalui tiga jalur utama:
+**KMP Mart** adalah marketplace koperasi inklusif yang dirancang untuk meningkatkan volume usaha koperasi desa/kelurahan dengan membuat seluruh warga dapat bertransaksi di koperasi melalui tiga jalur utama:
 
 1. **Self-order melalui aplikasi/PWA** untuk warga digital yang terbiasa checkout sendiri.
 2. **Kartu Kopdes / QR Purchase Card** untuk warga tanpa smartphone atau yang tidak nyaman memakai aplikasi.
@@ -71,13 +71,13 @@ Produk ini bukan super app. Fokusnya adalah **mengaktifkan transaksi koperasi** 
 
 ## 1.2 One-Liner
 
-> **KopMart RT membuat belanja koperasi bisa dilakukan sendiri, pakai kartu, atau dibantu RT — sehingga semua warga bisa bertransaksi dan volume usaha koperasi meningkat.**
+> **KMP Mart membuat belanja koperasi bisa dilakukan sendiri, pakai kartu, atau dibantu RT — sehingga semua warga bisa bertransaksi dan volume usaha koperasi meningkat.**
 
 ## 1.3 Why Now
 
 Koperasi Desa/Kelurahan Merah Putih sudah banyak terbentuk dan terhubung secara administratif, tetapi transaksi digital riil masih rendah. Masalahnya bukan sekadar “belum ada sistem”, tetapi **sistem belum menjadi kebiasaan belanja warga**.
 
-KopMart RT menutup gap tersebut dengan membuat koperasi menjadi kanal transaksi harian warga melalui:
+KMP Mart menutup gap tersebut dengan membuat koperasi menjadi kanal transaksi harian warga melalui:
 
 - katalog dan stok digital,
 - checkout mandiri,
@@ -93,7 +93,7 @@ KopMart RT menutup gap tersebut dengan membuat koperasi menjadi kanal transaksi 
 
 Berdasarkan kriteria penilaian hackathon yang diberikan, produk ini dirancang untuk mengoptimalkan seluruh komponen penilaian:
 
-| Kriteria Penilaian                          |   Bobot | Strategi Optimasi KopMart RT                                                                                                                                                                                                                                        |
+| Kriteria Penilaian                          |   Bobot | Strategi Optimasi KMP Mart                                                                                                                                                                                                                                        |
 | ------------------------------------------- | ------: | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Relevansi dengan Permasalahan/Tantangan** | **25%** | Fokus langsung pada masalah nasional: banyak koperasi terdaftar tetapi belum aktif bertransaksi. Solusi diarahkan ke Pilar 1, yaitu peningkatan volume usaha koperasi, dengan metrik GMV, order, repeat order, RT aktif, household aktif, dan produk lokal terjual. |
 | **Inovasi dan Kreativitas**                 | **20%** | Marketplace koperasi bukan hal baru, tetapi diferensiasinya adalah **RT Group Order + Kartu Kopdes + Poin Gotong Royong + Referral**. Ini menjadikan produk sebagai marketplace inklusif yang bisa dipakai warga digital dan non-digital.                           |
@@ -208,7 +208,7 @@ Masalahnya bukan lagi “membangun koperasi dari nol”, tetapi:
 
 > **mengubah koperasi yang sudah ada menjadi channel transaksi yang rutin dipakai warga.**
 
-KopMart RT adalah **transaction activation layer** yang dapat berdiri di atas atau terintegrasi dengan SIMKOPDES.
+KMP Mart adalah **transaction activation layer** yang dapat berdiri di atas atau terintegrasi dengan SIMKOPDES.
 
 ## 4.3 Strategic Relevance to Pillar 1
 
@@ -245,7 +245,7 @@ Poin tidak boleh hanya menjadi hadiah registrasi. Poin harus menjadi **retention
 
 ## 5.2 Share of Wallet
 
-Tujuan KopMart RT bukan mengganti semua tempat belanja warga, tetapi menaikkan porsi belanja rutin warga yang masuk ke koperasi.
+Tujuan KMP Mart bukan mengganti semua tempat belanja warga, tetapi menaikkan porsi belanja rutin warga yang masuk ke koperasi.
 
 Contoh kategori target:
 
@@ -293,7 +293,7 @@ Koperasi bukan hanya bisnis komersial. Koperasi memiliki dua dimensi:
 1. profit/keberlanjutan bisnis,
 2. kesejahteraan bersama.
 
-KopMart RT menjaga keduanya dengan:
+KMP Mart menjaga keduanya dengan:
 
 - menaikkan omzet koperasi,
 - membuka akses warga kurang mampu,
@@ -311,7 +311,7 @@ Retail modern seperti Alfagift, Indomaret Poinku, OVO Points, dan member-card re
 - referral membantu akuisisi,
 - personalized promo dapat menaikkan basket size.
 
-Bedanya, KopMart RT menerapkan pola tersebut dengan filosofi koperasi:
+Bedanya, KMP Mart menerapkan pola tersebut dengan filosofi koperasi:
 
 > **insentif bukan untuk mengunci customer demi profit platform, tetapi untuk membuat nilai belanja warga kembali berputar di koperasi.**
 
@@ -338,9 +338,9 @@ Membangun sistem transaksi koperasi yang:
 
 # 7. Product Positioning
 
-## 7.1 What KopMart RT Is
+## 7.1 What KMP Mart Is
 
-KopMart RT adalah:
+KMP Mart adalah:
 
 - marketplace koperasi,
 - assisted commerce platform,
@@ -349,9 +349,9 @@ KopMart RT adalah:
 - financial and audit dashboard,
 - koperasi transaction activation layer.
 
-## 7.2 What KopMart RT Is Not
+## 7.2 What KMP Mart Is Not
 
-KopMart RT bukan:
+KMP Mart bukan:
 
 - super app,
 - aplikasi simpan pinjam,
@@ -363,7 +363,7 @@ KopMart RT bukan:
 
 ## 7.3 Unique Differentiation
 
-| Marketplace biasa             | KopMart RT                                  |
+| Marketplace biasa             | KMP Mart                                  |
 | ----------------------------- | ------------------------------------------- |
 | Menunggu user install app     | RT aktif mengumpulkan order                 |
 | Hanya menjangkau user digital | Menjangkau digital dan non-digital users    |
@@ -850,7 +850,7 @@ Tracks business performance, cashflow, P&L, points liability, settlement, and au
 
 **As a** resident,  
 **I want** to register using phone number and PIN,  
-**so that** I can access KopMart RT and transact at my cooperative.
+**so that** I can access KMP Mart and transact at my cooperative.
 
 ### Acceptance Criteria
 
@@ -1765,7 +1765,7 @@ RT/kader may operate in areas with weak connectivity or limited data quota. The 
 
 ## 28.1 Integration Principle
 
-KopMart RT should complement SIMKOPDES, not replace it.
+KMP Mart should complement SIMKOPDES, not replace it.
 
 ## 28.2 Integration Levels
 
@@ -1889,7 +1889,7 @@ KopMart RT should complement SIMKOPDES, not replace it.
 
 ## 32.1 Demo Goal
 
-Show that KopMart RT increases cooperative transaction volume by enabling three kinds of users:
+Show that KMP Mart increases cooperative transaction volume by enabling three kinds of users:
 
 - digital user,
 - card user,
@@ -2024,11 +2024,11 @@ Show that KopMart RT increases cooperative transaction volume by enabling three 
 
 # 36. Final Pitch Narrative
 
-> **Masalahnya bukan koperasi belum terdaftar. Masalahnya koperasi belum menjadi tempat transaksi harian warga. Dari puluhan ribu KDKMP yang sudah masuk ekosistem digital, hanya sebagian kecil yang benar-benar aktif bertransaksi. KopMart RT hadir sebagai marketplace koperasi inklusif: warga digital bisa checkout sendiri, warga tanpa smartphone bisa memakai Kartu Kopdes, dan warga awam bisa dibantu RT melalui group order. Dengan Poin Gotong Royong dan KopAjak, warga terdorong belanja ulang dan mengajak tetangga. Dengan dashboard keuangan, koperasi bisa melihat GMV, cashflow, settlement RT, dan profit/loss. Hasilnya, transaksi koperasi naik, stok bergerak, produk lokal terserap, dan nilai ekonomi kembali berputar di komunitas.**
+> **Masalahnya bukan koperasi belum terdaftar. Masalahnya koperasi belum menjadi tempat transaksi harian warga. Dari puluhan ribu KDKMP yang sudah masuk ekosistem digital, hanya sebagian kecil yang benar-benar aktif bertransaksi. KMP Mart hadir sebagai marketplace koperasi inklusif: warga digital bisa checkout sendiri, warga tanpa smartphone bisa memakai Kartu Kopdes, dan warga awam bisa dibantu RT melalui group order. Dengan Poin Gotong Royong dan KopAjak, warga terdorong belanja ulang dan mengajak tetangga. Dengan dashboard keuangan, koperasi bisa melihat GMV, cashflow, settlement RT, dan profit/loss. Hasilnya, transaksi koperasi naik, stok bergerak, produk lokal terserap, dan nilai ekonomi kembali berputar di komunitas.**
 
 ## 36.1 Final One-Liner
 
-> **KopMart RT mengubah setiap RT menjadi keranjang belanja koperasi, setiap Kartu Kopdes menjadi akses transaksi, dan setiap poin menjadi alasan warga kembali belanja di koperasi.**
+> **KMP Mart mengubah setiap RT menjadi keranjang belanja koperasi, setiap Kartu Kopdes menjadi akses transaksi, dan setiap poin menjadi alasan warga kembali belanja di koperasi.**
 
 ---
 
